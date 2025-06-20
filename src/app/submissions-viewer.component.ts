@@ -52,7 +52,7 @@ import { Router } from '@angular/router';
                     <button mat-icon-button (click)="duplicateAndEdit(sub.version)" matTooltip="Duplicate & Edit">
                       <mat-icon>content_copy</mat-icon>
                     </button>
-                    <button mat-icon-button (click)="deleteSubmission(sub.version)" matTooltip="Delete Version">
+                    <button mat-icon-button (click)="deleteSubmission(sub.version)" matTooltip="Delete Version" class="delete-btn">
                       <mat-icon>delete</mat-icon>
                     </button>
                   </td>
@@ -182,6 +182,13 @@ import { Router } from '@angular/router';
       white-space: pre-wrap;
       word-wrap: break-word;
       color: var(--text-color);
+    }
+
+    .delete-btn .mat-icon {
+      color: var(--danger-color, #e53935) !important;
+    }
+    .delete-btn:hover .mat-icon {
+      color: #b71c1c !important;
     }
   `]
 })

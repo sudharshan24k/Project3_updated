@@ -290,6 +290,7 @@ export class DashboardComponent implements OnInit {
   onFormClose() {
     this.mode = 'list';
     this.selectedTemplate = null;
+    this.duplicatedVersion = null;
     this.loadTemplates();
   }
 

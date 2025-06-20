@@ -71,7 +71,7 @@ async def edit_template(name: str, template: TemplateModel = Body(...)):
         raise HTTPException(status_code=404, detail=f"Template {name} not found")
         
     updated_template = await template_collection.find_one({"name": name})
-    return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(TemplateModel.model_validate(updated_template)))
+    return serialize_mongo(updated_template)
 
 @app.delete("/templates/{name}", response_description="Delete a template")
 async def delete_template(name: str):

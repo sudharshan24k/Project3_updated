@@ -200,7 +200,13 @@ import { SchemaService, TemplateSchema } from './schema.service';
                     <option [ngValue]="null">-- None --</option>
                     <option *ngFor="let f of schema.fields" [ngValue]="f.key" [disabled]="f.key === fieldForm.value.key">{{ f.label }}</option>
                   </select>
-                  <input *ngIf="visibleIfKey" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value (e.g. true, 1, etc.)">
+                  <ng-container *ngIf="visibleIfKey">
+                    <select *ngIf="isBooleanField(visibleIfKey)" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}">
+                      <option [ngValue]="true">true</option>
+                      <option [ngValue]="false">false</option>
+                    </select>
+                    <input *ngIf="!isBooleanField(visibleIfKey)" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value (e.g. true, 1, etc.)">
+                  </ng-container>
                 </div>
               </div>
               <div class="form-field">
@@ -210,7 +216,13 @@ import { SchemaService, TemplateSchema } from './schema.service';
                     <option [ngValue]="null">-- None --</option>
                     <option *ngFor="let f of schema.fields" [ngValue]="f.key" [disabled]="f.key === fieldForm.value.key">{{ f.label }}</option>
                   </select>
-                  <input *ngIf="mandatoryIfKey" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value (e.g. true, 1, etc.)">
+                  <ng-container *ngIf="mandatoryIfKey">
+                    <select *ngIf="isBooleanField(mandatoryIfKey)" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}">
+                      <option [ngValue]="true">true</option>
+                      <option [ngValue]="false">false</option>
+                    </select>
+                    <input *ngIf="!isBooleanField(mandatoryIfKey)" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value (e.g. true, 1, etc.)">
+                  </ng-container>
                 </div>
               </div>
 
@@ -595,14 +607,41 @@ export class DynamicForm implements OnInit, OnChanges {
   isFieldVisible(field: any): boolean {
     if (!field.visibleIf || !field.visibleIf.key) return true;
     const controllingValue = this.form?.get(field.visibleIf.key)?.value;
-    // Use loose equality for type flexibility
-    return controllingValue == field.visibleIf.value;
+    let values = field.visibleIf.value;
+    if (typeof values === 'string') {
+      values = values.split(',').map((v: string) => v.trim());
+    } else if (!Array.isArray(values)) {
+      values = [values];
+    }
+    // Normalize booleans
+    const normalized = (v: any) => {
+      if (typeof controllingValue === 'boolean') {
+        if (v === true || v === 'true') return true;
+        if (v === false || v === 'false') return false;
+      }
+      return v;
+    };
+    return values.some((v: any) => controllingValue == normalized(v));
   }
 
   isFieldRequired(field: any): boolean {
     if (field.mandatoryIf && field.mandatoryIf.key) {
       const controllingValue = this.form?.get(field.mandatoryIf.key)?.value;
-      return controllingValue == field.mandatoryIf.value;
+      let values = field.mandatoryIf.value;
+      if (typeof values === 'string') {
+        values = values.split(',').map((v: string) => v.trim());
+      } else if (!Array.isArray(values)) {
+        values = [values];
+      }
+      // Normalize booleans
+      const normalized = (v: any) => {
+        if (typeof controllingValue === 'boolean') {
+          if (v === true || v === 'true') return true;
+          if (v === false || v === 'false') return false;
+        }
+        return v;
+      };
+      return values.some((v: any) => controllingValue == normalized(v));
     }
     return !!field.required;
   }
@@ -796,8 +835,10 @@ export class DynamicForm implements OnInit, OnChanges {
     }
     const newField = this.fieldForm.value;
     // Attach conditional logic fields
-    newField.visibleIf = this.visibleIfKey ? { key: this.visibleIfKey, value: this.visibleIfValue } : null;
-    newField.mandatoryIf = this.mandatoryIfKey ? { key: this.mandatoryIfKey, value: this.mandatoryIfValue } : null;
+    const visibleIfVal = this.visibleIfKey ? (this.visibleIfValue !== null && this.visibleIfValue !== undefined ? this.visibleIfValue : '') : null;
+    newField.visibleIf = this.visibleIfKey ? { key: this.visibleIfKey, value: visibleIfVal } : null;
+    const mandatoryIfVal = this.mandatoryIfKey ? (this.mandatoryIfValue !== null && this.mandatoryIfValue !== undefined ? this.mandatoryIfValue : '') : null;
+    newField.mandatoryIf = this.mandatoryIfKey ? { key: this.mandatoryIfKey, value: mandatoryIfVal } : null;
     if (this.currentFieldIndex !== null) {
       this.schema.fields[this.currentFieldIndex] = newField;
     } else {
@@ -809,7 +850,16 @@ export class DynamicForm implements OnInit, OnChanges {
 
   onSubmit() {
     if (this.mode === 'create') {
-      this.schemaService.createTemplate(this.schema).subscribe(() => this.closeForm());
+      this.schemaService.createTemplate(this.schema).subscribe({
+        next: () => this.closeForm(),
+        error: (err) => {
+          if (err.status === 409) {
+            alert('A template with this name already exists. Please choose a different name.');
+          } else {
+            alert('Failed to save template. Please try again.');
+          }
+        }
+      });
     } else if (this.mode === 'edit') {
       this.schemaService.updateTemplate(this.schema.name, this.schema).subscribe(() => this.closeForm());
     } else if (this.mode === 'use') {
@@ -840,5 +890,10 @@ export class DynamicForm implements OnInit, OnChanges {
 
   removeOption(index: number) {
     this.options.removeAt(index);
+  }
+
+  isBooleanField(key: string): boolean {
+    const field = this.schema.fields.find((f: any) => f.key === key);
+    return field?.type === 'boolean';
   }
 }
