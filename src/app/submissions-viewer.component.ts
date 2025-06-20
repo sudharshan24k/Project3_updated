@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, OnInit, OnChanges, SimpleChanges, Output, EventEmitter } from '@angular/core';
 import { CommonModule, JsonPipe } from '@angular/common';
 import { SchemaService, Submission } from './dynamic-form/schema.service';
 import { FormsModule } from '@angular/forms';
@@ -6,6 +6,7 @@ import { DiffViewerComponent } from './diff-viewer.component';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatButtonModule } from '@angular/material/button';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-submissions-viewer',
@@ -47,6 +48,12 @@ import { MatButtonModule } from '@angular/material/button';
                     </button>
                     <button mat-icon-button (click)="downloadSubmission(sub.version)" matTooltip="Download .conf">
                       <mat-icon>download</mat-icon>
+                    </button>
+                    <button mat-icon-button (click)="duplicateAndEdit(sub.version)" matTooltip="Duplicate & Edit">
+                      <mat-icon>content_copy</mat-icon>
+                    </button>
+                    <button mat-icon-button (click)="deleteSubmission(sub.version)" matTooltip="Delete Version">
+                      <mat-icon>delete</mat-icon>
                     </button>
                   </td>
                 </tr>
@@ -188,8 +195,9 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
   
   selectedVersions = new Set<number>();
   diffResult: any = null;
+  @Output() duplicateEdit = new EventEmitter<{ template: string, version: number }>();
 
-  constructor(private schemaService: SchemaService) {}
+  constructor(private schemaService: SchemaService, private router: Router) {}
 
   ngOnInit() {
     this.loadSubmissions();
@@ -292,5 +300,25 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
     this.schemaService.diffSubmissions(this.templateName, versions[0], versions[1]).subscribe(result => {
       this.diffResult = result.diff;
     });
+  }
+
+  duplicateAndEdit(version: number) {
+    if (!this.templateName) return;
+    this.schemaService.duplicateSubmission(this.templateName, version).subscribe(res => {
+      this.duplicateEdit.emit({ template: this.templateName!, version: res.version });
+    });
+  }
+
+  deleteSubmission(version: number) {
+    if (!this.templateName) return;
+    if (confirm('Are you sure you want to delete this submission version?')) {
+      this.schemaService.deleteSubmission(this.templateName, version).subscribe(() => {
+        this.loadSubmissions();
+        if (this.selectedVersion === version) {
+          this.selectedVersion = null;
+          this.selectedSubmissionData = null;
+        }
+      });
+    }
   }
 } 

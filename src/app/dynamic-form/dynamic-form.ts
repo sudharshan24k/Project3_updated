@@ -564,6 +564,7 @@ import { SchemaService, TemplateSchema } from './schema.service';
 export class DynamicForm implements OnInit, OnChanges {
   @Input() mode: 'create' | 'edit' | 'use' | 'preview' | 'list' | 'submissions' = 'use';
   @Input() templateName: string | null = null;
+  @Input() prefillVersion: number | null = null;
   @Output() formClose = new EventEmitter<void>();
 
   form: FormGroup;
@@ -582,6 +583,9 @@ export class DynamicForm implements OnInit, OnChanges {
   visibleIfValue: any = null;
   mandatoryIfKey: string | null = null;
   mandatoryIfValue: any = null;
+
+  submissionVersion: number | null = null;
+  isDuplicatedEdit: boolean = false;
 
   // --- Add for dynamic conditional logic ---
   get visibleFields() {
@@ -628,8 +632,27 @@ export class DynamicForm implements OnInit, OnChanges {
     });
   }
 
-  ngOnInit() { this.setupComponent(); }
-  ngOnChanges(changes: SimpleChanges) { this.setupComponent(); }
+  ngOnInit() { 
+    this.route.paramMap.subscribe(params => {
+      const versionParam = params.get('version');
+      this.submissionVersion = versionParam ? +versionParam : null;
+      this.route.queryParamMap.subscribe(qp => {
+        this.isDuplicatedEdit = qp.get('duplicated') === 'true';
+        this.setupComponent();
+      });
+    });
+  }
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['prefillVersion'] && this.prefillVersion && this.mode === 'use' && this.templateName) {
+      this.schemaService.getSubmission(this.templateName, this.prefillVersion).subscribe(sub => {
+        if (this.form) {
+          this.form.patchValue(sub.data);
+        }
+        this.prefillVersion = null;
+      });
+    }
+    this.setupComponent();
+  }
 
   setupComponent() {
     this.isReadOnly = this.mode === 'preview';
@@ -651,7 +674,11 @@ export class DynamicForm implements OnInit, OnChanges {
         this.title = `Fill Form: ${this.templateName}`;
         this.submitButtonText = 'Submit Form';
         this.isReadOnly = false;
-        this.loadTemplate();
+        if (this.submissionVersion && this.isDuplicatedEdit) {
+          this.loadTemplateWithPrefill();
+        } else {
+          this.loadTemplate();
+        }
         break;
       case 'preview':
         this.title = `Preview: ${this.templateName}`;
@@ -670,6 +697,20 @@ export class DynamicForm implements OnInit, OnChanges {
       this.schema.name = data.name; // ensure name is populated
       this.buildForm();
       this.isLoading = false;
+    });
+  }
+
+  loadTemplateWithPrefill() {
+    if (!this.templateName || !this.submissionVersion) return;
+    this.isLoading = true;
+    this.schemaService.getTemplate(this.templateName).subscribe(data => {
+      this.schema = data.schema;
+      this.schema.name = data.name;
+      this.schemaService.getSubmission(this.templateName!, this.submissionVersion!).subscribe(sub => {
+        this.buildForm();
+        this.form.patchValue(sub.data);
+        this.isLoading = false;
+      });
     });
   }
 

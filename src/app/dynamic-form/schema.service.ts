@@ -76,4 +76,12 @@ export class SchemaService {
   diffSubmissions(templateName: string, v1: number, v2: number): Observable<any> {
     return this.http.get(`${this.apiUrl}/submissions/${templateName}/diff/${v1}/${v2}`);
   }
+
+  duplicateSubmission(templateName: string, version: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/submissions/${templateName}/${version}/duplicate`, {});
+  }
+
+  deleteSubmission(templateName: string, version: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/submissions/${templateName}/${version}`);
+  }
 }

@@ -46,7 +46,7 @@ async def create_template(template: TemplateModel = Body(...)):
     new_template = await template_collection.insert_one(encoded_template)
     created_template = await template_collection.find_one({"_id": new_template.inserted_id})
     return TemplateModel.model_validate(created_template)
-
+     
 @app.get("/templates/", response_description="List all templates", response_model=List[str])
 async def list_templates():
     templates = await template_collection.find().to_list(1000)
@@ -195,4 +195,33 @@ async def diff_submissions(template_name: str, v1: int, v2: int):
     # Convert to JSON string and back to dict to ensure it's JSON serializable
     serializable_diff = json.loads(diff_obj.to_json())
     
-    return {"diff": serializable_diff} 
+    return {"diff": serializable_diff}
+
+# --- Duplicate Submission Endpoint ---
+@app.post("/submissions/{template_name}/{version}/duplicate", response_description="Duplicate a submission version as a new version")
+async def duplicate_submission(template_name: str, version: int):
+    # Find the original submission
+    original = await submission_collection.find_one({"template_name": template_name, "version": version})
+    if not original:
+        raise HTTPException(status_code=404, detail="Submission not found.")
+    # Get the next version number
+    last_submission = await submission_collection.find_one({"template_name": template_name}, sort=[("version", -1)])
+    next_version = last_submission["version"] + 1 if last_submission else 1
+    # Prepare the new submission data (copy data, new version, new created_at)
+    new_submission = {
+        "template_name": template_name,
+        "version": next_version,
+        "data": original["data"],
+        "created_at": datetime.datetime.utcnow()
+    }
+    await submission_collection.insert_one(jsonable_encoder(new_submission))
+    return {"message": f"Submission duplicated as version {next_version}.", "version": next_version}
+
+@app.delete("/submissions/{template_name}/{version}", response_description="Delete a specific submission version")
+async def delete_submission_version(template_name: str, version: int):
+    delete_result = await submission_collection.delete_one({"template_name": template_name, "version": version})
+    if delete_result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Submission version not found.")
+    # Optionally, also delete responses for this submission version
+    await response_collection.delete_many({"version": version, "submission_id": {"$exists": True}})
+    return {"message": f"Submission version {version} deleted."} 

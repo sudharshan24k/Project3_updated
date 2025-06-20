@@ -25,44 +25,53 @@ import { MatButtonModule } from '@angular/material/button';
           </button>
         </header>
 
-        <div *ngIf="templates.length > 0" class="templates-grid">
-          <div *ngFor="let template of templates" class="card template-card enhanced-card">
-            <div class="template-accent-bar"></div>
-            <div class="template-card-header">
-                <div class="template-title-group">
-                  <mat-icon class="template-icon" matTooltip="Form Template">description</mat-icon>
-                  <div>
-                    <h3>{{ template }}</h3>
-                    <p class="template-desc" *ngIf="getTemplateDesc(template)">{{ getTemplateDesc(template) }}</p>
-                    <div class="template-meta" *ngIf="getTemplateMeta(template)">
-                      <mat-icon>calendar_today</mat-icon>
-                      <span>{{ getTemplateMeta(template) }}</span>
+        <div *ngIf="templates.length > 0" class="templates-list">
+          <table class="template-list-table">
+            <thead>
+              <tr>
+                <th>Form Template</th>
+                <th style="width: 1%; white-space: nowrap;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let template of templates">
+                <td>
+                  <div class="template-title-group">
+                    <mat-icon class="template-icon" matTooltip="Form Template">description</mat-icon>
+                    <div>
+                      <h3>{{ template }}</h3>
+                      <p class="template-desc" *ngIf="getTemplateDesc(template)">{{ getTemplateDesc(template) }}</p>
+                      <div class="template-meta" *ngIf="getTemplateMeta(template)">
+                        <mat-icon>calendar_today</mat-icon>
+                        <span>{{ getTemplateMeta(template) }}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div class="actions">
-                    <button mat-icon-button (click)="useTemplate(template)" matTooltip="Fill Out Form">
-                        <mat-icon fontIcon="dynamic_form" class="action-icon"></mat-icon>
-                    </button>
-                    <button mat-icon-button (click)="editTemplate(template)" matTooltip="Edit Schema">
-                        <mat-icon fontIcon="edit" class="action-icon"></mat-icon>
-                    </button>
-                    <button mat-icon-button (click)="previewTemplate(template)" matTooltip="Preview Form">
-                        <mat-icon fontIcon="visibility" class="action-icon"></mat-icon>
-                    </button>
-                    <button mat-icon-button (click)="viewSubmissions(template)" matTooltip="View Submissions">
-                        <mat-icon fontIcon="list_alt" class="action-icon"></mat-icon>
-                    </button>
-                     <div class="divider"></div>
-                    <button mat-icon-button (click)="duplicateTemplate(template)" matTooltip="Duplicate">
-                        <mat-icon fontIcon="content_copy" class="action-icon"></mat-icon>
-                    </button>
-                    <button mat-icon-button class="action-delete" (click)="deleteTemplate(template)" matTooltip="Delete Template">
-                        <mat-icon fontIcon="delete_outline" class="action-icon"></mat-icon>
-                    </button>
-                </div>
-            </div>
-          </div>
+                </td>
+                <td class="actions">
+                  <button mat-icon-button (click)="useTemplate(template)" matTooltip="Fill Out Form">
+                    <mat-icon fontIcon="dynamic_form" class="action-icon"></mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="editTemplate(template)" matTooltip="Edit Schema">
+                    <mat-icon fontIcon="edit" class="action-icon"></mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="previewTemplate(template)" matTooltip="Preview Form">
+                    <mat-icon fontIcon="visibility" class="action-icon"></mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="viewSubmissions(template)" matTooltip="View Submissions">
+                    <mat-icon fontIcon="list_alt" class="action-icon"></mat-icon>
+                  </button>
+                  <div class="divider"></div>
+                  <button mat-icon-button (click)="duplicateTemplate(template)" matTooltip="Duplicate">
+                    <mat-icon fontIcon="content_copy" class="action-icon"></mat-icon>
+                  </button>
+                  <button mat-icon-button class="action-delete" (click)="deleteTemplate(template)" matTooltip="Delete Template">
+                    <mat-icon fontIcon="delete_outline" class="action-icon"></mat-icon>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
         <div *ngIf="templates.length === 0" class="card empty-state enhanced-card">
             <mat-icon class="empty-illustration">folder_open</mat-icon>
@@ -78,6 +87,7 @@ import { MatButtonModule } from '@angular/material/button';
         <app-dynamic-form
           [mode]="mode"
           [templateName]="selectedTemplate"
+          [prefillVersion]="duplicatedVersion"
           (formClose)="onFormClose()">
         </app-dynamic-form>
       </div>
@@ -89,7 +99,7 @@ import { MatButtonModule } from '@angular/material/button';
             <span>Back to Templates</span>
           </button>
         </header>
-        <app-submissions-viewer [templateName]="selectedTemplate"></app-submissions-viewer>
+        <app-submissions-viewer [templateName]="selectedTemplate" (duplicateEdit)="onDuplicateEdit($event)"></app-submissions-viewer>
       </div>
     </div>
   `,
@@ -117,32 +127,39 @@ import { MatButtonModule } from '@angular/material/button';
         align-items: center;
         gap: 0.5rem;
     }
-    .templates-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-      gap: 2rem;
+    .templates-list {
       margin-top: 1.5rem;
     }
-    .template-card {
-        position: relative;
-        overflow: hidden;
-        transition: all 0.2s cubic-bezier(.4,2,.3,1);
-        box-shadow: 0 2px 8px var(--shadow-color-light);
-        border-radius: 1.25rem;
-        background: var(--card-bg);
-        min-height: 120px;
+    .template-list-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 0.5rem;
     }
-    .template-card:hover {
-        transform: translateY(-7px) scale(1.025);
-        box-shadow: 0 12px 32px var(--shadow-color-dark);
-        border: 1.5px solid var(--primary-color);
+    .template-list-table th, .template-list-table td {
+      padding: 1.25rem 1.5rem;
+      background: var(--card-bg);
+      border-radius: 0.75rem;
+      vertical-align: middle;
     }
-    .template-accent-bar {
-        position: absolute;
-        left: 0; top: 0; bottom: 0;
-        width: 6px;
-        background: linear-gradient(180deg, var(--primary-color) 0%, var(--primary-color-light) 100%);
-        border-radius: 6px 0 0 6px;
+    .template-list-table th {
+      text-align: left;
+      font-size: 1.1rem;
+      color: var(--text-muted-color);
+      font-weight: 600;
+      background: none;
+      border-bottom: none;
+    }
+    .template-list-table td.actions {
+      text-align: right;
+      white-space: nowrap;
+      background: none;
+    }
+    .template-list-table tr {
+      transition: box-shadow 0.2s;
+    }
+    .template-list-table tr:hover td {
+      box-shadow: 0 2px 12px var(--shadow-color-light);
+      background: var(--primary-color-lightest);
     }
     .template-title-group {
         display: flex;
@@ -166,40 +183,6 @@ import { MatButtonModule } from '@angular/material/button';
         color: var(--text-muted-color);
         font-size: 0.95rem;
         margin-top: 0.1rem;
-    }
-    .template-card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 1.5rem;
-    }
-    .template-card-header h3 {
-        margin: 0;
-        font-weight: 700;
-        color: var(--text-color);
-    }
-    .actions {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-left: 1.5rem;
-    }
-    .action-icon {
-        font-size: 1.7rem;
-        color: var(--text-muted-color);
-        transition: color 0.2s ease;
-    }
-    .actions button:hover .action-icon {
-        color: var(--primary-color);
-    }
-    .action-delete:hover .action-icon {
-        color: var(--danger-color) !important;
-    }
-    .divider {
-        width: 1px;
-        height: 24px;
-        background-color: var(--border-color);
-        margin: 0 0.5rem;
     }
     .empty-state {
         text-align: center;
@@ -247,6 +230,7 @@ export class DashboardComponent implements OnInit {
   templates: string[] = [];
   mode: 'list' | 'create' | 'edit' | 'preview' | 'use' | 'submissions' = 'list';
   selectedTemplate: string | null = null;
+  duplicatedVersion: number | null = null;
 
   constructor(private schemaService: SchemaService) {}
 
@@ -319,5 +303,11 @@ export class DashboardComponent implements OnInit {
     // Placeholder: In a real app, fetch created/updated date from template details
     // For now, return null or a mock date
     return null;
+  }
+
+  onDuplicateEdit(event: { template: string, version: number }) {
+    this.mode = 'use';
+    this.selectedTemplate = event.template;
+    this.duplicatedVersion = event.version;
   }
 }
