@@ -48,11 +48,12 @@ import { SchemaService, TemplateSchema } from './schema.service';
             <p class="panel-subtitle" *ngIf="isEditMode">This is how your form will look to users.</p>
           </header>
           <form [formGroup]="form" (ngSubmit)="onSubmit()">
-            <div *ngFor="let field of schema.fields" class="form-field" [ngSwitch]="field.type">
-              <label>{{ field.label }} <span *ngIf="field.required" class="required-asterisk">*</span></label>
+            <div *ngFor="let field of visibleFields" class="form-field" [ngSwitch]="field.type">
+              <label>{{ field.label }} <span *ngIf="isFieldRequired(field)" class="required-asterisk">*</span></label>
               
               <input *ngSwitchCase="'text'" [formControlName]="field.key" [placeholder]="field.placeholder || ''" [readOnly]="isReadOnly || !field.editable">
               <input *ngSwitchCase="'number'" type="number" [formControlName]="field.key" [placeholder]="field.placeholder || ''" [readOnly]="isReadOnly || !field.editable">
+              <input *ngSwitchCase="'email'" type="email" [formControlName]="field.key" [placeholder]="field.placeholder || ''" [readOnly]="isReadOnly || !field.editable" required>
               
               <select *ngSwitchCase="'boolean'" [formControlName]="field.key" [attr.disabled]="isReadOnly || !field.editable ? true : null">
                 <option [ngValue]="true">True</option>
@@ -113,52 +114,68 @@ import { SchemaService, TemplateSchema } from './schema.service';
           </div>
 
           <!-- Add/Edit Field Form -->
-          <div *ngIf="isFieldEditorVisible" class="field-editor-form">
+          <div *ngIf="isFieldEditorVisible" class="field-editor-form enhanced-card">
             <h5>{{ currentFieldIndex === null ? 'Add New Field' : 'Edit Field' }}</h5>
+            
+            <!-- Basic Info Section -->
+            <div class="section-heading"><mat-icon>info</mat-icon> Basic Info</div>
             <form [formGroup]="fieldForm" class="field-form-grid">
               <div class="form-field span-2">
-                <label>Field Label</label>
+                <label>Field Label <span class="required-asterisk">*</span></label>
                 <input formControlName="label" placeholder="Visible label (e.g., 'First Name')">
+                <div *ngIf="fieldForm.get('label')?.invalid && fieldForm.get('label')?.touched" class="error-message">Label is required.</div>
               </div>
               <div class="form-field">
-                <label>Field Key</label>
+                <label>Field Key <span class="required-asterisk">*</span></label>
                 <input formControlName="key" placeholder="unique_key">
+                <div *ngIf="fieldForm.get('key')?.invalid && fieldForm.get('key')?.touched" class="error-message">Key is required and must be alphanumeric/underscore.</div>
               </div>
               <div class="form-field">
                 <label>Field Type</label>
-                <select formControlName="type">
-                  <option value="text">Text</option>
-                  <option value="number">Number</option>
-                  <option value="boolean">Boolean</option>
-                  <option value="dropdown">Dropdown</option>
-                </select>
+                <div class="type-select-group">
+                  <mat-icon *ngIf="fieldForm.get('type')?.value === 'text'">text_fields</mat-icon>
+                  <mat-icon *ngIf="fieldForm.get('type')?.value === 'number'">pin</mat-icon>
+                  <mat-icon *ngIf="fieldForm.get('type')?.value === 'email'">email</mat-icon>
+                  <mat-icon *ngIf="fieldForm.get('type')?.value === 'boolean'">toggle_on</mat-icon>
+                  <mat-icon *ngIf="fieldForm.get('type')?.value === 'dropdown'">arrow_drop_down_circle</mat-icon>
+                  <select formControlName="type">
+                    <option value="text">Text</option>
+                    <option value="number">Number</option>
+                    <option value="email">Email</option>
+                    <option value="boolean">Boolean</option>
+                    <option value="dropdown">Dropdown</option>
+                  </select>
+                </div>
               </div>
-               <div class="form-field span-2">
+
+              <div class="section-heading"><mat-icon>tune</mat-icon> Field Settings</div>
+              <div class="form-field span-2">
                 <label>Placeholder / Help Text</label>
                 <input formControlName="placeholder" placeholder="Help text inside the input or for checkbox">
               </div>
-               <div class="form-field">
+              <div class="form-field">
                 <label>Default Value</label>
                 <input formControlName="defaultValue" placeholder="Optional default value">
               </div>
               <div class="form-field" *ngIf="fieldForm.get('type')?.value === 'text'">
-                <label>Validation Regex</label>
+                <label>Validation Regex <mat-icon matTooltip="Pattern the input must match (e.g., ^[a-zA-Z]+$)">help_outline</mat-icon></label>
                 <input formControlName="regex" placeholder="e.g., ^[a-zA-Z]+$">
               </div>
               
               <div class="checkbox-group span-2">
                 <div class="checkbox-wrapper">
                   <input type="checkbox" formControlName="required" id="field-required"> 
-                  <label for="field-required">Required Field</label>
+                  <label for="field-required">Required Field <mat-icon matTooltip="User must fill this field">help_outline</mat-icon></label>
                 </div>
                 <div class="checkbox-wrapper">
                   <input type="checkbox" formControlName="editable" id="field-editable">
-                  <label for="field-editable">User Editable</label>
+                  <label for="field-editable">User Editable <mat-icon matTooltip="If unchecked, field is visible but not editable">help_outline</mat-icon></label>
                 </div>
               </div>
 
+              <!-- Dropdown Options Section -->
               <div *ngIf="fieldForm.get('type')?.value === 'dropdown'" class="dropdown-options-editor span-2">
-                <h6>Dropdown Options</h6>
+                <div class="section-heading"><mat-icon>list</mat-icon> Dropdown Options</div>
                 <div formArrayName="options">
                    <div *ngFor="let option of options.controls; let i = index" [formGroupName]="i" class="option-item">
                     <input formControlName="label" placeholder="Option Label">
@@ -167,17 +184,85 @@ import { SchemaService, TemplateSchema } from './schema.service';
                       <mat-icon>remove_circle_outline</mat-icon>
                     </button>
                   </div>
+                  <div *ngIf="options.length === 0" class="no-options-message">No options added yet.</div>
                 </div>
                 <button type="button" class="add-option-btn" (click)="addOption()">
                    <mat-icon>add</mat-icon> Add Option
                 </button>
               </div>
 
+              <!-- Conditional Logic Section -->
+              <div class="section-heading"><mat-icon>rule</mat-icon> Conditional Logic</div>
+              <div class="form-field">
+                <label>Visible If <mat-icon matTooltip="Show this field only if another field has a certain value">help_outline</mat-icon></label>
+                <div class="conditional-group">
+                  <select [(ngModel)]="visibleIfKey" [ngModelOptions]="{standalone: true}" (ngModelChange)="visibleIfValue = null">
+                    <option [ngValue]="null">-- None --</option>
+                    <option *ngFor="let f of schema.fields" [ngValue]="f.key" [disabled]="f.key === fieldForm.value.key">{{ f.label }}</option>
+                  </select>
+                  <input *ngIf="visibleIfKey" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value (e.g. true, 1, etc.)">
+                </div>
+              </div>
+              <div class="form-field">
+                <label>Mandatory If <mat-icon matTooltip="Make this field required only if another field has a certain value">help_outline</mat-icon></label>
+                <div class="conditional-group">
+                  <select [(ngModel)]="mandatoryIfKey" [ngModelOptions]="{standalone: true}" (ngModelChange)="mandatoryIfValue = null">
+                    <option [ngValue]="null">-- None --</option>
+                    <option *ngFor="let f of schema.fields" [ngValue]="f.key" [disabled]="f.key === fieldForm.value.key">{{ f.label }}</option>
+                  </select>
+                  <input *ngIf="mandatoryIfKey" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value (e.g. true, 1, etc.)">
+                </div>
+              </div>
+
+              <!-- Save/Cancel Actions -->
               <div class="field-editor-actions span-2">
                 <button type="button" (click)="isFieldEditorVisible = false" class="secondary">Cancel</button>
-                <button type="button" (click)="saveField()" [disabled]="fieldForm.invalid">Save Field</button>
+                <button type="button" (click)="saveField()" [disabled]="fieldForm.invalid" mat-raised-button color="primary">
+                  <mat-icon>save</mat-icon> Save Field
+                </button>
               </div>
             </form>
+          </div>
+        </div>
+
+        <!-- Preview Mode: Show Field Conditions Panel -->
+        <div *ngIf="mode === 'preview'" class="conditions-panel card">
+          <header class="panel-header">
+            <h3><mat-icon>info</mat-icon> Field Conditions & Rules</h3>
+            <p class="panel-subtitle">Below are all the conditions and rules defined for each field in this template.</p>
+          </header>
+          <div class="conditions-list">
+            <div *ngFor="let field of schema.fields" class="condition-item">
+              <div class="condition-title">
+                <mat-icon>label</mat-icon>
+                <strong>{{ field.label }}</strong>
+                <span class="field-meta">({{ field.key }}, {{ field.type }})</span>
+              </div>
+              <ul class="condition-details">
+                <li *ngIf="field.required"><mat-icon>check_circle</mat-icon> <b>Required</b></li>
+                <li *ngIf="!field.required"><mat-icon>radio_button_unchecked</mat-icon> Optional</li>
+                <li *ngIf="field.editable === false"><mat-icon>lock</mat-icon> <b>Non-editable</b></li>
+                <li *ngIf="field.regex"><mat-icon>code</mat-icon> Regex: <code>{{ field.regex }}</code></li>
+                <li *ngIf="field.visibleIf"><mat-icon>visibility</mat-icon> <b>Visible if</b>: <code>{{ field.visibleIf.key }}</code> = <code>{{ field.visibleIf.value }}</code></li>
+                <li *ngIf="field.mandatoryIf"><mat-icon>assignment_turned_in</mat-icon> <b>Required if</b>: <code>{{ field.mandatoryIf.key }}</code> = <code>{{ field.mandatoryIf.value }}</code></li>
+                <li *ngIf="field.type === 'dropdown' && field.options"><mat-icon>arrow_drop_down_circle</mat-icon> Options: <span *ngFor="let opt of field.options; let last = last">{{ opt.label || opt }}<span *ngIf="!last">, </span></span></li>
+                <li *ngIf="field.type === 'boolean'"><mat-icon>toggle_on</mat-icon> Boolean (True/False)</li>
+                <li *ngIf="field.placeholder"><mat-icon>info</mat-icon> Placeholder: <i>{{ field.placeholder }}</i></li>
+                <li *ngIf="field.defaultValue !== undefined && field.defaultValue !== null"><mat-icon>star</mat-icon> Default: <code>{{ field.defaultValue }}</code></li>
+                <li *ngIf="field.created_at"><mat-icon>calendar_today</mat-icon> Field Created: {{ field.created_at | date:'medium' }}</li>
+                <li *ngIf="field.updated_at"><mat-icon>update</mat-icon> Field Updated: {{ field.updated_at | date:'medium' }}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preview Mode: Show Template Timestamps -->
+        <div *ngIf="mode === 'preview'" class="template-timestamps card">
+          <div class="timestamp-row">
+            <mat-icon>calendar_today</mat-icon>
+            <span><b>Created:</b> {{ schema.created_at | date:'medium' }}</span>
+            <mat-icon>update</mat-icon>
+            <span><b>Last Updated:</b> {{ schema.updated_at | date:'medium' }}</span>
           </div>
         </div>
       </main>
@@ -382,6 +467,98 @@ import { SchemaService, TemplateSchema } from './schema.service';
     .field-editor-actions {
       display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem;
     }
+
+    .conditions-panel.card {
+      background: linear-gradient(135deg, var(--background-color) 60%, #f3f6fa 100%);
+      box-shadow: 0 2px 12px var(--shadow-color-light);
+      border-radius: 16px;
+      padding: 2rem 1.5rem;
+      margin-bottom: 2rem;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .conditions-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .condition-item {
+      background: var(--surface-color);
+      border-radius: 10px;
+      box-shadow: 0 1px 4px var(--shadow-color-light);
+      padding: 1.25rem 1rem 0.5rem 1rem;
+      margin-bottom: 0.5rem;
+    }
+    .condition-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.1rem;
+      color: var(--primary-color);
+      margin-bottom: 0.5rem;
+    }
+    .condition-title mat-icon {
+      font-size: 1.2rem;
+      color: var(--primary-color);
+    }
+    .field-meta {
+      font-size: 0.9rem;
+      color: var(--text-muted-color);
+      margin-left: 0.5rem;
+    }
+    .condition-details {
+      list-style: none;
+      padding-left: 0;
+      margin: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.2rem;
+      font-size: 1rem;
+      color: var(--text-color);
+    }
+    .condition-details mat-icon {
+      font-size: 1rem;
+      vertical-align: middle;
+      margin-right: 0.2rem;
+      color: var(--secondary-color);
+    }
+    .condition-details code {
+      background: #f0f2f5;
+      border-radius: 4px;
+      padding: 0.1rem 0.4rem;
+      font-size: 0.95em;
+      color: #2d3a4a;
+    }
+    .condition-details i {
+      color: var(--text-muted-color);
+    }
+
+    .template-timestamps.card {
+      background: linear-gradient(90deg, #e3eafc 60%, #f3f6fa 100%);
+      box-shadow: 0 1px 6px var(--shadow-color-light);
+      border-radius: 12px;
+      padding: 1.2rem 1.5rem;
+      margin-bottom: 1.5rem;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    .timestamp-row {
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+      font-size: 1.08rem;
+      color: var(--text-muted-color);
+    }
+    .timestamp-row mat-icon {
+      font-size: 1.1rem;
+      color: var(--primary-color);
+      vertical-align: middle;
+    }
   `]
 })
 export class DynamicForm implements OnInit, OnChanges {
@@ -399,6 +576,32 @@ export class DynamicForm implements OnInit, OnChanges {
   currentFieldIndex: number | null = null;
   title = '';
   submitButtonText = '';
+
+  // Temporary properties for conditional logic fields
+  visibleIfKey: string | null = null;
+  visibleIfValue: any = null;
+  mandatoryIfKey: string | null = null;
+  mandatoryIfValue: any = null;
+
+  // --- Add for dynamic conditional logic ---
+  get visibleFields() {
+    return this.schema.fields.filter((field: any) => this.isFieldVisible(field));
+  }
+
+  isFieldVisible(field: any): boolean {
+    if (!field.visibleIf || !field.visibleIf.key) return true;
+    const controllingValue = this.form?.get(field.visibleIf.key)?.value;
+    // Use loose equality for type flexibility
+    return controllingValue == field.visibleIf.value;
+  }
+
+  isFieldRequired(field: any): boolean {
+    if (field.mandatoryIf && field.mandatoryIf.key) {
+      const controllingValue = this.form?.get(field.mandatoryIf.key)?.value;
+      return controllingValue == field.mandatoryIf.value;
+    }
+    return !!field.required;
+  }
 
   constructor(private fb: FormBuilder, private route: ActivatedRoute, private router: Router, private schemaService: SchemaService) {
     this.form = this.fb.group({});
@@ -474,16 +677,36 @@ export class DynamicForm implements OnInit, OnChanges {
     const controls: { [key: string]: any } = {};
     this.schema.fields.forEach((field: any) => {
       const validators: ValidatorFn[] = [];
-      if (field.required) {
+      // Do not add required here; will be handled dynamically
+      if (field.regex) {
+        validators.push(Validators.pattern(field.regex));
+      }
+      const control = new FormControl({ value: field.defaultValue, disabled: this.isReadOnly || (this.mode === 'use' && !field.editable) }, validators);
+      controls[field.key] = control;
+    });
+    this.form = this.fb.group(controls);
+
+    // Listen for changes to update required validators dynamically
+    this.form.valueChanges.subscribe(() => {
+      this.updateDynamicValidators();
+    });
+    this.updateDynamicValidators();
+  }
+
+  updateDynamicValidators() {
+    this.schema.fields.forEach((field: any) => {
+      const control = this.form.get(field.key);
+      if (!control) return;
+      const validators: ValidatorFn[] = [];
+      if (this.isFieldRequired(field)) {
         validators.push(Validators.required);
       }
       if (field.regex) {
         validators.push(Validators.pattern(field.regex));
       }
-       const control = new FormControl({ value: field.defaultValue, disabled: this.isReadOnly || (this.mode === 'use' && !field.editable) }, validators);
-      controls[field.key] = control;
+      control.setValidators(validators);
+      control.updateValueAndValidity({ emitEvent: false });
     });
-    this.form = this.fb.group(controls);
   }
 
   showAddFieldEditor() {
@@ -499,18 +722,25 @@ export class DynamicForm implements OnInit, OnChanges {
     });
     this.options.clear();
     this.isFieldEditorVisible = true;
+    this.visibleIfKey = null;
+    this.visibleIfValue = null;
+    this.mandatoryIfKey = null;
+    this.mandatoryIfValue = null;
   }
 
   editField(index: number) {
     this.currentFieldIndex = index;
     const field = this.schema.fields[index];
     this.fieldForm.patchValue(field);
-    
     this.options.clear();
     if (field.type === 'dropdown' && field.options) {
       field.options.forEach((opt: any) => this.options.push(this.fb.group(opt)));
     }
-
+    // Sync conditional logic fields
+    this.visibleIfKey = field.visibleIf?.key || null;
+    this.visibleIfValue = field.visibleIf?.value ?? null;
+    this.mandatoryIfKey = field.mandatoryIf?.key || null;
+    this.mandatoryIfValue = field.mandatoryIf?.value ?? null;
     this.isFieldEditorVisible = true;
   }
 
@@ -524,6 +754,9 @@ export class DynamicForm implements OnInit, OnChanges {
       return;
     }
     const newField = this.fieldForm.value;
+    // Attach conditional logic fields
+    newField.visibleIf = this.visibleIfKey ? { key: this.visibleIfKey, value: this.visibleIfValue } : null;
+    newField.mandatoryIf = this.mandatoryIfKey ? { key: this.mandatoryIfKey, value: this.mandatoryIfValue } : null;
     if (this.currentFieldIndex !== null) {
       this.schema.fields[this.currentFieldIndex] = newField;
     } else {

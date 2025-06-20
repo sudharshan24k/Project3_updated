@@ -11,4 +11,5 @@ client = AsyncIOMotorClient(MONGO_DETAILS)
 db = client.form_builder_db
 
 template_collection = db.get_collection("templates")
-submission_collection = db.get_collection("submissions") 
+submission_collection = db.get_collection("submissions")
+response_collection = db.get_collection("responses") 

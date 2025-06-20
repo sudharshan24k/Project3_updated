@@ -6,9 +6,10 @@ from typing import List, Dict, Any
 from deepdiff import DeepDiff
 import datetime
 import json
+import copy
 
-from .database import template_collection, submission_collection
-from .models import TemplateModel, SubmissionModel
+from .database import template_collection, submission_collection, response_collection
+from .models import TemplateModel, SubmissionModel, ResponseModel
 
 app = FastAPI(title="Form Template & Submission API")
 
@@ -40,6 +41,8 @@ async def create_template(template: TemplateModel = Body(...)):
         raise HTTPException(status_code=409, detail=f"Template with name {template.name} already exists.")
     
     encoded_template = jsonable_encoder(template)
+    if "_id" in encoded_template and not encoded_template["_id"]:
+        del encoded_template["_id"]
     new_template = await template_collection.insert_one(encoded_template)
     created_template = await template_collection.find_one({"_id": new_template.inserted_id})
     return TemplateModel.model_validate(created_template)
@@ -49,10 +52,10 @@ async def list_templates():
     templates = await template_collection.find().to_list(1000)
     return [template["name"] for template in templates]
 
-@app.get("/templates/{name}", response_description="Get a single template", response_model=TemplateModel)
+@app.get("/templates/{name}", response_description="Get a single template")
 async def get_template(name: str):
     if (template := await template_collection.find_one({"name": name})) is not None:
-        return TemplateModel.model_validate(template)
+        return serialize_mongo(template)
     raise HTTPException(status_code=404, detail=f"Template {name} not found")
 
 @app.put("/templates/{name}", response_description="Update a template")
@@ -68,7 +71,7 @@ async def edit_template(name: str, template: TemplateModel = Body(...)):
         raise HTTPException(status_code=404, detail=f"Template {name} not found")
         
     updated_template = await template_collection.find_one({"name": name})
-    return JSONResponse(status_code=status.HTTP_200_OK, content=TemplateModel.model_validate(updated_template).model_dump(by_alias=True))
+    return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(TemplateModel.model_validate(updated_template)))
 
 @app.delete("/templates/{name}", response_description="Delete a template")
 async def delete_template(name: str):
@@ -92,8 +95,8 @@ async def duplicate_template(name: str):
             break
         i += 1
         
-    new_template_data = original_template
-    del new_template_data["_id"]
+    new_template_data = copy.deepcopy(original_template)
+    new_template_data.pop("_id", None)
     new_template_data["name"] = new_name
     new_template_data["created_at"] = datetime.datetime.utcnow()
     new_template_data["updated_at"] = datetime.datetime.utcnow()
@@ -133,7 +136,52 @@ async def get_submission(template_name: str, version: int):
     submission = await submission_collection.find_one({"template_name": template_name, "version": version})
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found.")
+    # Fetch threaded responses
+    responses = await response_collection.find({"submission_id": str(submission["_id"]), "version": version}).to_list(1000)
+    def build_thread(parent_id=None):
+        thread = []
+        for resp in responses:
+            if resp.get("parent_id") == parent_id:
+                children = build_thread(str(resp["_id"]))
+                resp["children"] = children
+                thread.append(resp)
+        return thread
+    submission["responses"] = build_thread(None)
     return serialize_mongo(submission)
+
+@app.post("/submissions/{template_name}/{version}/responses", response_description="Add a threaded response to a submission/version")
+async def add_response(template_name: str, version: int, request: Request):
+    submission = await submission_collection.find_one({"template_name": template_name, "version": version})
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found.")
+    data = await request.json()
+    response_doc = {
+        "submission_id": str(submission["_id"]),
+        "version": version,
+        "parent_id": data.get("parent_id"),
+        "author": data.get("author"),
+        "content": data["content"],
+        "created_at": datetime.datetime.utcnow(),
+    }
+    result = await response_collection.insert_one(response_doc)
+    response_doc["_id"] = result.inserted_id
+    return serialize_mongo(response_doc)
+
+@app.get("/submissions/{template_name}/{version}/responses", response_description="Get all threaded responses for a submission/version")
+async def get_responses(template_name: str, version: int):
+    submission = await submission_collection.find_one({"template_name": template_name, "version": version})
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found.")
+    responses = await response_collection.find({"submission_id": str(submission["_id"]), "version": version}).to_list(1000)
+    def build_thread(parent_id=None):
+        thread = []
+        for resp in responses:
+            if resp.get("parent_id") == parent_id:
+                children = build_thread(str(resp["_id"]))
+                resp["children"] = children
+                thread.append(resp)
+        return thread
+    return build_thread(None)
 
 @app.get("/submissions/{template_name}/diff/{v1}/{v2}", response_description="Get a diff between two submissions")
 async def diff_submissions(template_name: str, v1: int, v2: int):
