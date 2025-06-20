@@ -14,39 +14,49 @@ import { MatButtonModule } from '@angular/material/button';
   template: `
     <div class="container">
       <div *ngIf="mode === 'list'">
-        <div class="dashboard-header">
-          <h1>Form Templates</h1>
-          <button (click)="showCreateTemplate()" mat-raised-button color="primary">
-             <mat-icon>add</mat-icon> Create Template
+        <header class="dashboard-header">
+          <div>
+            <h1>Form Templates</h1>
+            <p class="subtitle">Create, manage, and use your form templates.</p>
+          </div>
+          <button (click)="showCreateTemplate()" mat-raised-button>
+             <mat-icon>add</mat-icon> 
+             <span>Create New Template</span>
           </button>
-        </div>
-        <div class="dashboard-templates">
-          <div *ngFor="let template of templates" class="card">
+        </header>
+
+        <div *ngIf="templates.length > 0" class="templates-grid">
+          <div *ngFor="let template of templates" class="card template-card">
             <div class="template-card-header">
                 <h3>{{ template }}</h3>
                 <div class="actions">
-                    <button mat-icon-button (click)="useTemplate(template)" matTooltip="Use Form">
-                        <mat-icon>play_arrow</mat-icon>
+                    <button mat-icon-button (click)="useTemplate(template)" matTooltip="Fill Out Form">
+                        <mat-icon>dynamic_form</mat-icon>
                     </button>
-                    <button mat-icon-button (click)="editTemplate(template)" matTooltip="Edit Template">
+                    <button mat-icon-button (click)="editTemplate(template)" matTooltip="Edit Schema">
                         <mat-icon>edit</mat-icon>
                     </button>
-                    <button mat-icon-button (click)="previewTemplate(template)" matTooltip="Preview">
+                    <button mat-icon-button (click)="previewTemplate(template)" matTooltip="Preview Form">
                         <mat-icon>visibility</mat-icon>
                     </button>
                     <button mat-icon-button (click)="viewSubmissions(template)" matTooltip="View Submissions">
                         <mat-icon>list_alt</mat-icon>
                     </button>
+                     <div class="divider"></div>
                     <button mat-icon-button (click)="duplicateTemplate(template)" matTooltip="Duplicate">
                         <mat-icon>content_copy</mat-icon>
                     </button>
-                    <button mat-icon-button (click)="deleteTemplate(template)" matTooltip="Delete" class="btn-delete">
-                        <mat-icon>delete</mat-icon>
+                    <button mat-icon-button class="action-delete" (click)="deleteTemplate(template)" matTooltip="Delete Template">
+                        <mat-icon>delete_outline</mat-icon>
                     </button>
                 </div>
             </div>
           </div>
-          <div *ngIf="templates.length === 0">No templates found. Create one!</div>
+        </div>
+        <div *ngIf="templates.length === 0" class="card empty-state">
+            <h4>No templates found.</h4>
+            <p>Get started by creating a new one!</p>
+            <button (click)="showCreateTemplate()">Create Template</button>
         </div>
       </div>
 
@@ -59,7 +69,12 @@ import { MatButtonModule } from '@angular/material/button';
       </div>
 
       <div *ngIf="mode === 'submissions'">
-        <button (click)="onFormClose()">< Back to Templates</button>
+        <header class="page-header">
+          <button (click)="onFormClose()" class="back-button">
+            <mat-icon>arrow_back</mat-icon>
+            <span>Back to Templates</span>
+          </button>
+        </header>
         <app-submissions-viewer [templateName]="selectedTemplate"></app-submissions-viewer>
       </div>
     </div>
@@ -68,39 +83,95 @@ import { MatButtonModule } from '@angular/material/button';
     .dashboard-header {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      margin-bottom: 2rem;
+      align-items: flex-start;
+      margin-bottom: 2.5rem;
     }
-    button[mat-raised-button] {
+    .dashboard-header h1 {
+        margin-bottom: 0.25rem;
+    }
+    .subtitle {
+        margin: 0;
+        color: var(--text-muted-color);
+        font-size: 1.1rem;
+    }
+    .dashboard-header button {
         display: flex;
         align-items: center;
         gap: 0.5rem;
     }
-    .dashboard-templates {
+    .templates-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 1.5rem;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 2rem;
+    }
+    .template-card {
+        transition: all 0.2s ease-in-out;
+    }
+    .template-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px var(--shadow-color-dark);
     }
     .template-card-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
+    .template-card-header h3 {
+        margin: 0;
+        font-weight: 700;
+        color: var(--text-color);
+    }
     .actions {
-      margin-top: 0;
       display: flex;
-      flex-wrap: nowrap;
-      gap: 0.25rem;
+      align-items: center;
+      gap: 0.5rem;
     }
-    .btn-delete {
-      background-color: var(--error-color);
-      color: var(--on-error-color);
+    .actions .mat-icon {
+        color: var(--text-muted-color);
+        transition: color 0.2s ease;
     }
-    .btn-delete .mat-icon {
-        color: var(--error-color);
+    .actions button:hover .mat-icon {
+        color: var(--primary-color);
     }
-    .btn-delete:hover .mat-icon {
-        color: var(--on-error-color);
+    .action-delete:hover .mat-icon {
+        color: var(--danger-color) !important;
+    }
+    .divider {
+        width: 1px;
+        height: 24px;
+        background-color: var(--border-color);
+        margin: 0 0.5rem;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+    }
+    .empty-state h4 {
+        margin-bottom: 0.5rem;
+    }
+    .empty-state p {
+        color: var(--text-muted-color);
+        margin-bottom: 1.5rem;
+    }
+    .page-header {
+        margin-bottom: 2rem;
+    }
+    .back-button {
+        background: none;
+        border: none;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--primary-color);
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+    }
+    .back-button:hover {
+        text-decoration: underline;
+        box-shadow: none;
+        transform: none;
     }
   `]
 })

@@ -18,250 +18,369 @@ import { SchemaService, TemplateSchema } from './schema.service';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, FormsModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatSelectModule, MatCheckboxModule, MatCardModule, NgIf, NgFor, MatIconModule, MatTooltipModule],
   template: `
-    <div class="container">
-      <div class="form-header">
-        <h1>{{ title }}</h1>
-        <button (click)="closeForm()">Back to List</button>
-      </div>
+    <div class="dynamic-form-container">
+      <header class="page-header">
+        <button (click)="closeForm()" class="back-button">
+          <mat-icon>arrow_back</mat-icon>
+          <span>Back to Templates</span>
+        </button>
+        <div>
+          <h1 class="form-title">{{ title }}</h1>
+          <p class="form-subtitle" *ngIf="schema.description">{{ schema.description }}</p>
+        </div>
+        <div class="header-actions">
+           <button *ngIf="isEditMode" (click)="onSubmit()" [disabled]="!isFormValid()" mat-raised-button>
+             <mat-icon>save</mat-icon> {{ submitButtonText }}
+           </button>
+           <button *ngIf="!isEditMode && mode !== 'preview'" (click)="onSubmit()" [disabled]="form.invalid" mat-raised-button>
+             <mat-icon>send</mat-icon> {{ submitButtonText }}
+           </button>
+        </div>
+      </header>
 
-      <div *ngIf="isLoading" class="loading-spinner">Loading...</div>
+      <div *ngIf="isLoading" class="loading-spinner">Loading form...</div>
 
-      <div class="form-grid" *ngIf="!isLoading">
-        <!-- Left Column: Template Editor -->
-        <div class="template-editor card" *ngIf="isEditMode">
-          <h3>Template Editor</h3>
-          <div class="form-field">
-             <label>Template Name</label>
-            <input [(ngModel)]="schema.name" placeholder="Template Name" [ngModelOptions]="{standalone: true}" [disabled]="mode === 'edit'">
-          </div>
-           <div class="form-field">
-             <label>Template Description</label>
-            <input [(ngModel)]="schema.description" placeholder="Template Description" [ngModelOptions]="{standalone: true}">
-           </div>
+      <main class="form-grid" *ngIf="!isLoading">
+        <!-- Left Panel: Form Filling / Preview -->
+        <div class="form-panel card" [class.full-width]="!isEditMode">
+          <header class="panel-header">
+            <h3>{{ isEditMode ? 'Live Preview' : 'Complete the Form' }}</h3>
+            <p class="panel-subtitle" *ngIf="isEditMode">This is how your form will look to users.</p>
+          </header>
+          <form [formGroup]="form" (ngSubmit)="onSubmit()">
+            <div *ngFor="let field of schema.fields" class="form-field" [ngSwitch]="field.type">
+              <label>{{ field.label }} <span *ngIf="field.required" class="required-asterisk">*</span></label>
+              
+              <input *ngSwitchCase="'text'" [formControlName]="field.key" [placeholder]="field.placeholder || ''" [readOnly]="isReadOnly || !field.editable">
+              <input *ngSwitchCase="'number'" type="number" [formControlName]="field.key" [placeholder]="field.placeholder || ''" [readOnly]="isReadOnly || !field.editable">
+              
+              <select *ngSwitchCase="'boolean'" [formControlName]="field.key" [attr.disabled]="isReadOnly || !field.editable ? true : null">
+                <option [ngValue]="true">True</option>
+                <option [ngValue]="false">False</option>
+              </select>
 
-          <div *ngFor="let field of schema.fields; let i = index" class="field-editor-item">
-            <span>{{ field.label }} ({{ field.type }})</span>
-            <div class="field-actions">
-              <button class="btn-icon" (click)="editField(i)" mat-icon-button matTooltip="Edit Field">
-                <mat-icon>edit</mat-icon>
-              </button>
-              <button class="btn-icon btn-delete" (click)="removeField(i)" mat-icon-button matTooltip="Remove Field">
-                <mat-icon>delete</mat-icon>
-              </button>
-            </div>
-          </div>
+              <select *ngSwitchCase="'dropdown'" [formControlName]="field.key" [attr.disabled]="isReadOnly || !field.editable ? true : null">
+                <option *ngFor="let opt of field.options" [value]="opt.value">{{ opt.label }}</option>
+              </select>
 
-          <!-- Inline Add/Edit Field Form -->
-          <div *ngIf="isFieldEditorVisible" class="field-editor-form card">
-            <h4>{{ currentFieldIndex === null ? 'Add New Field' : 'Edit Field' }}</h4>
-            <form [formGroup]="fieldForm">
-              <div class="form-field">
-                <label>Field Key</label>
-                <input formControlName="key" placeholder="Unique key (e.g., 'firstName')">
+              <div *ngIf="form.get(field.key)?.invalid && form.get(field.key)?.touched" class="error-message">
+                This field is required or invalid.
               </div>
-              <div class="form-field">
+            </div>
+          </form>
+        </div>
+
+        <!-- Right Panel: Template Schema Editor -->
+        <div class="schema-editor-panel card" *ngIf="isEditMode">
+           <header class="panel-header">
+            <h3>Schema Editor</h3>
+            <p class="panel-subtitle">Define the structure of your form.</p>
+          </header>
+          <div class="form-field">
+            <label>Template Name</label>
+            <input [(ngModel)]="schema.name" placeholder="A unique name for this template" [ngModelOptions]="{standalone: true}" [disabled]="mode === 'edit'">
+          </div>
+          <div class="form-field">
+            <label>Template Description</label>
+            <input [(ngModel)]="schema.description" placeholder="A short description of the form's purpose" [ngModelOptions]="{standalone: true}">
+          </div>
+
+          <hr class="section-divider">
+
+          <div class="field-list-header">
+            <h4>Fields</h4>
+            <button class="add-field-btn" (click)="showAddFieldEditor()" *ngIf="!isFieldEditorVisible">
+              <mat-icon>add</mat-icon> Add Field
+            </button>
+          </div>
+          
+          <div class="field-list">
+            <div *ngFor="let field of schema.fields; let i = index" class="field-item">
+              <div>
+                <strong class="field-label">{{ field.label }}</strong>
+                <span class="field-meta">{{ field.key }} &middot; {{ field.type }}</span>
+              </div>
+              <div class="field-actions">
+                <button (click)="editField(i)" mat-icon-button matTooltip="Edit Field">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button class="action-delete" (click)="removeField(i)" mat-icon-button matTooltip="Remove Field">
+                  <mat-icon>delete_outline</mat-icon>
+                </button>
+              </div>
+            </div>
+             <p *ngIf="schema.fields.length === 0" class="no-fields-message">No fields added yet.</p>
+          </div>
+
+          <!-- Add/Edit Field Form -->
+          <div *ngIf="isFieldEditorVisible" class="field-editor-form">
+            <h5>{{ currentFieldIndex === null ? 'Add New Field' : 'Edit Field' }}</h5>
+            <form [formGroup]="fieldForm" class="field-form-grid">
+              <div class="form-field span-2">
                 <label>Field Label</label>
                 <input formControlName="label" placeholder="Visible label (e.g., 'First Name')">
+              </div>
+              <div class="form-field">
+                <label>Field Key</label>
+                <input formControlName="key" placeholder="unique_key">
               </div>
               <div class="form-field">
                 <label>Field Type</label>
                 <select formControlName="type">
                   <option value="text">Text</option>
                   <option value="number">Number</option>
-                  <option value="boolean">Checkbox</option>
+                  <option value="boolean">Boolean</option>
                   <option value="dropdown">Dropdown</option>
                 </select>
               </div>
+               <div class="form-field span-2">
+                <label>Placeholder / Help Text</label>
+                <input formControlName="placeholder" placeholder="Help text inside the input or for checkbox">
+              </div>
                <div class="form-field">
                 <label>Default Value</label>
-                <input formControlName="defaultValue" placeholder="Default value for the field">
-              </div>
-              <div class="form-field">
-                <label>Placeholder Text</label>
-                <input formControlName="placeholder" placeholder="Help text inside the input">
+                <input formControlName="defaultValue" placeholder="Optional default value">
               </div>
               <div class="form-field" *ngIf="fieldForm.get('type')?.value === 'text'">
                 <label>Validation Regex</label>
                 <input formControlName="regex" placeholder="e.g., ^[a-zA-Z]+$">
               </div>
-              <div class="form-group-inline">
-                <input type="checkbox" formControlName="required" id="field-required"> 
-                <label for="field-required">Required</label>
-              </div>
-               <div class="form-group-inline">
-                <input type="checkbox" formControlName="editable" id="field-editable">
-                <label for="field-editable">Editable by User</label>
+              
+              <div class="checkbox-group span-2">
+                <div class="checkbox-wrapper">
+                  <input type="checkbox" formControlName="required" id="field-required"> 
+                  <label for="field-required">Required Field</label>
+                </div>
+                <div class="checkbox-wrapper">
+                  <input type="checkbox" formControlName="editable" id="field-editable">
+                  <label for="field-editable">User Editable</label>
+                </div>
               </div>
 
-              <!-- Dropdown Options Editor -->
-              <div *ngIf="fieldForm.get('type')?.value === 'dropdown'" class="dropdown-options-editor">
-                <h5>Dropdown Options</h5>
-                <div formArrayName="options" *ngFor="let option of options.controls; let i = index">
-                  <div [formGroupName]="i" class="option-inputs">
+              <div *ngIf="fieldForm.get('type')?.value === 'dropdown'" class="dropdown-options-editor span-2">
+                <h6>Dropdown Options</h6>
+                <div formArrayName="options">
+                   <div *ngFor="let option of options.controls; let i = index" [formGroupName]="i" class="option-item">
                     <input formControlName="label" placeholder="Option Label">
                     <input formControlName="value" placeholder="Option Value">
+                    <button type="button" class="action-delete" (click)="removeOption(i)" mat-icon-button matTooltip="Remove Option">
+                      <mat-icon>remove_circle_outline</mat-icon>
+                    </button>
                   </div>
-                  <button type="button" class="btn-icon btn-delete" (click)="removeOption(i)" mat-icon-button matTooltip="Remove Option">
-                    <mat-icon>remove_circle_outline</mat-icon>
-                  </button>
                 </div>
-                <button type="button" class="btn-add-option" (click)="addOption()">
+                <button type="button" class="add-option-btn" (click)="addOption()">
                    <mat-icon>add</mat-icon> Add Option
                 </button>
               </div>
 
-              <div class="form-actions">
+              <div class="field-editor-actions span-2">
                 <button type="button" (click)="isFieldEditorVisible = false" class="secondary">Cancel</button>
                 <button type="button" (click)="saveField()" [disabled]="fieldForm.invalid">Save Field</button>
               </div>
             </form>
           </div>
-
-          <button class="add-field-btn" (click)="showAddFieldEditor()" *ngIf="!isFieldEditorVisible">+ Add Field</button>
-          
-          <div class="form-actions" *ngIf="isEditMode">
-             <button (click)="closeForm()" class="secondary">Cancel</button>
-             <button (click)="onSubmit()" [disabled]="!isFormValid()">{{ submitButtonText }}</button>
-          </div>
         </div>
-
-        <!-- Right Column: Live Form Preview or Form Filling Area -->
-        <div class="form-preview card" [class.full-width]="!isEditMode">
-            <form [formGroup]="form" (ngSubmit)="onSubmit()">
-                <h3>{{ isEditMode ? 'Preview' : 'Fill Form' }}</h3>
-                <div *ngFor="let field of schema.fields" class="form-field" [ngSwitch]="field.type">
-                    <label>{{ field.label }} <span *ngIf="field.required">*</span></label>
-                    
-                    <input *ngSwitchCase="'text'" [formControlName]="field.key" [placeholder]="field.placeholder || ''">
-                    
-                    <input *ngSwitchCase="'number'" type="number" [formControlName]="field.key" [placeholder]="field.placeholder || ''">
-                    
-                    <input *ngSwitchCase="'boolean'" type="checkbox" [formControlName]="field.key">
-
-                    <select *ngSwitchCase="'dropdown'" [formControlName]="field.key">
-                        <option *ngFor="let opt of field.options" [value]="opt.value">{{ opt.label }}</option>
-                    </select>
-
-                    <div *ngIf="form.get(field.key)?.invalid && form.get(field.key)?.touched" class="error-message">
-                        <div *ngIf="form.get(field.key)?.errors?.['required']">This field is required.</div>
-                        <div *ngIf="form.get(field.key)?.errors?.['pattern']">Invalid format.</div>
-                    </div>
-                </div>
-                <div class="form-actions" *ngIf="!isEditMode">
-                    <button type="submit" [disabled]="form.invalid">{{ submitButtonText }}</button>
-                </div>
-            </form>
-        </div>
-      </div>
+      </main>
     </div>
   `,
   styles: [`
-    .container {
-      padding: 2rem;
+    :host {
+      display: block;
     }
-    .form-header {
+    .dynamic-form-container {
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+    .page-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 2rem;
+      padding: 0 1rem;
     }
+    .back-button {
+      background: none; border: none; padding: 0; display: flex;
+      align-items: center; gap: 0.5rem; color: var(--primary-color);
+      font-size: 1rem; font-weight: 700; cursor: pointer;
+    }
+    .back-button:hover {
+      text-decoration: underline;
+    }
+    .form-title { margin: 0; font-size: 1.8rem; }
+    .form-subtitle { margin: 0.25rem 0 0; color: var(--text-muted-color); }
+    .header-actions button {
+        display: flex; align-items: center; gap: 0.5rem;
+    }
+
     .form-grid {
       display: grid;
       grid-template-columns: 1fr;
       gap: 2rem;
     }
-    @media (min-width: 768px) {
+    @media (min-width: 1024px) {
       .form-grid {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr 1.2fr;
       }
     }
-    .form-preview.full-width {
+    .form-panel.full-width {
       grid-column: 1 / -1;
+      max-width: 800px;
+      margin: 0 auto;
     }
-    .template-editor, .form-preview {
+    .form-panel.card {
+      background: linear-gradient(135deg, var(--background-color) 60%, #e9ecf1 100%);
+      box-shadow: 0 4px 24px var(--shadow-color-light);
+      border-radius: 18px;
+      padding: 2.5rem 2rem;
+      margin-bottom: 2rem;
+      transition: box-shadow 0.2s;
+    }
+    .form-panel.card:hover {
+      box-shadow: 0 8px 32px var(--shadow-color-dark);
+    }
+    .panel-header {
+      margin-bottom: 2.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .form-panel .form-field {
+      background: var(--surface-color);
+      border-radius: 10px;
+      box-shadow: 0 1px 4px var(--shadow-color-light);
+      padding: 1.25rem 1rem 0.5rem 1rem;
+      margin-bottom: 1.5rem;
       display: flex;
       flex-direction: column;
-      gap: 1.5rem;
-    }
-    .field-editor-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0.75rem;
-      border: 1px solid #eee;
-      border-radius: 4px;
-    }
-    .field-actions {
-      display: flex;
       gap: 0.5rem;
+      transition: box-shadow 0.2s, border 0.2s;
     }
-    .btn-icon {
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 0;
-      color: var(--primary-color);
-      width: 24px;
-      height: 24px;
-      line-height: 24px;
+    .form-panel .form-field:focus-within {
+      box-shadow: 0 2px 8px var(--shadow-color-dark);
+      border: 1px solid var(--primary-color);
     }
-     .btn-icon.btn-delete {
-      color: var(--error-color);
+    .form-panel label {
+      font-size: 1.05rem;
+      color: var(--text-muted-color);
+      font-weight: 700;
+      margin-bottom: 0.25rem;
     }
-    .field-editor-form {
-      padding: 1.5rem;
-      border: 1px solid #ddd;
-      margin-top: 1rem;
+    .form-panel input,
+    .form-panel select {
+      font-size: 1.1rem;
+      padding: 0.7rem 1rem;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: #f8fafc;
+      color: var(--text-color);
+      transition: border 0.2s, box-shadow 0.2s;
     }
-    .form-group-inline {
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    .form-panel input:focus,
+    .form-panel select:focus {
+      border: 1.5px solid var(--primary-color);
+      outline: none;
+      box-shadow: 0 0 0 2px var(--secondary-color);
     }
-    .dropdown-options-editor {
-      border: 1px solid #eee;
-      padding: 1rem;
-      border-radius: 4px;
-      margin-top: 1rem;
+    .form-panel .required-asterisk {
+      color: var(--danger-color);
+      margin-left: 0.2rem;
     }
-    .option-item {
-      display: flex;
-      gap: 0.5rem;
-      align-items: center;
-      margin-bottom: 0.5rem;
+    .form-panel .error-message {
+      color: var(--danger-color);
+      font-size: 0.9rem;
+      margin-top: 0.25rem;
+      font-weight: 500;
     }
-    .option-inputs {
-      display: flex;
-      gap: 0.5rem;
-      flex-grow: 1;
+
+    .checkbox-wrapper { display: flex; align-items: center; gap: 0.5rem; }
+    .checkbox-wrapper input[type="checkbox"] { width: auto; }
+    .checkbox-wrapper label { margin: 0; font-weight: 400; color: var(--text-color); }
+
+    /* Schema Editor Specifics */
+    .section-divider {
+      border: 0;
+      height: 1px;
+      background-color: var(--border-color);
+      margin: 2rem 0;
     }
-    .btn-add-option {
+    .field-list-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    .field-list-header h4 { margin: 0; }
+    .add-field-btn {
         background: none;
-        border: 1px dashed var(--primary-color);
+        border: 1px solid var(--primary-color);
         color: var(--primary-color);
-        padding: 0.5rem 1rem;
-        border-radius: 4px;
+        padding: 0.4rem 0.8rem;
+        border-radius: 6px;
         cursor: pointer;
-        margin-top: 0.5rem;
         display: flex;
         align-items: center;
         gap: 0.5rem;
+        font-weight: 700;
+        font-size: 0.8rem;
     }
-    .error-message {
-        color: var(--error-color);
-        font-size: 0.875rem;
-        margin-top: 0.25rem;
-    }
-    .form-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 1rem;
-        margin-top: 1.5rem;
+    .add-field-btn:hover {
+        background-color: var(--primary-color);
+        color: var(--surface-color);
     }
 
-    input:disabled, select:disabled, textarea:disabled {
-        background-color: #eeeeee;
-        cursor: not-allowed;
+    .field-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .field-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 1rem; border-radius: 8px; background-color: var(--background-color);
+    }
+    .field-label { color: var(--text-color); }
+    .field-meta { font-size: 0.8rem; color: var(--text-muted-color); margin-left: 0.5rem; }
+    .no-fields-message { color: var(--text-muted-color); text-align: center; padding: 1rem; }
+    
+    .field-actions .mat-icon { color: var(--text-muted-color); }
+    .field-actions button:hover .mat-icon { color: var(--primary-color); }
+    .field-actions .action-delete:hover .mat-icon { color: var(--danger-color); }
+
+    .field-editor-form {
+      background-color: var(--background-color);
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+    }
+    .field-editor-form h5 { margin-top: 0; }
+    
+    .field-form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+    .span-2 { grid-column: span 2; }
+
+    .checkbox-group {
+        display: flex;
+        gap: 2rem;
+        align-items: center;
+    }
+
+    .dropdown-options-editor { margin-top: 1rem; }
+    .dropdown-options-editor h6 { margin-top: 0; margin-bottom: 1rem; }
+    .option-item {
+      display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;
+    }
+    .option-item input { flex-grow: 1; }
+    
+    .add-option-btn {
+      background: none; border: 1px dashed var(--secondary-color); color: var(--text-muted-color);
+      padding: 0.5rem; width: 100%; border-radius: 6px; cursor: pointer; margin-top: 0.5rem;
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      transition: all 0.2s ease;
+    }
+    .add-option-btn:hover {
+        background-color: var(--secondary-color);
+        color: var(--text-color);
+    }
+
+    .field-editor-actions {
+      display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem;
     }
   `]
 })
