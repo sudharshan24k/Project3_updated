@@ -1,684 +1,451 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ValidatorFn, ReactiveFormsModule, FormArray, FormControl } from '@angular/forms';
-import { CommonModule, NgIf, NgFor, JsonPipe } from '@angular/common';
+import { CommonModule, NgIf, NgFor } from '@angular/common';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
-import { FORM_SCHEMA } from './form-schema';
 import { ActivatedRoute, Router } from '@angular/router';
+import { SchemaService, TemplateSchema } from './schema.service';
 
 @Component({
   selector: 'app-dynamic-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatSelectModule, MatCheckboxModule, MatCardModule, NgIf, NgFor, JsonPipe],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatSelectModule, MatCheckboxModule, MatCardModule, NgIf, NgFor, MatIconModule, MatTooltipModule],
   template: `
-    <div class="form-card">
-      <form [formGroup]="form" (ngSubmit)="onSubmit()">
-        <ng-container *ngFor="let field of schema.fields">
-          <ng-container *ngIf="isVisible(field)">
-            <ng-container [ngSwitch]="field.type">
-              <div class="field-row">
-                <label class="field-label">
-                  {{ field.label }}<span *ngIf="isFieldRequired(field)" style="color:red">*</span>
-                  <button *ngIf="field.description" mat-icon-button type="button" class="desc-btn" (click)="toggleDesc(field)">
-                    <span class="material-icons">help_outline</span>
-                  </button>
-                </label>
-                <div class="field-value">
-                  <mat-form-field *ngSwitchCase="'text'" appearance="fill" style="width: 100%;">
-                    <input matInput [formControlName]="field.key" [placeholder]="field.tooltip ?? ''" [readonly]="!field.editable">
-                    <mat-error *ngIf="form.get(field.key)?.hasError('required')">This field is required</mat-error>
-                    <mat-error *ngIf="form.get(field.key)?.hasError('pattern')">Invalid format</mat-error>
-                  </mat-form-field>
-                  <mat-form-field *ngSwitchCase="'number'" appearance="fill" style="width: 100%;">
-                    <input matInput type="number" [formControlName]="field.key" [placeholder]="field.tooltip ?? ''" [readonly]="!field.editable">
-                    <mat-error *ngIf="form.get(field.key)?.hasError('required')">This field is required</mat-error>
-                  </mat-form-field>
-                  <mat-form-field *ngSwitchCase="'dropdown'" appearance="fill" style="width: 100%;">
-                    <mat-select [formControlName]="field.key">
-                      <mat-option *ngFor="let opt of field.options" [value]="opt">{{ opt }}</mat-option>
-                    </mat-select>
-                    <mat-error *ngIf="form.get(field.key)?.hasError('required')">This field is required</mat-error>
-                  </mat-form-field>
-                  <mat-checkbox *ngSwitchCase="'boolean'" [formControlName]="field.key"> </mat-checkbox>
-                </div>
-                <div *ngIf="descShown[field.key]" class="desc-popup">{{ field.description }}</div>
-              </div>
-            </ng-container>
-          </ng-container>
-        </ng-container>
-        <!-- Render extraProperties fields -->
-        <ng-container *ngFor="let field of schema.extraProperties">
-          <ng-container *ngIf="isVisible(field)">
-            <ng-container [ngSwitch]="field.type">
-              <div class="field-row">
-                <label class="field-label">
-                  {{ field.label }}<span *ngIf="isFieldRequired(field)" style="color:red">*</span>
-                  <button *ngIf="field.description" mat-icon-button type="button" class="desc-btn" (click)="toggleDesc(field)">
-                    <span class="material-icons">help_outline</span>
-                  </button>
-                </label>
-                <div class="field-value">
-                  <mat-form-field *ngSwitchCase="'text'" appearance="fill" style="width: 100%;">
-                    <input matInput [formControlName]="field.key" [placeholder]="field.tooltip ?? ''" [readonly]="!field.editable">
-                    <mat-error *ngIf="form.get(field.key)?.hasError('required')">This field is required</mat-error>
-                    <mat-error *ngIf="form.get(field.key)?.hasError('pattern')">Invalid format</mat-error>
-                  </mat-form-field>
-                  <mat-form-field *ngSwitchCase="'number'" appearance="fill" style="width: 100%;">
-                    <input matInput type="number" [formControlName]="field.key" [placeholder]="field.tooltip ?? ''" [readonly]="!field.editable">
-                    <mat-error *ngIf="form.get(field.key)?.hasError('required')">This field is required</mat-error>
-                  </mat-form-field>
-                  <mat-form-field *ngSwitchCase="'dropdown'" appearance="fill" style="width: 100%;">
-                    <mat-select [formControlName]="field.key">
-                      <mat-option *ngFor="let opt of field.options" [value]="opt">{{ opt }}</mat-option>
-                    </mat-select>
-                    <mat-error *ngIf="form.get(field.key)?.hasError('required')">This field is required</mat-error>
-                  </mat-form-field>
-                  <mat-checkbox *ngSwitchCase="'boolean'" [formControlName]="field.key"> </mat-checkbox>
-                </div>
-                <div *ngIf="descShown[field.key]" class="desc-popup">{{ field.description }}</div>
-              </div>
-            </ng-container>
-          </ng-container>
-        </ng-container>
-        <!-- Render Column Mapping first -->
-        <ng-container *ngIf="schema.mapSections.length">
-          <ng-container *ngFor="let map of schema.mapSections; let i = index">
-            <ng-container *ngIf="map.key === 'columnMapping'">
-              <div style="margin: 24px 0;">
-                <h3>{{ map.label }}</h3>
-                <div *ngFor="let key of getMapKeys(map)" class="map-row">
-                  <span class="map-key-label">{{ key }}</span>
-                  <span>:</span>
-                  <mat-form-field appearance="fill" class="map-value-field">
-                    <input matInput [formControlName]="key">
-                  </mat-form-field>
-                </div>
-                <div class="map-row">
-                  <input #newMapKeyInput placeholder="New key" class="map-key-input" matInput>
-                  <button mat-stroked-button class="map-add-btn" type="button" (click)="addMapKey(map.key, newMapKeyInput.value); newMapKeyInput.value=''">+ Add Key</button>
-                </div>
-              </div>
-            </ng-container>
-          </ng-container>
-        </ng-container>
-        <!-- Render custom map sections after Column Mapping -->
-        <ng-container *ngIf="schema.mapSections.length">
-          <ng-container *ngFor="let map of schema.mapSections; let i = index">
-            <ng-container *ngIf="map.key !== 'columnMapping'">
-              <div style="margin: 24px 0;">
-                <h3>{{ map.label }}</h3>
-                <div *ngFor="let key of getMapKeys(map)" class="map-row">
-                  <span class="map-key-label">{{ key }}</span>
-                  <span>:</span>
-                  <mat-form-field appearance="fill" class="map-value-field">
-                    <input matInput [formControlName]="key">
-                  </mat-form-field>
-                </div>
-                <div class="map-row">
-                  <input #newMapKeyInputCustom placeholder="New key" class="map-key-input" matInput>
-                  <button mat-stroked-button class="map-add-btn" type="button" (click)="addMapKey(map.key, newMapKeyInputCustom.value); newMapKeyInputCustom.value=''">+ Add Key</button>
-                </div>
-              </div>
-            </ng-container>
-          </ng-container>
-        </ng-container>
-        <div style="margin: 32px 0 0 0; text-align: right; display: flex; justify-content: flex-end; gap: 12px;">
-          <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid">Submit</button>
-          <button mat-stroked-button color="accent" type="button" (click)="openAddFieldDialog()">+ Add Extra Field</button>
-        </div>
-      </form>
-    </div>
+    <div class="container">
+      <div class="form-header">
+        <h1>{{ title }}</h1>
+        <button (click)="closeForm()">Back to List</button>
+      </div>
 
-    <!-- Add Field Modal Popup -->
-    <div *ngIf="showAddFieldCard" class="modal-overlay">
-      <div class="modal-content wide-modal">
-        <button class="close-btn" (click)="showAddFieldCard=false">&times;</button>
-        <h2 style="margin-top:0">Add Extra Field</h2>
-        <form [formGroup]="addFieldForm">
-          <mat-form-field appearance="fill" style="width: 100%" *ngIf="addFieldForm.get('type')?.value!=='customMap'">
-            <mat-label>Key<span style="color:red" *ngIf="addFieldForm.get('key')?.invalid && addFieldForm.get('key')?.touched">*</span></mat-label>
-            <input matInput formControlName="key">
-          </mat-form-field>
-          <mat-form-field appearance="fill" style="width: 100%" *ngIf="addFieldForm.get('type')?.value!=='customMap'">
-            <mat-label>Label<span style="color:red" *ngIf="addFieldForm.get('label')?.invalid && addFieldForm.get('label')?.touched">*</span></mat-label>
-            <input matInput formControlName="label">
-          </mat-form-field>
-          <mat-form-field appearance="fill" style="width: 100%" *ngIf="addFieldForm.get('type')?.value!=='customMap'">
-            <mat-label>Type<span style="color:red" *ngIf="addFieldForm.get('type')?.invalid && addFieldForm.get('type')?.touched">*</span></mat-label>
-            <mat-select formControlName="type">
-              <mat-option *ngFor="let t of fieldTypes" [value]="t">{{t}}</mat-option>
-              <mat-option value="customMap">Custom Map Section</mat-option>
-            </mat-select>
-          </mat-form-field>
-          <mat-form-field appearance="fill" style="width: 100%" *ngIf="addFieldForm.get('type')?.value==='dropdown'">
-            <mat-label>Dropdown Options (comma separated)</mat-label>
-            <input matInput formControlName="options" placeholder="e.g. option1, option2">
-          </mat-form-field>
-          <mat-form-field appearance="fill" style="width: 100%" *ngIf="addFieldForm.get('type')?.value==='customMap'">
-            <mat-label>Section Name</mat-label>
-            <input matInput formControlName="customMapName" placeholder="Enter section name">
-          </mat-form-field>
-          <div *ngIf="addFieldForm.get('type')?.value==='customMap'">
-            <div *ngFor="let pair of customMapPairs; let i = index" style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-              <span class="map-key-label">{{ pair.key }}</span>
-              <span>:</span>
-              <input matInput [(ngModel)]="customMapPairs[i].value" placeholder="Value" style="flex:1;max-width:180px;">
-              <button mat-icon-button color="warn" (click)="removeCustomMapPair(i)"><span class="material-icons">close</span></button>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-              <input #newCustomMapKey placeholder="New key" style="flex:1;max-width:180px;" matInput>
-              <button mat-stroked-button type="button" (click)="addCustomMapPair(newCustomMapKey.value); newCustomMapKey.value=''">+ Add Key</button>
+      <div *ngIf="isLoading" class="loading-spinner">Loading...</div>
+
+      <div class="form-grid" *ngIf="!isLoading">
+        <!-- Left Column: Template Editor -->
+        <div class="template-editor card" *ngIf="isEditMode">
+          <h3>Template Editor</h3>
+          <div class="form-field">
+             <label>Template Name</label>
+            <input [(ngModel)]="schema.name" placeholder="Template Name" [ngModelOptions]="{standalone: true}" [disabled]="mode === 'edit'">
+          </div>
+           <div class="form-field">
+             <label>Template Description</label>
+            <input [(ngModel)]="schema.description" placeholder="Template Description" [ngModelOptions]="{standalone: true}">
+           </div>
+
+          <div *ngFor="let field of schema.fields; let i = index" class="field-editor-item">
+            <span>{{ field.label }} ({{ field.type }})</span>
+            <div class="field-actions">
+              <button class="btn-icon" (click)="editField(i)" mat-icon-button matTooltip="Edit Field">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button class="btn-icon btn-delete" (click)="removeField(i)" mat-icon-button matTooltip="Remove Field">
+                <mat-icon>delete</mat-icon>
+              </button>
             </div>
           </div>
-          <mat-form-field appearance="fill" style="width: 100%" *ngIf="addFieldForm.get('type')?.value!=='customMap'">
-            <mat-label>Default Value</mat-label>
-            <input matInput formControlName="defaultValue" [placeholder]="defaultValuePlaceholder">
-          </mat-form-field>
-          <mat-form-field appearance="fill" style="width: 100%" *ngIf="addFieldForm.get('type')?.value!=='customMap'">
-            <mat-label>Regex</mat-label>
-            <input matInput formControlName="regex">
-          </mat-form-field>
-          <mat-form-field appearance="fill" style="width: 100%" *ngIf="addFieldForm.get('type')?.value!=='customMap'">
-            <mat-label>Tooltip</mat-label>
-            <input matInput formControlName="tooltip">
-          </mat-form-field>
-          <mat-form-field appearance="fill" style="width: 100%" *ngIf="addFieldForm.get('type')?.value!=='customMap'">
-            <mat-label>Description</mat-label>
-            <input matInput formControlName="description">
-          </mat-form-field>
-          <div style="display:flex;gap:16px;align-items:center;margin:8px 0;" *ngIf="addFieldForm.get('type')?.value!=='customMap'">
-            <mat-checkbox formControlName="mandatory">Mandatory</mat-checkbox>
-            <mat-checkbox formControlName="editable">Editable</mat-checkbox>
+
+          <!-- Inline Add/Edit Field Form -->
+          <div *ngIf="isFieldEditorVisible" class="field-editor-form card">
+            <h4>{{ currentFieldIndex === null ? 'Add New Field' : 'Edit Field' }}</h4>
+            <form [formGroup]="fieldForm">
+              <div class="form-field">
+                <label>Field Key</label>
+                <input formControlName="key" placeholder="Unique key (e.g., 'firstName')">
+              </div>
+              <div class="form-field">
+                <label>Field Label</label>
+                <input formControlName="label" placeholder="Visible label (e.g., 'First Name')">
+              </div>
+              <div class="form-field">
+                <label>Field Type</label>
+                <select formControlName="type">
+                  <option value="text">Text</option>
+                  <option value="number">Number</option>
+                  <option value="boolean">Checkbox</option>
+                  <option value="dropdown">Dropdown</option>
+                </select>
+              </div>
+               <div class="form-field">
+                <label>Default Value</label>
+                <input formControlName="defaultValue" placeholder="Default value for the field">
+              </div>
+              <div class="form-field">
+                <label>Placeholder Text</label>
+                <input formControlName="placeholder" placeholder="Help text inside the input">
+              </div>
+              <div class="form-field" *ngIf="fieldForm.get('type')?.value === 'text'">
+                <label>Validation Regex</label>
+                <input formControlName="regex" placeholder="e.g., ^[a-zA-Z]+$">
+              </div>
+              <div class="form-group-inline">
+                <input type="checkbox" formControlName="required" id="field-required"> 
+                <label for="field-required">Required</label>
+              </div>
+               <div class="form-group-inline">
+                <input type="checkbox" formControlName="editable" id="field-editable">
+                <label for="field-editable">Editable by User</label>
+              </div>
+
+              <!-- Dropdown Options Editor -->
+              <div *ngIf="fieldForm.get('type')?.value === 'dropdown'" class="dropdown-options-editor">
+                <h5>Dropdown Options</h5>
+                <div formArrayName="options" *ngFor="let option of options.controls; let i = index">
+                  <div [formGroupName]="i" class="option-inputs">
+                    <input formControlName="label" placeholder="Option Label">
+                    <input formControlName="value" placeholder="Option Value">
+                  </div>
+                  <button type="button" class="btn-icon btn-delete" (click)="removeOption(i)" mat-icon-button matTooltip="Remove Option">
+                    <mat-icon>remove_circle_outline</mat-icon>
+                  </button>
+                </div>
+                <button type="button" class="btn-add-option" (click)="addOption()">
+                   <mat-icon>add</mat-icon> Add Option
+                </button>
+              </div>
+
+              <div class="form-actions">
+                <button type="button" (click)="isFieldEditorVisible = false" class="secondary">Cancel</button>
+                <button type="button" (click)="saveField()" [disabled]="fieldForm.invalid">Save Field</button>
+              </div>
+            </form>
           </div>
-          <!-- Condition fields: mandatoryIf and visibleIf, always shown, side by side -->
-          <div *ngIf="addFieldForm.get('type')?.value!=='customMap'" style="display:flex;gap:12px;align-items:center;">
-            <mat-form-field appearance="fill" style="flex:1;min-width:120px;">
-              <mat-label>Mandatory If Key</mat-label>
-              <mat-select formControlName="mandatoryIfKey">
-                <mat-option value="">None</mat-option>
-                <mat-option *ngFor="let k of allKeys()" [value]="k">{{k}}</mat-option>
-              </mat-select>
-            </mat-form-field>
-            <mat-form-field appearance="fill" style="flex:1;min-width:120px;">
-              <mat-label>Mandatory If Value</mat-label>
-              <mat-select *ngIf="getPossibleValuesForKey(addFieldForm.get('mandatoryIfKey')?.value).length > 0" formControlName="mandatoryIfValue">
-                <mat-option *ngFor="let v of getPossibleValuesForKey(addFieldForm.get('mandatoryIfKey')?.value)" [value]="v">{{v}}</mat-option>
-              </mat-select>
-              <input matInput *ngIf="getPossibleValuesForKey(addFieldForm.get('mandatoryIfKey')?.value).length === 0" formControlName="mandatoryIfValue" [readonly]="!addFieldForm.get('mandatoryIfKey')?.value">
-            </mat-form-field>
+
+          <button class="add-field-btn" (click)="showAddFieldEditor()" *ngIf="!isFieldEditorVisible">+ Add Field</button>
+          
+          <div class="form-actions" *ngIf="isEditMode">
+             <button (click)="closeForm()" class="secondary">Cancel</button>
+             <button (click)="onSubmit()" [disabled]="!isFormValid()">{{ submitButtonText }}</button>
           </div>
-          <div *ngIf="addFieldForm.get('type')?.value!=='customMap'" style="display:flex;gap:12px;align-items:center;">
-            <mat-form-field appearance="fill" style="flex:1;min-width:120px;">
-              <mat-label>Visible If Key</mat-label>
-              <mat-select formControlName="visibleIfKey">
-                <mat-option value="">None</mat-option>
-                <mat-option *ngFor="let k of allKeys()" [value]="k">{{k}}</mat-option>
-              </mat-select>
-            </mat-form-field>
-            <mat-form-field appearance="fill" style="flex:1;min-width:120px;">
-              <mat-label>Visible If Value</mat-label>
-              <mat-select *ngIf="getPossibleValuesForKey(addFieldForm.get('visibleIfKey')?.value).length > 0" formControlName="visibleIfValue">
-                <mat-option *ngFor="let v of getPossibleValuesForKey(addFieldForm.get('visibleIfKey')?.value)" [value]="v">{{v}}</mat-option>
-              </mat-select>
-              <input matInput *ngIf="getPossibleValuesForKey(addFieldForm.get('visibleIfKey')?.value).length === 0" formControlName="visibleIfValue" [readonly]="!addFieldForm.get('visibleIfKey')?.value">
-            </mat-form-field>
-          </div>
-        </form>
-        <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
-          <button mat-raised-button color="primary" (click)="addFieldToExtraProperties()">Add Field</button>
-          <button mat-button (click)="showAddFieldCard=false">Cancel</button>
+        </div>
+
+        <!-- Right Column: Live Form Preview or Form Filling Area -->
+        <div class="form-preview card" [class.full-width]="!isEditMode">
+            <form [formGroup]="form" (ngSubmit)="onSubmit()">
+                <h3>{{ isEditMode ? 'Preview' : 'Fill Form' }}</h3>
+                <div *ngFor="let field of schema.fields" class="form-field" [ngSwitch]="field.type">
+                    <label>{{ field.label }} <span *ngIf="field.required">*</span></label>
+                    
+                    <input *ngSwitchCase="'text'" [formControlName]="field.key" [placeholder]="field.placeholder || ''">
+                    
+                    <input *ngSwitchCase="'number'" type="number" [formControlName]="field.key" [placeholder]="field.placeholder || ''">
+                    
+                    <input *ngSwitchCase="'boolean'" type="checkbox" [formControlName]="field.key">
+
+                    <select *ngSwitchCase="'dropdown'" [formControlName]="field.key">
+                        <option *ngFor="let opt of field.options" [value]="opt.value">{{ opt.label }}</option>
+                    </select>
+
+                    <div *ngIf="form.get(field.key)?.invalid && form.get(field.key)?.touched" class="error-message">
+                        <div *ngIf="form.get(field.key)?.errors?.['required']">This field is required.</div>
+                        <div *ngIf="form.get(field.key)?.errors?.['pattern']">Invalid format.</div>
+                    </div>
+                </div>
+                <div class="form-actions" *ngIf="!isEditMode">
+                    <button type="submit" [disabled]="form.invalid">{{ submitButtonText }}</button>
+                </div>
+            </form>
         </div>
       </div>
     </div>
-
-    <style>
-      .form-card {
-        background: #f7fafd;
-        border-radius: 12px;
-        box-shadow: 0 2px 16px rgba(0,0,0,0.10);
-        padding: 32px 24px 24px 24px;
-        max-width: 900px;
-        margin: 32px auto;
-        overflow-y: auto;
-        min-height: 80vh;
-        max-height: 90vh;
-      }
-      .modal-overlay {
-        position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0,0,0,0.3);
-        z-index: 1000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .modal-content {
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 2px 16px rgba(0,0,0,0.2);
-        padding: 18px 18px 8px 18px;
-        min-width: 320px;
-        max-width: 540px;
-        position: relative;
-      }
-      .wide-modal {
-        min-width: 420px;
-        max-width: 540px;
-      }
-      .map-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 8px;
-      }
-      .map-key-label {
-        display: inline-block;
-        background: #e3f2fd;
-        color: #1976d2;
-        border-radius: 4px;
-        padding: 2px 10px;
-        font-weight: 500;
-        font-size: 1em;
-        min-width: 60px;
-      }
-      .map-value-field {
-        flex: 1;
-        min-width: 120px;
-        max-width: 350px;
-      }
-      .map-key-input {
-        width: 80px;
-        min-width: 60px;
-        max-width: 100px;
-        font-size: 0.95em;
-        margin-left: 8px;
-      }
-      .map-add-btn {
-        min-width: 60px;
-        font-size: 0.95em;
-        padding: 2px 8px;
-        margin-left: 4px;
-      }
-
-      .field-row {
-        display: flex;
-        align-items: flex-start;
-        margin-bottom: 16px;
-        gap: 12px;
-      }
-      .field-label {
-        min-width: 160px;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-      }
-      .desc-btn {
-        padding: 0;
-        min-width: 24px;
-        min-height: 24px;
-        line-height: 1;
-      }
-      .desc-popup {
-        background: #f5f5f5;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        padding: 8px 12px;
-        margin-left: 8px;
-        font-size: 0.95em;
-        max-width: 320px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      }
-      .field-value {
-        flex: 1;
-      }
-    </style>
   `,
-  styles: `form { max-width: 800px; margin: 24px auto; }`
-})
-export class DynamicForm implements OnInit {
-  schema: any = FORM_SCHEMA;
-  form: FormGroup;
-  submitted = false;
-  showAddFieldCard = false;
-  showAddFormCard = false;
-  newForm: any = {
-    framework: '', description: '', fields: [], mapSections: [], extraProperties: []
-  };
-  addFieldForm!: FormGroup;
-
-  // For new field creation UI
-  fieldTypes = ['text', 'dropdown', 'boolean', 'number', 'map', 'json'];
-
-  // Used for custom map section creation in add field modal
-  customMapPairs: { key: string, value: string }[] = [];
-
-  defaultValuePlaceholder = '';
-
-  addCustomMapPair(newKey: string) {
-    const key = newKey.trim();
-    if (key && !this.customMapPairs.find(p => p.key === key)) {
-      this.customMapPairs.push({ key, value: '' });
+  styles: [`
+    .container {
+      padding: 2rem;
     }
-  }
+    .form-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+    @media (min-width: 768px) {
+      .form-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    .form-preview.full-width {
+      grid-column: 1 / -1;
+    }
+    .template-editor, .form-preview {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .field-editor-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem;
+      border: 1px solid #eee;
+      border-radius: 4px;
+    }
+    .field-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .btn-icon {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      color: var(--primary-color);
+      width: 24px;
+      height: 24px;
+      line-height: 24px;
+    }
+     .btn-icon.btn-delete {
+      color: var(--error-color);
+    }
+    .field-editor-form {
+      padding: 1.5rem;
+      border: 1px solid #ddd;
+      margin-top: 1rem;
+    }
+    .form-group-inline {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dropdown-options-editor {
+      border: 1px solid #eee;
+      padding: 1rem;
+      border-radius: 4px;
+      margin-top: 1rem;
+    }
+    .option-item {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .option-inputs {
+      display: flex;
+      gap: 0.5rem;
+      flex-grow: 1;
+    }
+    .btn-add-option {
+        background: none;
+        border: 1px dashed var(--primary-color);
+        color: var(--primary-color);
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-top: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .error-message {
+        color: var(--error-color);
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
 
-  removeCustomMapPair(idx: number) {
-    this.customMapPairs.splice(idx, 1);
-  }
+    input:disabled, select:disabled, textarea:disabled {
+        background-color: #eeeeee;
+        cursor: not-allowed;
+    }
+  `]
+})
+export class DynamicForm implements OnInit, OnChanges {
+  @Input() mode: 'create' | 'edit' | 'use' | 'preview' | 'list' | 'submissions' = 'use';
+  @Input() templateName: string | null = null;
+  @Output() formClose = new EventEmitter<void>();
 
-  // --- AddFieldForm now exposes all possible field keys ---
-  buildAddFieldForm() {
-    return this.fb.group({
-      key: ['', Validators.required],
+  form: FormGroup;
+  fieldForm: FormGroup;
+  schema: any = { name: '', description: '', fields: [] };
+  isLoading = false;
+  isReadOnly = false;
+  isEditMode = false;
+  isFieldEditorVisible = false;
+  currentFieldIndex: number | null = null;
+  title = '';
+  submitButtonText = '';
+
+  constructor(private fb: FormBuilder, private route: ActivatedRoute, private router: Router, private schemaService: SchemaService) {
+    this.form = this.fb.group({});
+    this.fieldForm = this.fb.group({
+      key: ['', [Validators.required, Validators.pattern(/^[a-zA-Z0-9_]+$/)]],
       label: ['', Validators.required],
-      type: ['', Validators.required],
-      defaultValue: [''],
-      mandatory: [false],
+      type: ['text', Validators.required],
+      required: [false],
+      placeholder: [''],
+      defaultValue: [null],
       editable: [true],
       regex: [''],
-      options: [''],
-      tooltip: [''],
-      description: [''],
-      allowUserAddition: [false],
-      mandatoryIfKey: [''],
-      mandatoryIfValue: [''],
-      visibleIfKey: [''],
-      visibleIfValue: [''],
-      customMapName: ['', Validators.required] // Only for custom map
+      options: this.fb.array([])
     });
-  }
 
-  // Helper to get possible values for a key (for IfValue dropdown)
-  getPossibleValuesForKey(key: string) {
-    const field = [...this.schema.fields, ...this.schema.extraProperties].find((f: any) => f.key === key);
-    if (!field) return [];
-    if (field.type === 'dropdown') return field.options || [];
-    if (field.type === 'boolean') return [true, false];
-    return [];
-  }
-
-  constructor(public fb: FormBuilder, private route: ActivatedRoute, private router: Router) {
-    this.addFieldForm = this.buildAddFieldForm();
-    this.form = this.fb.group({});
-  }
-
-  ngOnInit() {
-    // Check route param to load form or new
-    this.route.paramMap.subscribe(params => {
-      const name = params.get('name');
-      if (name === 'new') {
-        // Clear schema for new form
-        this.schema = { framework: '', description: '', fields: [], mapSections: [], extraProperties: [] };
+    this.fieldForm.get('type')?.valueChanges.subscribe(type => {
+      if (type === 'dropdown') {
+        if (this.options.length === 0) {
+          this.addOption();
+        }
       } else {
-        // Use hardcoded schema (file-ingestion)
-        this.schema = FORM_SCHEMA;
-      }
-      const group: any = {};
-      (this.schema.fields as any[]).forEach((field: any) => {
-        const validators: ValidatorFn[] = [];
-        if (field.mandatory) validators.push(Validators.required);
-        if (field.regex) validators.push(Validators.pattern(field.regex));
-        group[field.key] = [field.defaultValue ?? '', validators];
-      });
-      (this.schema.mapSections as any[] ?? []).forEach((map: any) => {
-        group[map.key] = this.fb.group(map.defaultValue || {});
-      });
-      this.form = this.fb.group(group);
-      this.form.valueChanges.subscribe(() => this.updateConditionalValidators());
-    });
-    this.addFieldForm?.get('type')?.valueChanges.subscribe(() => this.updateDefaultValuePlaceholder());
-    this.addFieldForm?.get('options')?.valueChanges.subscribe(() => this.updateDefaultValuePlaceholder());
-  }
-
-  updateConditionalValidators() {
-    (this.schema.fields as any[]).forEach((field: any) => {
-      if (field.mandatoryIf) {
-        const depField = this.schema.fields.find((f: any) => f.key === field.mandatoryIf.key) || this.schema.extraProperties.find((f: any) => f.key === field.mandatoryIf.key);
-        let depValue = this.form.get(field.mandatoryIf.key)?.value;
-        let condValue = field.mandatoryIf.value;
-        if (depField && depField.type === 'boolean') {
-          depValue = depValue === true || depValue === 'true';
-          condValue = condValue === true || condValue === 'true';
-        } else {
-          depValue = depValue != null ? String(depValue) : depValue;
-          condValue = condValue != null ? String(condValue) : condValue;
-        }
-        const control = this.form.get(field.key);
-        if (depValue === condValue) {
-          control?.addValidators(Validators.required);
-        } else {
-          control?.removeValidators(Validators.required);
-        }
-        control?.updateValueAndValidity({ emitEvent: false });
-      }
-    });
-    // Also update for extraProperties
-    (this.schema.extraProperties as any[]).forEach((field: any) => {
-      if (field.mandatoryIf) {
-        const depField = this.schema.fields.find((f: any) => f.key === field.mandatoryIf.key) || this.schema.extraProperties.find((f: any) => f.key === field.mandatoryIf.key);
-        let depValue = this.form.get(field.mandatoryIf.key)?.value;
-        let condValue = field.mandatoryIf.value;
-        if (depField && depField.type === 'boolean') {
-          depValue = depValue === true || depValue === 'true';
-          condValue = condValue === true || condValue === 'true';
-        } else {
-          depValue = depValue != null ? String(depValue) : depValue;
-          condValue = condValue != null ? String(condValue) : condValue;
-        }
-        const control = this.form.get(field.key);
-        if (depValue === condValue) {
-          control?.addValidators(Validators.required);
-        } else {
-          control?.removeValidators(Validators.required);
-        }
-        control?.updateValueAndValidity({ emitEvent: false });
+        this.options.clear();
       }
     });
   }
 
-  isVisible(field: any): boolean {
-    if (!field.visibleIf) return true;
-    const depField = this.schema.fields.find((f: any) => f.key === field.visibleIf.key) || this.schema.extraProperties.find((f: any) => f.key === field.visibleIf.key);
-    let depValue = this.form.get(field.visibleIf.key)?.value;
-    let condValue = field.visibleIf.value;
-    if (depField && depField.type === 'boolean') {
-      depValue = depValue === true || depValue === 'true';
-      condValue = condValue === true || condValue === 'true';
+  ngOnInit() { this.setupComponent(); }
+  ngOnChanges(changes: SimpleChanges) { this.setupComponent(); }
+
+  setupComponent() {
+    this.isReadOnly = this.mode === 'preview';
+    this.isEditMode = this.mode === 'create' || this.mode === 'edit';
+
+    switch (this.mode) {
+      case 'create':
+        this.title = 'Create New Template';
+        this.submitButtonText = 'Save Template';
+        this.schema = { name: '', description: '', fields: [] };
+        this.buildForm();
+        break;
+      case 'edit':
+        this.title = `Edit Template: ${this.templateName}`;
+        this.submitButtonText = 'Update Template';
+        this.loadTemplate();
+        break;
+      case 'use':
+        this.title = `Fill Form: ${this.templateName}`;
+        this.submitButtonText = 'Submit Form';
+        this.isReadOnly = false;
+        this.loadTemplate();
+        break;
+      case 'preview':
+        this.title = `Preview: ${this.templateName}`;
+        this.submitButtonText = '';
+        this.isReadOnly = true;
+        this.loadTemplate();
+        break;
+    }
+  }
+
+  loadTemplate() {
+    if (!this.templateName) return;
+    this.isLoading = true;
+    this.schemaService.getTemplate(this.templateName).subscribe(data => {
+      this.schema = data.schema;
+      this.schema.name = data.name; // ensure name is populated
+      this.buildForm();
+      this.isLoading = false;
+    });
+  }
+
+  buildForm() {
+    const controls: { [key: string]: any } = {};
+    this.schema.fields.forEach((field: any) => {
+      const validators: ValidatorFn[] = [];
+      if (field.required) {
+        validators.push(Validators.required);
+      }
+      if (field.regex) {
+        validators.push(Validators.pattern(field.regex));
+      }
+       const control = new FormControl({ value: field.defaultValue, disabled: this.isReadOnly || (this.mode === 'use' && !field.editable) }, validators);
+      controls[field.key] = control;
+    });
+    this.form = this.fb.group(controls);
+  }
+
+  showAddFieldEditor() {
+    this.currentFieldIndex = null;
+    this.fieldForm.reset({
+      type: 'text',
+      required: false,
+      editable: true,
+      defaultValue: null,
+      placeholder: '',
+      regex: '',
+      options: []
+    });
+    this.options.clear();
+    this.isFieldEditorVisible = true;
+  }
+
+  editField(index: number) {
+    this.currentFieldIndex = index;
+    const field = this.schema.fields[index];
+    this.fieldForm.patchValue(field);
+    
+    this.options.clear();
+    if (field.type === 'dropdown' && field.options) {
+      field.options.forEach((opt: any) => this.options.push(this.fb.group(opt)));
+    }
+
+    this.isFieldEditorVisible = true;
+  }
+
+  removeField(index: number) {
+    this.schema.fields.splice(index, 1);
+    this.buildForm();
+  }
+
+  saveField() {
+    if (this.fieldForm.invalid) {
+      return;
+    }
+    const newField = this.fieldForm.value;
+    if (this.currentFieldIndex !== null) {
+      this.schema.fields[this.currentFieldIndex] = newField;
     } else {
-      depValue = depValue != null ? String(depValue) : depValue;
-      condValue = condValue != null ? String(condValue) : condValue;
+      this.schema.fields.push(newField);
     }
-    return depValue === condValue;
-  }
-
-  getMapKeys(map: any) {
-    return Object.keys(this.form.value[map.key] || {});
-  }
-
-  addMapKey(mapKey: string, newKey?: string) {
-    const key = newKey?.trim();
-    if (key) {
-      (this.form.get(mapKey) as FormGroup).addControl(key, new FormControl(''));
-    }
+    this.buildForm();
+    this.isFieldEditorVisible = false;
   }
 
   onSubmit() {
-    this.submitted = true;
-    // Mark all controls as touched to trigger validation
-    Object.values(this.form.controls).forEach(control => {
-      if (control instanceof FormControl) {
-        control.markAsTouched();
-        control.updateValueAndValidity();
-      } else if (control instanceof FormGroup) {
-        Object.values(control.controls).forEach(c => {
-          c.markAsTouched();
-          c.updateValueAndValidity();
-        });
-      }
-    });
-    if (this.form.invalid) {
-      return;
+    if (this.mode === 'create') {
+      this.schemaService.createTemplate(this.schema).subscribe(() => this.closeForm());
+    } else if (this.mode === 'edit') {
+      this.schemaService.updateTemplate(this.schema.name, this.schema).subscribe(() => this.closeForm());
+    } else if (this.mode === 'use') {
+      if (!this.templateName) return;
+      this.schemaService.submitForm(this.templateName, this.form.getRawValue()).subscribe(() => this.closeForm());
     }
-    // ...existing submit logic if any...
   }
 
-  openAddFieldDialog(forNewFramework = false) {
-    this.showAddFieldCard = true;
-    this.addFieldForm = this.buildAddFieldForm();
-    this.addFieldForm.reset({ type: 'text', mandatory: false, editable: true });
-    this.addingToNewFramework = forNewFramework;
+  isFormValid(): boolean {
+      // We only care about the template's structure.
+      return this.schema.name && this.schema.fields.length > 0;
   }
 
-  addingToNewFramework = false;
-
-  // --- Add field to either extraProperties or new framework fields ---
-  addFieldToExtraProperties() {
-    
-    const f = this.addFieldForm.value;
-    // Handle custom map section creation
-    if (f.type === 'customMap') {
-      const mapKey = f.customMapName;
-      if (!mapKey) return;
-      const defaultValue = this.customMapPairs.reduce((acc: any, pair: { key: string, value: string }) => { acc[pair.key] = pair.value; return acc; }, {});
-      const mapSection = {
-        key: mapKey,
-        label: mapKey,
-        type: 'map',
-        defaultValue,
-        mandatory: false,
-        allowUserAddition: true
-      };
-      if (this.addingToNewFramework) {
-        this.newForm.mapSections.push(mapSection);
-      } else {
-        this.schema.mapSections.push(mapSection);
-        this.form.addControl(mapKey, this.fb.group(defaultValue));
-      }
-      this.customMapPairs = [];
-      this.showAddFieldCard = false;
-      return;
-    }
-    // Build field object with all keys, null for empty
-    // --- Fix: ensure conditional values are boolean if the dependent field is boolean ---
-    let mandatoryIf = null;
-    if (f.mandatoryIfKey && f.mandatoryIfValue !== undefined && f.mandatoryIfValue !== null && f.mandatoryIfKey !== '') {
-      const depField = [...this.schema.fields, ...this.schema.extraProperties].find((fld: any) => fld.key === f.mandatoryIfKey);
-      let condValue: any = f.mandatoryIfValue;
-      if (depField && depField.type === 'boolean') {
-        condValue = (condValue === true || condValue === 'true');
-      }
-      mandatoryIf = { key: f.mandatoryIfKey, value: condValue };
-    }
-    let visibleIf = null;
-    if (f.visibleIfKey && f.visibleIfValue !== undefined && f.visibleIfValue !== null && f.visibleIfKey !== '') {
-      const depField = [...this.schema.fields, ...this.schema.extraProperties].find((fld: any) => fld.key === f.visibleIfKey);
-      let condValue: any = f.visibleIfValue;
-      if (depField && depField.type === 'boolean') {
-        condValue = (condValue === true || condValue === 'true');
-      }
-      visibleIf = { key: f.visibleIfKey, value: condValue };
-    }
-    const field: any = {
-      key: f.key,
-      label: f.label,
-      type: f.type,
-      defaultValue: f.defaultValue === '' ? null : f.defaultValue,
-      mandatory: !!f.mandatory,
-      editable: !!f.editable,
-      regex: f.regex === '' ? null : f.regex,
-      options: f.type === 'dropdown' ? (f.options ? f.options.split(',').map((o: string) => o.trim()) : null) : null,
-      tooltip: f.tooltip === '' ? null : f.tooltip,
-      description: f.description === '' ? null : f.description,
-      allowUserAddition: false, // always false from modal
-      mandatoryIf: mandatoryIf,
-      visibleIf: visibleIf
-    };
-    if (this.addingToNewFramework) {
-      this.newForm.fields.push(field);
-    } else {
-      this.schema.extraProperties.push(field);
-      // Add control with required validator if mandatory is set
-      const validators: ValidatorFn[] = [];
-      if (field.mandatory) validators.push(Validators.required);
-      if (field.regex) validators.push(Validators.pattern(field.regex));
-      this.form.addControl(field.key, new FormControl(field.defaultValue ?? '', validators));
-      this.updateConditionalValidators();
-    }
-    this.showAddFieldCard = false;
+  closeForm() {
+    this.formClose.emit();
   }
 
-  // --- For new framework creation, use the same modal and logic ---
-  openNewFormDialog() {
-    this.showAddFormCard = true;
-    this.newForm = { framework: '', description: '', fields: [], mapSections: [], extraProperties: [] };
+  get options() {
+    return this.fieldForm.get('options') as FormArray;
   }
 
-  addFieldToNewFramework() {
-    this.openAddFieldDialog(true);
+  addOption() {
+    this.options.push(this.fb.group({
+      label: ['', Validators.required],
+      value: ['', Validators.required]
+    }));
   }
 
-  saveNewForm() {
-    // Simulate saving to /assets/forms/ (in real app, use backend or file API)
-    const forms = JSON.parse(localStorage.getItem('forms') || '[]');
-    forms.push({ ...this.newForm });
-    localStorage.setItem('forms', JSON.stringify(forms));
-    this.showAddFormCard = false;
-  }
-
-  isDropdownOrBoolean(key: string): boolean {
-    const field = [...this.schema.fields, ...this.schema.extraProperties].find((f: any) => f.key === key);
-    return field && (field.type === 'dropdown' || field.type === 'boolean');
-  }
-
-  descShown: { [key: string]: boolean } = {};
-  toggleDesc(field: any) {
-    this.descShown[field.key] = !this.descShown[field.key];
-  }
-
-  allKeys() {
-    return [
-      ...this.schema.fields.map((f: any) => f.key),
-      ...this.schema.extraProperties.map((f: any) => f.key)
-    ];
-  }
-
-  updateDefaultValuePlaceholder() {
-    const type = this.addFieldForm.get('type')?.value;
-    const options = this.addFieldForm.get('options')?.value;
-    let placeholder = '';
-    if (type === 'dropdown' && options) {
-      placeholder = 'e.g. ' + options.split(',').map((o: string) => o.trim()).join(', ');
-    } else if (type === 'boolean') {
-      placeholder = 'true or false';
-    } else if (type === 'number') {
-      placeholder = 'Enter a number';
-    } else {
-      placeholder = '';
-    }
-    this.defaultValuePlaceholder = placeholder;
-  }
-
-  // Add isFieldRequired helper
-  isFieldRequired(field: any): boolean {
-    if (field.mandatory) return true;
-    if (field.mandatoryIf) {
-      const depField = this.schema.fields.find((f: any) => f.key === field.mandatoryIf.key) || this.schema.extraProperties.find((f: any) => f.key === field.mandatoryIf.key);
-      let depValue = this.form.get(field.mandatoryIf.key)?.value;
-      let condValue = field.mandatoryIf.value;
-      if (depField && depField.type === 'boolean') {
-        depValue = depValue === true || depValue === 'true';
-        condValue = condValue === true || condValue === 'true';
-      } else {
-        depValue = depValue != null ? String(depValue) : depValue;
-        condValue = condValue != null ? String(condValue) : condValue;
-      }
-      return depValue === condValue;
-    }
-    return false;
+  removeOption(index: number) {
+    this.options.removeAt(index);
   }
 }

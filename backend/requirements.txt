@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+motor
+deepdiff
+pydantic[email]
+python-dotenv 
