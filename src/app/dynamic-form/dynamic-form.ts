@@ -215,7 +215,33 @@ import { MatCheckboxChange } from '@angular/material/checkbox';
               </div>
               <div class="form-field">
                 <label>Default Value</label>
-                <input formControlName="defaultValue" placeholder="Optional default value">
+                <!-- For dropdown and mcq_single -->
+                <ng-container *ngIf="fieldForm.get('type')?.value === 'dropdown' || fieldForm.get('type')?.value === 'mcq_single'; else defaultTextInput">
+                  <select formControlName="defaultValue">
+                    <option *ngFor="let opt of options.controls" [value]="opt.value.value">{{ opt.value.label }}</option>
+                  </select>
+                </ng-container>
+                <!-- For mcq_multiple -->
+                <ng-container *ngIf="fieldForm.get('type')?.value === 'mcq_multiple'">
+                  <div *ngFor="let opt of options.controls">
+                    <input type="checkbox"
+                          [value]="opt.value.value"
+                          (change)="onDefaultMultiChange($event, opt.value.value)"
+                          [checked]="fieldForm.value.defaultValue?.includes(opt.value.value)">
+                    {{ opt.value.label }}
+                  </div>
+                </ng-container>
+                <!-- For boolean -->
+                <ng-container *ngIf="fieldForm.get('type')?.value === 'boolean'">
+                  <select formControlName="defaultValue">
+                    <option [ngValue]="true">True</option>
+                    <option [ngValue]="false">False</option>
+                  </select>
+                </ng-container>
+                <!-- For other types -->
+                <ng-template #defaultTextInput>
+                  <input formControlName="defaultValue" placeholder="Optional default value">
+                </ng-template>
               </div>
               <div class="form-field" *ngIf="fieldForm.get('type')?.value === 'text'">
                 <label>Validation Regex <mat-icon matTooltip="Pattern the input must match (e.g., ^[a-zA-Z]+$)">help_outline</mat-icon></label>
@@ -1137,6 +1163,16 @@ export class DynamicForm implements OnInit, OnChanges {
     this.selectedImportTemplate = null;
     this.isImporting = false;
   }
+
+  onDefaultMultiChange(event: any, value: any) {
+    // this is to enable multi-select for default values in MCQ fields
+  const arr = this.fieldForm.value.defaultValue || [];
+  if (event.target.checked) {
+    this.fieldForm.patchValue({ defaultValue: [...arr, value] });
+  } else {
+    this.fieldForm.patchValue({ defaultValue: arr.filter((v: any) => v !== value) });
+  }
+}
 
   onKeyValueJsonChange(val: string) {
     this.keyValueJson = val;
