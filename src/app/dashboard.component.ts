@@ -1,16 +1,18 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule, NgIf, NgFor } from '@angular/common';
-import { SchemaService } from './dynamic-form/schema.service';
+import { SchemaService, TemplateInfo } from './dynamic-form/schema.service';
 import { DynamicForm } from './dynamic-form/dynamic-form';
 import { SubmissionsViewerComponent } from './submissions-viewer.component';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatButtonModule } from '@angular/material/button';
+import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, NgIf, NgFor, DynamicForm, SubmissionsViewerComponent, MatIconModule, MatTooltipModule, MatButtonModule],
+  imports: [CommonModule, NgIf, NgFor, DynamicForm, SubmissionsViewerComponent, MatIconModule, MatTooltipModule, MatButtonModule, FormsModule],
   template: `
     <div class="container">
       <div *ngIf="mode === 'list'">
@@ -19,14 +21,45 @@ import { MatButtonModule } from '@angular/material/button';
             <h1>Form Templates</h1>
             <p class="subtitle">Create, manage, and use your form templates.</p>
           </div>
-          <button (click)="showCreateTemplate()" mat-raised-button>
-             <mat-icon>add</mat-icon> 
-             <span>Create New Template</span>
-          </button>
+          <div class="header-actions">
+            <button (click)="toggleTheme()" mat-icon-button matTooltip="Toggle Light/Dark Mode">
+              <mat-icon>{{ isDarkTheme ? 'dark_mode' : 'light_mode' }}</mat-icon>
+            </button>
+            <button (click)="showCreateTemplate()" mat-raised-button>
+              <mat-icon>add</mat-icon>
+              <span>Create New Template</span>
+            </button>
+          </div>
         </header>
 
-        <div *ngIf="templates.length > 0" class="templates-list">
-          <table class="template-list-table">
+        <div class="filter-bar card">
+          <input type="text" class="filter-input" placeholder="Search by name..." [(ngModel)]="filterName" (ngModelChange)="applyFilters()">
+          <input type="text" class="filter-input" placeholder="Search by description..." [(ngModel)]="filterDescription" (ngModelChange)="applyFilters()">
+          <select class="filter-select" [(ngModel)]="filterLockStatus" (ngModelChange)="applyFilters()">
+            <option value="all">All Statuses</option>
+            <option value="locked">Locked</option>
+            <option value="unlocked">Unlocked</option>
+          </select>
+          <div class="date-range-filter">
+            <input type="date" class="filter-input" [(ngModel)]="filterStartDate" (ngModelChange)="applyFilters()">
+            <span class="date-range-separator">to</span>
+            <input type="date" class="filter-input" [(ngModel)]="filterEndDate" (ngModelChange)="applyFilters()">
+          </div>
+          <button (click)="resetFilters()" class="clear-filters-btn">Clear</button>
+        </div>
+
+        <div class="view-switcher">
+          <button mat-icon-button (click)="displayMode = 'list'" [class.active]="displayMode === 'list'" matTooltip="List View">
+            <mat-icon>view_list</mat-icon>
+          </button>
+          <button mat-icon-button (click)="displayMode = 'grid'" [class.active]="displayMode === 'grid'" matTooltip="Grid View">
+            <mat-icon>view_module</mat-icon>
+          </button>
+        </div>
+
+        <div *ngIf="filteredTemplates.length > 0" class="templates-list">
+          <!-- List View -->
+          <table class="template-list-table" *ngIf="displayMode === 'list'">
             <thead>
               <tr>
                 <th>Form Template</th>
@@ -34,52 +67,111 @@ import { MatButtonModule } from '@angular/material/button';
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let template of templates">
+              <tr *ngFor="let template of filteredTemplates">
                 <td>
                   <div class="template-title-group">
                     <mat-icon class="template-icon" matTooltip="Form Template">description</mat-icon>
                     <div>
-                      <h3>{{ template }}</h3>
-                      <p class="template-desc" *ngIf="getTemplateDesc(template)">{{ getTemplateDesc(template) }}</p>
-                      <div class="template-meta" *ngIf="getTemplateMeta(template)">
+                      <h3>
+                        {{ template.name }}
+                        <mat-icon *ngIf="template.is_locked" class="lock-icon" matTooltip="Template is locked">lock</mat-icon>
+                      </h3>
+                      <p class="template-desc" *ngIf="template.description">{{ template.description }}</p>
+                      <div class="template-meta" *ngIf="template.created_at">
                         <mat-icon>calendar_today</mat-icon>
-                        <span>{{ getTemplateMeta(template) }}</span>
+                        <span>Created on {{ template.created_at | date:'mediumDate' }}</span>
                       </div>
                     </div>
                   </div>
                 </td>
                 <td class="actions">
-                  <button mat-icon-button (click)="useTemplate(template)" matTooltip="Fill Out Form">
+                  <button mat-icon-button (click)="useTemplate(template.name)" matTooltip="Fill Out Form">
                     <mat-icon fontIcon="dynamic_form" class="action-icon"></mat-icon>
                   </button>
-                  <button mat-icon-button (click)="editTemplate(template)" matTooltip="Edit Schema">
+                  <button mat-icon-button (click)="editTemplate(template)" matTooltip="Edit Schema" [disabled]="template.is_locked">
                     <mat-icon fontIcon="edit" class="action-icon"></mat-icon>
                   </button>
-                  <button mat-icon-button (click)="previewTemplate(template)" matTooltip="Preview Form">
+                  <button mat-icon-button (click)="previewTemplate(template.name)" matTooltip="Preview Form">
                     <mat-icon fontIcon="visibility" class="action-icon"></mat-icon>
                   </button>
-                  <button mat-icon-button (click)="viewSubmissions(template)" matTooltip="View Submissions">
+                  <button mat-icon-button (click)="viewSubmissions(template.name)" matTooltip="View Submissions">
                     <mat-icon fontIcon="list_alt" class="action-icon"></mat-icon>
                   </button>
+                  <button mat-icon-button (click)="viewHistory(template.name)" matTooltip="View History">
+                    <mat-icon fontIcon="history" class="action-icon"></mat-icon>
+                  </button>
                   <div class="divider"></div>
-                  <button mat-icon-button (click)="duplicateTemplate(template)" matTooltip="Duplicate">
+                   <button *ngIf="!template.is_locked" mat-icon-button (click)="lockTemplate(template.name)" matTooltip="Lock Template">
+                    <mat-icon fontIcon="lock_open" class="action-icon"></mat-icon>
+                  </button>
+                  <button *ngIf="template.is_locked" mat-icon-button (click)="unlockTemplate(template.name)" matTooltip="Unlock Template">
+                    <mat-icon fontIcon="lock" class="action-icon"></mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="duplicateTemplate(template.name)" matTooltip="Duplicate">
                     <mat-icon fontIcon="content_copy" class="action-icon"></mat-icon>
                   </button>
-                  <button mat-icon-button class="action-delete" (click)="deleteTemplate(template)" matTooltip="Delete Template">
+                  <button mat-icon-button class="action-delete" (click)="deleteTemplate(template.name)" matTooltip="Delete Template">
                     <mat-icon fontIcon="delete_outline" class="action-icon"></mat-icon>
                   </button>
                 </td>
               </tr>
             </tbody>
           </table>
+
+          <!-- Grid View -->
+          <div class="template-grid" *ngIf="displayMode === 'grid'">
+            <div class="template-card card" *ngFor="let template of filteredTemplates">
+              <div class="template-title-group">
+                <mat-icon class="template-icon" matTooltip="Form Template">description</mat-icon>
+                <div>
+                  <h3>
+                    {{ template.name }}
+                    <mat-icon *ngIf="template.is_locked" class="lock-icon" matTooltip="Template is locked">lock</mat-icon>
+                  </h3>
+                  <p class="template-desc" *ngIf="template.description">{{ template.description }}</p>
+                  <div class="template-meta" *ngIf="template.created_at">
+                    <mat-icon>calendar_today</mat-icon>
+                    <span>Created on {{ template.created_at | date:'mediumDate' }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="actions">
+                <button mat-icon-button (click)="useTemplate(template.name)" matTooltip="Fill Out Form">
+                  <mat-icon fontIcon="dynamic_form" class="action-icon"></mat-icon>
+                </button>
+                <button mat-icon-button (click)="editTemplate(template)" matTooltip="Edit Schema" [disabled]="template.is_locked">
+                  <mat-icon fontIcon="edit" class="action-icon"></mat-icon>
+                </button>
+                <button mat-icon-button (click)="previewTemplate(template.name)" matTooltip="Preview Form">
+                  <mat-icon fontIcon="visibility" class="action-icon"></mat-icon>
+                </button>
+                <button mat-icon-button (click)="viewSubmissions(template.name)" matTooltip="View Submissions">
+                  <mat-icon fontIcon="list_alt" class="action-icon"></mat-icon>
+                </button>
+                <button mat-icon-button (click)="viewHistory(template.name)" matTooltip="View History">
+                  <mat-icon fontIcon="history" class="action-icon"></mat-icon>
+                </button>
+                <div class="divider"></div>
+                <button *ngIf="!template.is_locked" mat-icon-button (click)="lockTemplate(template.name)" matTooltip="Lock Template">
+                  <mat-icon fontIcon="lock_open" class="action-icon"></mat-icon>
+                </button>
+                <button *ngIf="template.is_locked" mat-icon-button (click)="unlockTemplate(template.name)" matTooltip="Unlock Template">
+                  <mat-icon fontIcon="lock" class="action-icon"></mat-icon>
+                </button>
+                <button mat-icon-button (click)="duplicateTemplate(template.name)" matTooltip="Duplicate">
+                  <mat-icon fontIcon="content_copy" class="action-icon"></mat-icon>
+                </button>
+                <button mat-icon-button class="action-delete" (click)="deleteTemplate(template.name)" matTooltip="Delete Template">
+                  <mat-icon fontIcon="delete_outline" class="action-icon"></mat-icon>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-        <div *ngIf="templates.length === 0" class="card empty-state enhanced-card">
-            <mat-icon class="empty-illustration">folder_open</mat-icon>
-            <h4>No templates found.</h4>
-            <p>Get started by creating a new one!</p>
-            <button (click)="showCreateTemplate()" mat-raised-button color="primary">
-              <mat-icon>add</mat-icon> Create Template
-            </button>
+        <div *ngIf="filteredTemplates.length === 0" class="card empty-state enhanced-card">
+            <mat-icon class="empty-illustration">search</mat-icon>
+            <h4>No templates match your filters.</h4>
+            <p>Try adjusting your search criteria.</p>
         </div>
       </div>
 
@@ -224,18 +316,102 @@ import { MatButtonModule } from '@angular/material/button';
         box-shadow: none;
         transform: none;
     }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .lock-icon {
+      font-size: 1.1rem;
+      vertical-align: middle;
+      margin-left: 0.25rem;
+      color: var(--text-muted-color);
+    }
+    .filter-bar {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .filter-input, .filter-select {
+      font-size: 1rem;
+      padding: 0.75rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background-color: var(--surface-color);
+      color: var(--text-color);
+    }
+    .filter-input {
+      flex-grow: 1;
+    }
+    .date-range-filter {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .clear-filters-btn {
+        background: none;
+        border: 1px solid var(--border-color);
+        color: var(--text-muted-color);
+    }
+    .clear-filters-btn:hover {
+        background: var(--background-color);
+        color: var(--text-color);
+        box-shadow: none;
+        transform: none;
+    }
+    .view-switcher {
+      text-align: right;
+      margin-bottom: 1rem;
+    }
+    .view-switcher button {
+      background: none;
+      border-radius: 8px;
+    }
+    .view-switcher button.active {
+      background-color: var(--secondary-color);
+    }
+    .template-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+    .template-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .template-card .actions {
+      border-top: 1px solid var(--border-color);
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      text-align: right;
+    }
   `]
 })
 export class DashboardComponent implements OnInit {
-  templates: string[] = [];
+  allTemplates: TemplateInfo[] = [];
+  filteredTemplates: TemplateInfo[] = [];
   mode: 'list' | 'create' | 'edit' | 'preview' | 'use' | 'submissions' = 'list';
   selectedTemplate: string | null = null;
   duplicatedVersion: number | null = null;
+  isDarkTheme = false;
+  displayMode: 'list' | 'grid' = 'list';
 
-  constructor(private schemaService: SchemaService) {}
+  // Filter properties
+  filterName: string = '';
+  filterDescription: string = '';
+  filterLockStatus: 'all' | 'locked' | 'unlocked' = 'all';
+  filterStartDate: string = '';
+  filterEndDate: string = '';
+
+  constructor(private schemaService: SchemaService, private router: Router) {}
 
   ngOnInit() {
     this.loadTemplates();
+    this.isDarkTheme = document.body.classList.contains('dark-theme');
   }
 
   isFormMode(): boolean {
@@ -244,13 +420,53 @@ export class DashboardComponent implements OnInit {
 
   loadTemplates() {
     this.schemaService.listTemplates().subscribe(templates => {
-      this.templates = templates;
+      this.allTemplates = templates;
+      this.applyFilters();
+      console.log('Templates loaded:', this.allTemplates);
     });
+  }
+
+  applyFilters() {
+    let templates = this.allTemplates;
+
+    if (this.filterName) {
+      templates = templates.filter(t => t.name.toLowerCase().includes(this.filterName.toLowerCase()));
+    }
+
+    if (this.filterDescription) {
+      templates = templates.filter(t => t.description?.toLowerCase().includes(this.filterDescription.toLowerCase()));
+    }
+
+    if (this.filterLockStatus !== 'all') {
+      const isLocked = this.filterLockStatus === 'locked';
+      templates = templates.filter(t => t.is_locked === isLocked);
+    }
+
+    if (this.filterStartDate) {
+      templates = templates.filter(t => new Date(t.created_at) >= new Date(this.filterStartDate));
+    }
+
+    if (this.filterEndDate) {
+      templates = templates.filter(t => new Date(t.created_at) <= new Date(this.filterEndDate));
+    }
+
+    this.filteredTemplates = templates;
+  }
+
+  resetFilters() {
+    this.filterName = '';
+    this.filterDescription = '';
+    this.filterLockStatus = 'all';
+    this.filterStartDate = '';
+    this.filterEndDate = '';
+    this.applyFilters();
   }
 
   showCreateTemplate() {
     this.mode = 'create';
     this.selectedTemplate = null;
+    this.duplicatedVersion = null;
+    this.loadTemplates();
   }
 
   useTemplate(template: string) {
@@ -258,9 +474,35 @@ export class DashboardComponent implements OnInit {
     this.selectedTemplate = template;
   }
 
-  editTemplate(template: string) {
-    this.mode = 'edit';
-    this.selectedTemplate = template;
+  editTemplate(template: TemplateInfo) {
+    console.log('editTemplate called for', template.name, 'initial is_locked:', template.is_locked);
+    this.schemaService.getTemplate(template.name).subscribe(latestTemplate => {
+      console.log('Fetched latestTemplate:', latestTemplate);
+      if (latestTemplate.is_locked) {
+        const password = prompt('This template is locked. Please enter the password to edit.');
+        if (password) {
+          this.schemaService.unlockTemplate(template.name, password).subscribe({
+            next: () => {
+              // After unlock, fetch the template again to confirm it's unlocked
+              this.schemaService.getTemplate(template.name).subscribe(refreshedTemplate => {
+                console.log('After unlock, refreshedTemplate:', refreshedTemplate);
+                if (!refreshedTemplate.is_locked) {
+                  this.loadTemplates();
+                  this.mode = 'edit';
+                  this.selectedTemplate = template.name;
+                } else {
+                  alert('Failed to unlock template.');
+                }
+              });
+            },
+            error: () => alert('Incorrect password.')
+          });
+        }
+      } else {
+        this.mode = 'edit';
+        this.selectedTemplate = template.name;
+      }
+    });
   }
 
   previewTemplate(template: string) {
@@ -295,20 +537,53 @@ export class DashboardComponent implements OnInit {
   }
 
   getTemplateDesc(template: string): string | null {
-    // Placeholder: In a real app, fetch description from template details
-    // For now, return null or a mock description
-    return null;
+    const t = this.allTemplates.find(t => t.name === template);
+    return t ? t.description : null;
   }
 
   getTemplateMeta(template: string): string | null {
-    // Placeholder: In a real app, fetch created/updated date from template details
-    // For now, return null or a mock date
-    return null;
+    const t = this.allTemplates.find(t => t.name === template);
+    return t ? t.created_at : null;
   }
 
   onDuplicateEdit(event: { template: string, version: number }) {
     this.mode = 'use';
     this.selectedTemplate = event.template;
     this.duplicatedVersion = event.version;
+  }
+
+  toggleTheme() {
+    this.isDarkTheme = !this.isDarkTheme;
+    if (this.isDarkTheme) {
+      document.body.classList.add('dark-theme');
+    } else {
+      document.body.classList.remove('dark-theme');
+    }
+  }
+
+  lockTemplate(templateName: string) {
+    const password = prompt('Enter a password to lock this template. This will prevent accidental edits.');
+    if (password) {
+      this.schemaService.lockTemplate(templateName, password).subscribe(() => {
+        this.loadTemplates();
+      });
+    }
+  }
+
+  unlockTemplate(templateName: string) {
+    const password = prompt('Enter the password to unlock this template.');
+    if (password) {
+      this.schemaService.unlockTemplate(templateName, password).subscribe({
+        next: () => {
+          alert('Template unlocked successfully.');
+          this.loadTemplates();
+        },
+        error: (err) => alert(`Failed to unlock template: ${err.error.detail || 'Incorrect password.'}`)
+      });
+    }
+  }
+
+  viewHistory(name: string) {
+    this.router.navigate(['/history', name]);
   }
 }

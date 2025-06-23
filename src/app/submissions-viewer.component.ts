@@ -1,6 +1,6 @@
 import { Component, Input, OnInit, OnChanges, SimpleChanges, Output, EventEmitter } from '@angular/core';
 import { CommonModule, JsonPipe } from '@angular/common';
-import { SchemaService, Submission } from './dynamic-form/schema.service';
+import { SchemaService, Submission, Response } from './dynamic-form/schema.service';
 import { FormsModule } from '@angular/forms';
 import { DiffViewerComponent } from './diff-viewer.component';
 import { MatIconModule } from '@angular/material/icon';
@@ -86,6 +86,18 @@ import { Router } from '@angular/router';
             <pre>{{ selectedSubmissionData | json }}</pre>
           </div>
 
+          <!-- Threaded Responses/Comments -->
+          <div *ngIf="selectedSubmission" class="card threaded-responses">
+            <h4>Internal Notes & Comments (v{{selectedVersion}})</h4>
+            <div *ngFor="let response of selectedSubmission.responses" class="response-item">
+              <p><strong>{{response.author || 'Anonymous'}}:</strong> {{response.content}}</p>
+              <!-- TODO: Add nested responses -->
+            </div>
+            <div class="response-form">
+              <textarea [(ngModel)]="newResponseContent" placeholder="Add a comment..."></textarea>
+              <button (click)="addResponse()">Submit</button>
+            </div>
+          </div>
           <div *ngIf="!diffResult && !selectedSubmissionData" class="card empty-state">
              <mat-icon>touch_app</mat-icon>
              <h4>Select an Item</h4>
@@ -190,6 +202,21 @@ import { Router } from '@angular/router';
     .delete-btn:hover .mat-icon {
       color: #b71c1c !important;
     }
+
+    .threaded-responses {
+      margin-top: 0;
+    }
+    .response-item {
+      background-color: var(--background-color);
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+    .response-form textarea {
+      width: 100%;
+      min-height: 80px;
+      margin-bottom: 1rem;
+    }
   `]
 })
 export class SubmissionsViewerComponent implements OnInit, OnChanges {
@@ -198,11 +225,12 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
   isLoading = false;
   submissions: Submission[] = [];
   selectedVersion: number | null = null;
+  selectedSubmission: (Submission & { responses?: Response[] }) | null = null;
   selectedSubmissionData: any = null;
-  
   selectedVersions = new Set<number>();
   diffResult: any = null;
   @Output() duplicateEdit = new EventEmitter<{ template: string, version: number }>();
+  newResponseContent: string = '';
 
   constructor(private schemaService: SchemaService, private router: Router) {}
 
@@ -220,6 +248,7 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
   resetState() {
     this.submissions = [];
     this.selectedVersion = null;
+    this.selectedSubmission = null;
     this.selectedSubmissionData = null;
     this.selectedVersions.clear();
     this.diffResult = null;
@@ -228,8 +257,8 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
   loadSubmissions() {
     if (!this.templateName) return;
     this.isLoading = true;
-    this.schemaService.listSubmissions(this.templateName).subscribe(subs => {
-      this.submissions = subs.sort((a, b) => a.version - b.version);
+    this.schemaService.listSubmissions(this.templateName).subscribe((subs: Submission[]) => {
+      this.submissions = subs.sort((a: Submission, b: Submission) => b.version - a.version);
       this.isLoading = false;
     });
   }
@@ -237,8 +266,29 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
   viewSubmission(version: number) {
     if (!this.templateName) return;
     this.selectedVersion = version;
-    this.schemaService.getSubmission(this.templateName, version).subscribe(data => {
-      this.selectedSubmissionData = data.data;
+    this.diffResult = null; // Clear diff when viewing a single submission
+    this.schemaService.getSubmission(this.templateName, version).subscribe(sub => {
+      this.selectedSubmission = sub;
+      this.selectedSubmissionData = sub.data;
+    });
+  }
+
+  addResponse() {
+    if (!this.templateName || !this.selectedVersion || !this.newResponseContent.trim()) return;
+
+    // TODO: Get author from a user service/auth
+    const response = {
+      content: this.newResponseContent,
+      author: 'Reviewer' 
+    };
+
+    this.schemaService.addResponse(this.templateName, this.selectedVersion, response).subscribe(newResponse => {
+      if (this.selectedSubmission && this.selectedSubmission.responses) {
+        this.selectedSubmission.responses.push(newResponse);
+      } else if (this.selectedSubmission) {
+        this.selectedSubmission.responses = [newResponse];
+      }
+      this.newResponseContent = '';
     });
   }
 
@@ -323,6 +373,7 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
         this.loadSubmissions();
         if (this.selectedVersion === version) {
           this.selectedVersion = null;
+          this.selectedSubmission = null;
           this.selectedSubmissionData = null;
         }
       });

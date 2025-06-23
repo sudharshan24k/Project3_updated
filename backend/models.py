@@ -3,12 +3,29 @@ from typing import Dict, Any, List, Optional
 from bson import ObjectId
 import datetime
 
+class TemplateVersionModel(BaseModel):
+    id: Optional[Any] = Field(alias="_id", default=None)
+    template_name: str = Field(...)
+    version: int = Field(...)
+    schema: Optional[Dict[str, Any]] = Field(default=None)
+    change_log: Optional[str] = Field(default="Initial version.")
+    created_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+        json_encoders={ObjectId: str},
+    )
+
 class TemplateModel(BaseModel):
     id: Optional[Any] = Field(alias="_id", default=None)
     name: str = Field(...)
+    version: int = Field(default=1)
     schema: Optional[Dict[str, Any]] = Field(default=None)
     created_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
     updated_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
+    is_locked: bool = Field(default=False)
+    lock_password: Optional[str] = Field(default=None)
 
     model_config = ConfigDict(
         populate_by_name=True,

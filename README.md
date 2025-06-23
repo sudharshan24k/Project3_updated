@@ -1,4 +1,3 @@
-
 cd backend
 
 python -m venv venv
@@ -9,8 +8,8 @@ w:  venv\Scripts\activate
 pip install -r requirements.txt
 http://127.0.0.1:8000
 
+# Make sure you are in the backend directory when running this command
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-```
 
 ### 2. Frontend Setup
 

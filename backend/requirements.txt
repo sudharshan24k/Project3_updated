@@ -3,4 +3,5 @@ uvicorn
 motor
 deepdiff
 pydantic[email]
-python-dotenv 
+python-dotenv
+passlib[bcrypt] 

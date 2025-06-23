@@ -179,3 +179,19 @@ tr:last-child td {
 tr:hover {
     background-color: var(--background-color);
 }
+
+/* Dark Theme Variables */
+.dark-theme {
+  --primary-color: #90caf9;
+  --secondary-color: #607d8b;
+  --accent-color: #ffb74d;
+  --background-color: #181a1b;
+  --surface-color: #23272a;
+  --text-color: #f4f6f8;
+  --text-muted-color: #b0b8c1;
+  --border-color: #2c3136;
+  --danger-color: #ef9a9a;
+  --success-color: #81c784;
+  --shadow-color-light: rgba(0, 0, 0, 0.25);
+  --shadow-color-dark: rgba(0, 0, 0, 0.5);
+}
