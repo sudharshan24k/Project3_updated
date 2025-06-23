@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MONGO_DETAILS = os.getenv("MONGO_DETAILS", "mongodb://localhost:27017")
+MONGO_DETAILS = os.getenv("MONGO_DETAILS", "mongodb+srv://sai2:WGRPGALFopkCXXTl@cluster0.gpxgs.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 
 client = AsyncIOMotorClient(MONGO_DETAILS)
 
