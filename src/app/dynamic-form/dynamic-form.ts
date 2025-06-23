@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, OnInit, Input, Output, EventEmitter, OnChanges, SimpleChanges, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ValidatorFn, ReactiveFormsModule, FormArray, FormControl } from '@angular/forms';
 import { CommonModule, NgIf, NgFor } from '@angular/common';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -15,6 +15,8 @@ import { SchemaService, TemplateSchema, TemplateInfo } from './schema.service';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatCheckboxChange } from '@angular/material/checkbox';
+import { MatDialog } from '@angular/material/dialog';
+import { VersionDialogComponent, VersionDialogData } from '../version-dialog.component';
 
 @Component({
   selector: 'app-dynamic-form',
@@ -51,61 +53,38 @@ import { MatCheckboxChange } from '@angular/material/checkbox';
             <p class="panel-subtitle" *ngIf="isEditMode">This is how your form will look to users.</p>
           </header>
           <form [formGroup]="form" (ngSubmit)="onSubmit()">
-            <div *ngFor="let field of visibleFields" class="form-field" [ngSwitch]="field.type">
-              <mat-form-field *ngSwitchCase="'text'" appearance="outline" class="full-width">
-                <mat-label>{{ field.label }}</mat-label>
-                <input matInput [formControlName]="field.key" [placeholder]="field.placeholder || ''" [readonly]="isReadOnly || !field.editable">
-                <mat-error *ngIf="form.get(field.key)?.invalid && form.get(field.key)?.touched">This field is required or invalid.</mat-error>
-              </mat-form-field>
-              <mat-form-field *ngSwitchCase="'number'" appearance="outline" class="full-width">
-                <mat-label>{{ field.label }}</mat-label>
-                <input matInput type="number" [formControlName]="field.key" [placeholder]="field.placeholder || ''" [readonly]="isReadOnly || !field.editable">
-                <mat-error *ngIf="form.get(field.key)?.invalid && form.get(field.key)?.touched">This field is required or invalid.</mat-error>
-              </mat-form-field>
-              <mat-form-field *ngSwitchCase="'email'" appearance="outline" class="full-width">
-                <mat-label>{{ field.label }}</mat-label>
-                <input matInput type="email" [formControlName]="field.key" [placeholder]="field.placeholder || ''" [readonly]="isReadOnly || !field.editable">
-                <mat-error *ngIf="form.get(field.key)?.invalid && form.get(field.key)?.touched">This field is required or invalid.</mat-error>
-              </mat-form-field>
-              <mat-form-field *ngSwitchCase="'timestamp'" appearance="outline" class="full-width">
-                <mat-label>{{ field.label }}</mat-label>
-                <input matInput type="datetime-local" [formControlName]="field.key" [readonly]="isReadOnly || !field.editable">
-              </mat-form-field>
-              <mat-form-field *ngSwitchCase="'dropdown'" appearance="outline" class="full-width">
-                <mat-label>{{ field.label }}</mat-label>
-                <mat-select [formControlName]="field.key" [disabled]="isReadOnly || !field.editable">
-                  <mat-option *ngFor="let opt of field.options" [value]="opt.value">{{ opt.label }}</mat-option>
-                </mat-select>
-              </mat-form-field>
-              <div *ngSwitchCase="'mcq_single'" class="mcq-group">
-                <span class="mcq-label">{{ field.label }}</span>
-                <mat-radio-group [formControlName]="field.key" [disabled]="isReadOnly || !field.editable">
-                  <mat-radio-button *ngFor="let opt of field.options" [value]="opt.value">{{ opt.label }}</mat-radio-button>
-                </mat-radio-group>
+            <div *ngFor="let field of visibleFields" class="form-field horizontal-field" [ngSwitch]="field.type">
+              <div class="field-label-horizontal">
+                <span>{{ field.label }}</span>
+                <span *ngIf="isFieldRequired(field)" class="required-asterisk-horizontal">*</span>
               </div>
-              <div *ngSwitchCase="'mcq_multiple'" class="mcq-group">
-                <span class="mcq-label">{{ field.label }}</span>
-                <div class="mcq-multi-options">
-                  <mat-checkbox *ngFor="let opt of field.options" [checked]="form.get(field.key)?.value?.includes(opt.value)" (change)="onMCQMultiChange(field.key, opt.value, getCheckboxChecked($event))" [disabled]="isReadOnly || !field.editable">{{ opt.label }}</mat-checkbox>
-                </div>
-              </div>
-              <div *ngSwitchCase="'boolean'" class="toggle-group">
-                <mat-slide-toggle [formControlName]="field.key" [disabled]="isReadOnly || !field.editable">{{ field.label }}</mat-slide-toggle>
-              </div>
-              <div *ngSwitchCase="'keyvalue'" class="keyvalue-panel">
-                <span class="keyvalue-label">{{ field.label }}</span>
-                <div *ngFor="let pair of form.get(field.key)?.value || []; let i = index" class="keyvalue-row">
-                  <mat-form-field class="keyvalue-input" appearance="outline">
-                    <mat-label>Key</mat-label>
-                    <input matInput [ngModel]="getKeyValueField(form, field.key, i, 'key')" (ngModelChange)="setKeyValueField(form, field.key, i, 'key', $event)" [readonly]="isReadOnly || !field.editable">
-                  </mat-form-field>
-                  <mat-form-field class="keyvalue-input" appearance="outline">
-                    <mat-label>Value</mat-label>
-                    <input matInput [ngModel]="getKeyValueField(form, field.key, i, 'value')" (ngModelChange)="setKeyValueField(form, field.key, i, 'value', $event)" [readonly]="isReadOnly || !field.editable">
-                  </mat-form-field>
-                  <button *ngIf="!isReadOnly && field.editable" type="button" (click)="removeKeyValuePair(field.key, i)" mat-icon-button matTooltip="Remove Pair"><mat-icon>remove_circle_outline</mat-icon></button>
-                </div>
-                <button *ngIf="!isReadOnly && field.editable" type="button" (click)="addKeyValuePair(field.key)" mat-icon-button><mat-icon>add</mat-icon> Add Pair</button>
+              <div class="field-input-horizontal">
+                <ng-container [ngSwitch]="field.type">
+                  <input *ngSwitchCase="'text'" matInput [formControlName]="field.key" [placeholder]="field.placeholder || 'Enter ' + field.label" [readonly]="isReadOnly || !field.editable" class="input-horizontal modern-placeholder" />
+                  <input *ngSwitchCase="'number'" matInput type="number" [formControlName]="field.key" [placeholder]="field.placeholder || 'Enter ' + field.label" [readonly]="isReadOnly || !field.editable" class="input-horizontal modern-placeholder" />
+                  <input *ngSwitchCase="'email'" matInput type="email" [formControlName]="field.key" [placeholder]="field.placeholder || 'Enter ' + field.label" [readonly]="isReadOnly || !field.editable" class="input-horizontal modern-placeholder" />
+                  <input *ngSwitchCase="'timestamp'" matInput type="datetime-local" [formControlName]="field.key" [readonly]="isReadOnly || !field.editable" class="input-horizontal modern-placeholder" />
+                  <mat-select *ngSwitchCase="'dropdown'" [formControlName]="field.key" [disabled]="isReadOnly || !field.editable" [placeholder]="field.placeholder || ''" class="input-horizontal">
+                    <mat-option *ngFor="let opt of field.options" [value]="opt.value">{{ opt.label }}</mat-option>
+                  </mat-select>
+                  <mat-radio-group *ngSwitchCase="'mcq_single'" [formControlName]="field.key" [disabled]="isReadOnly || !field.editable" class="input-horizontal">
+                    <mat-radio-button *ngFor="let opt of field.options" [value]="opt.value">{{ opt.label }}</mat-radio-button>
+                  </mat-radio-group>
+                  <div *ngSwitchCase="'mcq_multiple'" class="mcq-multi-options input-horizontal">
+                    <mat-checkbox *ngFor="let opt of field.options" [checked]="form.get(field.key)?.value?.includes(opt.value)" (change)="onMCQMultiChange(field.key, opt.value, getCheckboxChecked($event))" [disabled]="isReadOnly || !field.editable">{{ opt.label }}</mat-checkbox>
+                  </div>
+                  <mat-slide-toggle *ngSwitchCase="'boolean'" [formControlName]="field.key" [disabled]="isReadOnly || !field.editable" class="input-horizontal">{{ field.placeholder || field.label }}</mat-slide-toggle>
+                  <div *ngSwitchCase="'keyvalue'" class="keyvalue-array-horizontal">
+                    <div *ngFor="let group of getKeyValueArray(field.key)?.controls; let i = index" [formGroupName]="i" class="keyvalue-pair-horizontal">
+                      <input matInput formControlName="key" [placeholder]="field.placeholder ? field.placeholder + ' (Key)' : 'Enter ' + field.label + ' key'" class="input-horizontal" />
+                      <input matInput formControlName="value" [placeholder]="field.placeholder ? field.placeholder + ' (Value)' : 'Enter ' + field.label + ' value'" class="input-horizontal" />
+                      <button mat-icon-button color="warn" type="button" (click)="removeKeyValuePair(field.key, i)">
+                        <span class="material-icons">delete</span>
+                      </button>
+                    </div>
+                    <button mat-stroked-button color="primary" type="button" (click)="addKeyValuePair(field.key)">+ Add Pair</button>
+                  </div>
+                </ng-container>
               </div>
             </div>
           </form>
@@ -172,10 +151,13 @@ import { MatCheckboxChange } from '@angular/material/checkbox';
             <!-- Basic Info Section -->
             <div class="section-heading"><mat-icon>info</mat-icon> Basic Info</div>
             <form [formGroup]="fieldForm" class="field-form-grid">
-              <div class="form-field span-2">
-                <label>Field Label <span class="required-asterisk">*</span></label>
-                <input formControlName="label" placeholder="Visible label (e.g., 'First Name')">
-                <div *ngIf="fieldForm.get('label')?.invalid && fieldForm.get('label')?.touched" class="error-message">Label is required.</div>
+              <div class="form-field horizontal-field span-2">
+                <div class="field-label-horizontal">
+                  <label>Field Label <span class="required-asterisk">*</span></label>
+                </div>
+                <div class="field-input-horizontal">
+                  <input formControlName="label" placeholder="Visible label (e.g., 'First Name')" class="input-horizontal" />
+                </div>
               </div>
               <div class="form-field">
                 <label>Field Key <span class="required-asterisk">*</span></label>
@@ -192,8 +174,7 @@ import { MatCheckboxChange } from '@angular/material/checkbox';
                   <mat-icon *ngIf="fieldForm.get('type')?.value === 'dropdown'">arrow_drop_down_circle</mat-icon>
                   <mat-icon *ngIf="fieldForm.get('type')?.value === 'mcq_single'">radio_button_checked</mat-icon>
                   <mat-icon *ngIf="fieldForm.get('type')?.value === 'mcq_multiple'">check_box</mat-icon>
-                  <mat-icon *ngIf="fieldForm.get('type')?.value === 'keyvalue'">code</mat-icon>
-                  <mat-icon *ngIf="fieldForm.get('type')?.value === 'timestamp'">schedule</mat-icon>
+                  <mat-icon *ngIf="fieldForm.get('type')?.value === 'keyvalue'">key</mat-icon>
                   <select formControlName="type">
                     <option value="text">Text</option>
                     <option value="number">Number</option>
@@ -203,15 +184,18 @@ import { MatCheckboxChange } from '@angular/material/checkbox';
                     <option value="mcq_single">MCQ (Single Select)</option>
                     <option value="mcq_multiple">MCQ (Multiple Select)</option>
                     <option value="keyvalue">Key-Value</option>
-                    <option value="timestamp">Timestamp</option>
                   </select>
                 </div>
               </div>
 
               <div class="section-heading"><mat-icon>tune</mat-icon> Field Settings</div>
-              <div class="form-field span-2">
-                <label>Placeholder / Help Text</label>
-                <input formControlName="placeholder" placeholder="Help text inside the input or for checkbox">
+              <div class="form-field horizontal-field span-2">
+                <div class="field-label-horizontal">
+                  <label>Placeholder / Help Text</label>
+                </div>
+                <div class="field-input-horizontal">
+                  <input formControlName="placeholder" placeholder="Help text inside the input or for checkbox" class="input-horizontal" />
+                </div>
               </div>
               <div class="form-field">
                 <label>Default Value</label>
@@ -308,70 +292,69 @@ import { MatCheckboxChange } from '@angular/material/checkbox';
                 </button>
               </div>
 
-              <!-- Key-Value Default Section -->
-              <div *ngIf="fieldForm.get('type')?.value === 'keyvalue'" class="span-2">
-                <div class="section-heading"><mat-icon>code</mat-icon> Default Key-Value Pairs</div>
-                <div style="margin-bottom: 0.5rem;">
-                  <label>JSON Editor</label>
-                  <textarea [(ngModel)]="keyValueJson" (ngModelChange)="onKeyValueJsonChange($event)" rows="3" style="width:100%;font-family:monospace;"></textarea>
-                  <div *ngIf="keyValueJsonError" style="color: var(--danger-color); font-size: 0.95em;">{{ keyValueJsonError }}</div>
-                </div>
-                <div style="margin-bottom: 0.5rem;">Or use the UI below:</div>
-                <div *ngFor="let pair of fieldForm.value.defaultValue || []; let i = index" style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
-                  <input [(ngModel)]="fieldForm.value.defaultValue[i].key" [ngModelOptions]="{standalone: true}" placeholder="Key">
-                  <input [(ngModel)]="fieldForm.value.defaultValue[i].value" [ngModelOptions]="{standalone: true}" placeholder="Value">
-                  <button type="button" (click)="fieldForm.value.defaultValue.splice(i, 1)" mat-icon-button matTooltip="Remove Pair"><mat-icon>remove_circle_outline</mat-icon></button>
-                </div>
-                <button type="button" (click)="fieldForm.value.defaultValue = (fieldForm.value.defaultValue || []).concat([{key: '', value: ''}])" mat-icon-button><mat-icon>add</mat-icon> Add Pair</button>
+              <!-- Key-Value Pairs Section -->
+              <div *ngIf="fieldForm.get('type')?.value === 'keyvalue'" class="form-field span-2">
+                <label>Default Keys (comma separated)</label>
+                <input [(ngModel)]="fieldForm.value.initialKeys" placeholder="e.g. key1, key2, key3" [ngModelOptions]="{standalone: true}">
               </div>
 
               <!-- Conditional Logic Section -->
-              <div class="section-heading"><mat-icon>rule</mat-icon> Conditional Logic</div>
-              <div class="form-field">
-                <label>Visible If <mat-icon matTooltip="Show this field only if another field has a certain value">help_outline</mat-icon></label>
-                <div class="conditional-group">
-                  <select [(ngModel)]="visibleIfKey" [ngModelOptions]="{standalone: true}" (ngModelChange)="visibleIfValue = null">
-                    <option [ngValue]="null">-- None --</option>
+              <div class="section-heading"><mat-icon>visibility</mat-icon> Conditional Logic</div>
+              <div class="form-field span-2">
+                <label>Visible If (Show this field only if another field has a specific value)</label>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                  <select [(ngModel)]="visibleIfKey" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                    <option [ngValue]="null">-- Select Field --</option>
                     <option *ngFor="let f of schema.fields" [ngValue]="f.key" [disabled]="f.key === fieldForm.value.key">{{ f.label }}</option>
                   </select>
                   <ng-container *ngIf="visibleIfKey">
-                    <select *ngIf="isBooleanField(visibleIfKey)" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}">
-                      <option [ngValue]="true">true</option>
-                      <option [ngValue]="false">false</option>
-                    </select>
-                    <select *ngIf="getFieldOptions(visibleIfKey) && !isBooleanField(visibleIfKey) && getFieldType(visibleIfKey) !== 'mcq_multiple'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}">
-                      <option *ngFor="let opt of getFieldOptions(visibleIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
-                    </select>
-                    <div *ngIf="getFieldType(visibleIfKey) === 'mcq_multiple' && getFieldOptions(visibleIfKey)">
-                      <div *ngFor="let opt of getFieldOptions(visibleIfKey)">
-                        <input type="checkbox" [value]="opt.value" (change)="onMultiCondChange($event, 'visible')" [checked]="isArray(visibleIfValue) && visibleIfValue.includes(opt.value)"> {{ opt.label }}
+                    <ng-container [ngSwitch]="getFieldType(visibleIfKey)">
+                      <select *ngSwitchCase="'dropdown'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                        <option *ngFor="let opt of getFieldOptions(visibleIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
+                      </select>
+                      <select *ngSwitchCase="'mcq_single'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                        <option *ngFor="let opt of getFieldOptions(visibleIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
+                      </select>
+                      <div *ngSwitchCase="'mcq_multiple'" style="flex:1; display:flex; flex-wrap:wrap; gap:0.5rem;">
+                        <label *ngFor="let opt of getFieldOptions(visibleIfKey)">
+                          <input type="checkbox" [value]="opt.value" (change)="onMultiCondChange($event, 'visible')" [checked]="isArray(visibleIfValue) && visibleIfValue.includes(opt.value)"> {{ opt.label }}
+                        </label>
                       </div>
-                    </div>
-                    <input *ngIf="!isBooleanField(visibleIfKey) && !getFieldOptions(visibleIfKey)" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value (e.g. true, 1, etc.)">
+                      <select *ngSwitchCase="'boolean'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                        <option [ngValue]="true">True</option>
+                        <option [ngValue]="false">False</option>
+                      </select>
+                      <input *ngSwitchDefault [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value" style="flex:1;">
+                    </ng-container>
                   </ng-container>
                 </div>
               </div>
-              <div class="form-field">
-                <label>Mandatory If <mat-icon matTooltip="Make this field required only if another field has a certain value">help_outline</mat-icon></label>
-                <div class="conditional-group">
-                  <select [(ngModel)]="mandatoryIfKey" [ngModelOptions]="{standalone: true}" (ngModelChange)="mandatoryIfValue = null">
-                    <option [ngValue]="null">-- None --</option>
+              <div class="form-field span-2">
+                <label>Mandatory If (Make this field required only if another field has a specific value)</label>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                  <select [(ngModel)]="mandatoryIfKey" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                    <option [ngValue]="null">-- Select Field --</option>
                     <option *ngFor="let f of schema.fields" [ngValue]="f.key" [disabled]="f.key === fieldForm.value.key">{{ f.label }}</option>
                   </select>
                   <ng-container *ngIf="mandatoryIfKey">
-                    <select *ngIf="isBooleanField(mandatoryIfKey)" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}">
-                      <option [ngValue]="true">true</option>
-                      <option [ngValue]="false">false</option>
-                    </select>
-                    <select *ngIf="getFieldOptions(mandatoryIfKey) && !isBooleanField(mandatoryIfKey) && getFieldType(mandatoryIfKey) !== 'mcq_multiple'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}">
-                      <option *ngFor="let opt of getFieldOptions(mandatoryIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
-                    </select>
-                    <div *ngIf="getFieldType(mandatoryIfKey) === 'mcq_multiple' && getFieldOptions(mandatoryIfKey)">
-                      <div *ngFor="let opt of getFieldOptions(mandatoryIfKey)">
-                        <input type="checkbox" [value]="opt.value" (change)="onMultiCondChange($event, 'mandatory')" [checked]="isArray(mandatoryIfValue) && mandatoryIfValue.includes(opt.value)"> {{ opt.label }}
+                    <ng-container [ngSwitch]="getFieldType(mandatoryIfKey)">
+                      <select *ngSwitchCase="'dropdown'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                        <option *ngFor="let opt of getFieldOptions(mandatoryIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
+                      </select>
+                      <select *ngSwitchCase="'mcq_single'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                        <option *ngFor="let opt of getFieldOptions(mandatoryIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
+                      </select>
+                      <div *ngSwitchCase="'mcq_multiple'" style="flex:1; display:flex; flex-wrap:wrap; gap:0.5rem;">
+                        <label *ngFor="let opt of getFieldOptions(mandatoryIfKey)">
+                          <input type="checkbox" [value]="opt.value" (change)="onMultiCondChange($event, 'mandatory')" [checked]="isArray(mandatoryIfValue) && mandatoryIfValue.includes(opt.value)"> {{ opt.label }}
+                        </label>
                       </div>
-                    </div>
-                    <input *ngIf="!isBooleanField(mandatoryIfKey) && !getFieldOptions(mandatoryIfKey)" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value (e.g. true, 1, etc.)">
+                      <select *ngSwitchCase="'boolean'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                        <option [ngValue]="true">True</option>
+                        <option [ngValue]="false">False</option>
+                      </select>
+                      <input *ngSwitchDefault [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value" style="flex:1;">
+                    </ng-container>
                   </ng-container>
                 </div>
               </div>
@@ -589,16 +572,23 @@ import { MatCheckboxChange } from '@angular/material/checkbox';
 
     .field-editor-form {
       background-color: var(--background-color);
-      padding: 1.5rem;
-      border-radius: 8px;
-      margin-top: 1rem;
+      padding: 2rem 2rem 1.5rem 2rem;
+      border-radius: 12px;
+      margin-top: 1.5rem;
+      box-shadow: 0 2px 12px var(--shadow-color-light);
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
     }
     .field-editor-form h5 { margin-top: 0; }
     
     .field-form-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
     }
     .span-2 { grid-column: span 2; }
 
@@ -727,10 +717,80 @@ import { MatCheckboxChange } from '@angular/material/checkbox';
     .mcq-label { font-weight: 600; margin-bottom: 0.5rem; display: block; }
     .mcq-multi-options { display: flex; flex-wrap: wrap; gap: 1.2rem; }
     .toggle-group { margin-bottom: 1.5rem; }
-    .keyvalue-panel { background: var(--surface-color); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; }
-    .keyvalue-label { font-weight: 600; margin-bottom: 0.5rem; display: block; }
-    .keyvalue-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
-    .keyvalue-input { flex: 1 1 0; }
+
+    [formArrayName] > div {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 1rem 1rem 0.5rem 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 4px var(--shadow-color-light);
+      display: flex;
+      gap: 1rem;
+      align-items: flex-end;
+    }
+    mat-form-field[appearance="fill"] {
+      background: #f0f2f5;
+      border-radius: 6px;
+    }
+    button[mat-stroked-button] {
+      margin-top: 0.5rem;
+      align-self: flex-start;
+    }
+
+    /* Add styles for horizontal layout and required asterisk */
+    :host ::ng-deep .horizontal-field {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    :host ::ng-deep .field-label-horizontal {
+      min-width: 180px;
+      font-weight: 600;
+      font-size: 1.08rem;
+      color: var(--text-color);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      position: relative;
+      height: 40px;
+      margin-right: 1.5rem;
+    }
+    :host ::ng-deep .required-asterisk-horizontal {
+      color: var(--danger-color);
+      margin-left: 0.3rem;
+      font-size: 1.1em;
+      position: absolute;
+      right: -1.2em;
+      top: 0.1em;
+    }
+    :host ::ng-deep .field-input-horizontal {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 1.2rem;
+    }
+    :host ::ng-deep .input-horizontal {
+      flex: 1;
+      min-width: 180px;
+      max-width: 350px;
+    }
+    :host ::ng-deep .keyvalue-array-horizontal {
+      width: 100%;
+    }
+    :host ::ng-deep .keyvalue-pair-horizontal {
+      display: flex;
+      gap: 0.7rem;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .modern-placeholder::placeholder {
+      color: #b0b8c9;
+      font-style: italic;
+      opacity: 1;
+    }
   `]
 })
 export class DynamicForm implements OnInit, OnChanges {
@@ -774,11 +834,9 @@ export class DynamicForm implements OnInit, OnChanges {
   selectedImportTemplate: string | null = null;
   isImporting = false;
 
-  keyValueJson: string = '';
-  keyValueJsonError: string = '';
-
   // --- Add for dynamic conditional logic ---
   get visibleFields() {
+    // Force recalculation on every access to ensure visibility is always up to date
     return this.schema.fields.filter((field: any) => this.isFieldVisible(field));
   }
 
@@ -801,18 +859,10 @@ export class DynamicForm implements OnInit, OnChanges {
     return keys.every((key: string, idx: number) => {
       const controllingValue = this.form?.get(key)?.value;
       const expected = Array.isArray(values) ? values[idx] ?? values[0] : values;
-      // Normalize booleans
-      const normalized = (v: any) => {
-        if (typeof controllingValue === 'boolean') {
-          if (v === true || v === 'true') return true;
-          if (v === false || v === 'false') return false;
-        }
-        return v;
-      };
       if (Array.isArray(expected)) {
-        return expected.some((v: any) => controllingValue == normalized(v));
+        return expected.some((v: any) => controllingValue == v);
       } else {
-        return controllingValue == normalized(expected);
+        return controllingValue == expected;
       }
     });
   }
@@ -836,25 +886,17 @@ export class DynamicForm implements OnInit, OnChanges {
       return keys.every((key: string, idx: number) => {
         const controllingValue = this.form?.get(key)?.value;
         const expected = Array.isArray(values) ? values[idx] ?? values[0] : values;
-        // Normalize booleans
-        const normalized = (v: any) => {
-          if (typeof controllingValue === 'boolean') {
-            if (v === true || v === 'true') return true;
-            if (v === false || v === 'false') return false;
-          }
-          return v;
-        };
         if (Array.isArray(expected)) {
-          return expected.some((v: any) => controllingValue == normalized(v));
+          return expected.some((v: any) => controllingValue == v);
         } else {
-          return controllingValue == normalized(expected);
+          return controllingValue == expected;
         }
       });
     }
     return !!field.required;
   }
 
-  constructor(private fb: FormBuilder, private route: ActivatedRoute, private router: Router, private schemaService: SchemaService) {
+  constructor(private fb: FormBuilder, private route: ActivatedRoute, private router: Router, private schemaService: SchemaService, private cdr: ChangeDetectorRef, private dialog: MatDialog) {
     this.form = this.fb.group({});
     this.fieldForm = this.fb.group({
       key: ['', [Validators.required, Validators.pattern(/^[a-zA-Z0-9_]+$/)]],
@@ -892,6 +934,12 @@ export class DynamicForm implements OnInit, OnChanges {
         this.isDuplicatedEdit = qp.get('duplicated') === 'true';
         this.setupComponent();
       });
+    });
+    // --- Fix for boolean visibleIf glitch: subscribe to all boolean fields and trigger change detection ---
+    this.form?.valueChanges?.subscribe(() => {
+      // This will trigger Angular change detection and update visibleFields
+      this.cdr.markForCheck();
+      this.cdr.detectChanges();
     });
   }
   ngOnChanges(changes: SimpleChanges) {
@@ -969,25 +1017,54 @@ export class DynamicForm implements OnInit, OnChanges {
   buildForm() {
     const controls: { [key: string]: any } = {};
     this.schema.fields.forEach((field: any) => {
-      const validators: ValidatorFn[] = [];
-      if (field.regex) {
-        validators.push(Validators.pattern(field.regex));
+      if (field.type === 'keyvalue') {
+        const arr = new FormArray<FormGroup>([]);
+        if (field.initialKeys && Array.isArray(field.initialKeys)) {
+          field.initialKeys.forEach((k: string) => arr.push(this.fb.group({ key: k, value: '' })));
+        }
+        controls[field.key] = arr;
+      } else {
+        const validators: ValidatorFn[] = [];
+        if (field.regex) {
+          validators.push(Validators.pattern(field.regex));
+        }
+        let defaultValue = field.defaultValue;
+        if (field.type === 'mcq_multiple' && !Array.isArray(defaultValue)) {
+          defaultValue = [];
+        }
+        const control = new FormControl({ value: defaultValue, disabled: this.isReadOnly || (this.mode === 'use' && !field.editable) }, validators);
+        controls[field.key] = control;
+        // --- Fix: Listen for changes on controlling boolean fields to force UI update ---
+        if (field.type === 'boolean') {
+          control.valueChanges.subscribe(() => {
+            this.cdr.detectChanges();
+          });
+        }
       }
-      let defaultValue = field.defaultValue;
-      if (field.type === 'mcq_multiple' && !Array.isArray(defaultValue)) {
-        defaultValue = [];
-      }
-      if (field.type === 'keyvalue' && !Array.isArray(defaultValue)) {
-        defaultValue = [];
-      }
-      const control = new FormControl({ value: defaultValue, disabled: this.isReadOnly || (this.mode === 'use' && !field.editable) }, validators);
-      controls[field.key] = control;
     });
     this.form = this.fb.group(controls);
 
     // Listen for changes to update required validators dynamically
     this.form.valueChanges.subscribe(() => {
       this.updateDynamicValidators();
+      // Force change detection for visibility in response mode
+      if (this.mode === 'use') {
+        void this.visibleFields;
+        this.cdr.markForCheck();
+        this.cdr.detectChanges();
+      }
+    });
+    // --- Subscribe to all boolean fields for visibility glitch fix ---
+    this.schema.fields.forEach((field: any) => {
+      if (field.type === 'boolean') {
+        const control = this.form.get(field.key);
+        if (control) {
+          control.valueChanges.subscribe(() => {
+            this.cdr.markForCheck();
+            this.cdr.detectChanges();
+          });
+        }
+      }
     });
     this.updateDynamicValidators();
   }
@@ -1017,7 +1094,8 @@ export class DynamicForm implements OnInit, OnChanges {
       defaultValue: null,
       placeholder: '',
       regex: '',
-      options: []
+      options: [],
+      initialKeys: '' // Add initialKeys for keyvalue
     });
     this.options.clear();
     this.isFieldEditorVisible = true;
@@ -1025,8 +1103,6 @@ export class DynamicForm implements OnInit, OnChanges {
     this.visibleIfValue = null;
     this.mandatoryIfKey = null;
     this.mandatoryIfValue = null;
-    this.keyValueJson = '';
-    this.keyValueJsonError = '';
   }
 
   editField(index: number) {
@@ -1043,10 +1119,6 @@ export class DynamicForm implements OnInit, OnChanges {
     this.mandatoryIfKey = field.mandatoryIf?.key || null;
     this.mandatoryIfValue = field.mandatoryIf?.value ?? null;
     this.isFieldEditorVisible = true;
-    if (field.type === 'keyvalue') {
-      this.keyValueJson = JSON.stringify(field.defaultValue || [], null, 2);
-      this.keyValueJsonError = '';
-    }
   }
 
   removeField(index: number) {
@@ -1058,15 +1130,16 @@ export class DynamicForm implements OnInit, OnChanges {
     if (this.fieldForm.invalid) {
       return;
     }
-    if (this.fieldForm.get('type')?.value === 'keyvalue') {
-      this.keyValueJson = JSON.stringify(this.fieldForm.value.defaultValue || [], null, 2);
-    }
     const newField = this.fieldForm.value;
     // Attach conditional logic fields
     const visibleIfVal = this.visibleIfKey ? (this.visibleIfValue !== null && this.visibleIfValue !== undefined ? this.visibleIfValue : '') : null;
     newField.visibleIf = this.visibleIfKey ? { key: this.visibleIfKey, value: visibleIfVal } : null;
     const mandatoryIfVal = this.mandatoryIfKey ? (this.mandatoryIfValue !== null && this.mandatoryIfValue !== undefined ? this.mandatoryIfValue : '') : null;
     newField.mandatoryIf = this.mandatoryIfKey ? { key: this.mandatoryIfKey, value: mandatoryIfVal } : null;
+    // Parse initialKeys for keyvalue
+    if (newField.type === 'keyvalue' && typeof newField.initialKeys === 'string') {
+      newField.initialKeys = newField.initialKeys.split(',').map((k: string) => k.trim()).filter((k: string) => k);
+    }
     if (this.currentFieldIndex !== null) {
       this.schema.fields[this.currentFieldIndex] = newField;
     } else {
@@ -1082,12 +1155,24 @@ export class DynamicForm implements OnInit, OnChanges {
         this.closeForm();
       });
     } else if (this.mode === 'edit') {
-      const changeLog = prompt("Please provide a brief description of the changes you've made for the version history:", "Updated template schema.");
-      if (changeLog) {
-        this.schemaService.updateTemplate(this.schema.name, this.schema, changeLog).subscribe(() => {
-          this.closeForm();
-        });
-      }
+      const dialogRef = this.dialog.open(VersionDialogComponent, {
+        width: '400px',
+        data: { description: '', action: null } as VersionDialogData
+      });
+      dialogRef.afterClosed().subscribe(result => {
+        if (!result) return;
+        const { description, action } = result;
+        if (!description) return;
+        if (action === 'update') {
+          this.schemaService.updateTemplate(this.schema.name, this.schema, description).subscribe(() => {
+            this.closeForm();
+          });
+        } else if (action === 'newVersion') {
+          this.schemaService.createNewVersion(this.schema.name, this.schema, description).subscribe(() => {
+            this.closeForm();
+          });
+        }
+      });
     } else if (this.mode === 'use') {
       if (!this.templateName) return;
       this.schemaService.submitForm(this.templateName, this.form.getRawValue()).subscribe(() => this.closeForm());
@@ -1100,7 +1185,9 @@ export class DynamicForm implements OnInit, OnChanges {
   }
 
   closeForm() {
-    this.formClose.emit();
+          this.formClose.emit();
+
+
   }
 
   get options() {
@@ -1118,6 +1205,23 @@ export class DynamicForm implements OnInit, OnChanges {
     this.options.removeAt(index);
   }
 
+  getKeyValueArray(fieldKey: string): FormArray | null {
+    const control = this.form.get(fieldKey);
+    return control instanceof FormArray ? control : null;
+  }
+  addKeyValuePair(fieldKey: string) {
+    const control = this.form.get(fieldKey);
+    if (control instanceof FormArray) {
+      control.push(this.fb.group({ key: '', value: '' }));
+    }
+  }
+  removeKeyValuePair(fieldKey: string, index: number) {
+    const control = this.form.get(fieldKey);
+    if (control instanceof FormArray) {
+      control.removeAt(index);
+    }
+  }
+
   isBooleanField(key: string): boolean {
     const field = this.schema.fields.find((f: any) => f.key === key);
     return field?.type === 'boolean';
@@ -1132,16 +1236,7 @@ export class DynamicForm implements OnInit, OnChanges {
     }
   }
 
-  addKeyValuePair(fieldKey: string) {
-    const arr = this.form.get(fieldKey)?.value || [];
-    this.form.get(fieldKey)?.setValue([...arr, { key: '', value: '' }]);
-  }
 
-  removeKeyValuePair(fieldKey: string, index: number) {
-    const arr = this.form.get(fieldKey)?.value || [];
-    arr.splice(index, 1);
-    this.form.get(fieldKey)?.setValue([...arr]);
-  }
 
   getCheckboxChecked(event: MatCheckboxChange): boolean {
     return !!event.checked;
@@ -1187,21 +1282,6 @@ export class DynamicForm implements OnInit, OnChanges {
     this.fieldForm.patchValue({ defaultValue: arr.filter((v: any) => v !== value) });
   }
 }
-
-  onKeyValueJsonChange(val: string) {
-    this.keyValueJson = val;
-    try {
-      const arr = JSON.parse(val);
-      if (!Array.isArray(arr) || arr.some(p => typeof p.key !== 'string')) {
-        this.keyValueJsonError = 'Must be a JSON array of {key, value} objects.';
-        return;
-      }
-      this.keyValueJsonError = '';
-      this.fieldForm.patchValue({ defaultValue: arr });
-    } catch (e) {
-      this.keyValueJsonError = 'Invalid JSON.';
-    }
-  }
 
   // Helper to get options for a field key (for conditional logic)
   getFieldOptions(key: string | null) {

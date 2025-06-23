@@ -1,22 +1,43 @@
-cd backend
+# Project3_updated: Angular + FastAPI Fullstack App
 
-python -m venv venv
-source venv/bin/activate
+## Backend (FastAPI)
 
-w:  venv\Scripts\activate
+1. **Setup Python environment**
+   ```sh
+   cd backend
+   python -m venv venv
+   # For macOS/Linux:
+   source venv/bin/activate
+   # For Windows:
+   venv\Scripts\activate
+   ```
 
-pip install -r requirements.txt
-http://127.0.0.1:8000
+2. **Install dependencies**
+   ```sh
+   pip install -r requirements.txt
+   ```
 
-# Make sure you are in the backend directory when running this command
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+3. **Run the FastAPI server**
+   ```sh
+   uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+   # API docs: http://127.0.0.1:8000/docs
+   ```
 
-### 2. Frontend Setup
+## Frontend (Angular)
 
-cd backend
+1. **Install dependencies**
+   ```sh
+   npm install
+   ```
 
-npm install
+2. **Run the Angular app**
+   ```sh
+   ng serve
+   # App runs at: http://localhost:4200
+   ```
 
-npm start
-
- frontend host: **http://localhost:4200**.
+## Notes
+- Make sure the backend is running before using the frontend.
+- All form submissions and actions are stored in the database (no local file storage).
+- For development, use `--reload` for FastAPI and `ng serve` for Angular.
+- See `.gitignore` for ignored files and folders.

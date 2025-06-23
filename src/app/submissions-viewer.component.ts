@@ -7,6 +7,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatButtonModule } from '@angular/material/button';
 import { Router } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
+import { ResponseNameDialogComponent } from './response-name-dialog.component';
 
 @Component({
   selector: 'app-submissions-viewer',
@@ -32,27 +34,31 @@ import { Router } from '@angular/router';
               <thead>
                 <tr>
                   <th *ngIf="submissions.length > 1"></th>
-                  <th>Version</th>
+                  <th>Response Name</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let sub of submissions" [class.selected]="selectedVersion === sub.version">
+                <tr *ngFor="let sub of submissions" [class.selected]="selectedSubmissionName === (sub.submission_name || '')">
                   <td *ngIf="submissions.length > 1">
-                    <input type="checkbox" [id]="'ver-' + sub.version" [checked]="selectedVersions.has(sub.version)" (change)="toggleVersion(sub.version)" [disabled]="selectedVersions.size >= 2 && !selectedVersions.has(sub.version)">
+                    <input type="checkbox"
+                      [id]="'ver-' + (sub.submission_name || '')"
+                      [checked]="selectedVersions.has(sub.submission_name || '')"
+                      (change)="toggleVersion(sub.submission_name || '')"
+                      [disabled]="selectedVersions.size >= 2 && !selectedVersions.has(sub.submission_name || '')">
                   </td>
-                  <td (click)="viewSubmission(sub.version)" class="clickable-row">Version {{ sub.version }}</td>
+                  <td (click)="viewSubmission(sub.submission_name || '')" class="clickable-row">{{ sub.submission_name || '' }}</td>
                   <td class="actions-cell">
-                    <button mat-icon-button (click)="viewSubmission(sub.version)" matTooltip="View Details">
+                    <button mat-icon-button (click)="viewSubmission(sub.submission_name || '')" matTooltip="View Details">
                       <mat-icon>visibility</mat-icon>
                     </button>
-                    <button mat-icon-button (click)="downloadSubmission(sub.version)" matTooltip="Download .conf">
+                    <button mat-icon-button (click)="downloadSubmission(sub.submission_name || '')" matTooltip="Download .conf">
                       <mat-icon>download</mat-icon>
                     </button>
-                    <button mat-icon-button (click)="duplicateAndEdit(sub.version)" matTooltip="Duplicate & Edit">
+                    <button mat-icon-button (click)="duplicateAndEdit(sub.submission_name || '')" matTooltip="Duplicate & Edit">
                       <mat-icon>content_copy</mat-icon>
                     </button>
-                    <button mat-icon-button (click)="deleteSubmission(sub.version)" matTooltip="Delete Version" class="delete-btn">
+                    <button mat-icon-button (click)="deleteSubmission(sub.submission_name || '')" matTooltip="Delete Version" class="delete-btn">
                       <mat-icon>delete</mat-icon>
                     </button>
                   </td>
@@ -81,14 +87,14 @@ import { Router } from '@angular/router';
           <div *ngIf="selectedSubmissionData" class="card submission-data">
             <div class="submission-data-header">
               <h4>Submission Details</h4>
-              <span>Version {{ selectedVersion }}</span>
+              <span>Version {{ selectedSubmissionName }}</span>
             </div>
             <pre>{{ selectedSubmissionData | json }}</pre>
           </div>
 
           <!-- Threaded Responses/Comments -->
           <div *ngIf="selectedSubmission" class="card threaded-responses">
-            <h4>Internal Notes & Comments (v{{selectedVersion}})</h4>
+            <h4>Internal Notes & Comments (v{{selectedSubmissionName}})</h4>
             <div *ngFor="let response of selectedSubmission.responses" class="response-item">
               <p><strong>{{response.author || 'Anonymous'}}:</strong> {{response.content}}</p>
               <!-- TODO: Add nested responses -->
@@ -224,15 +230,15 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
   
   isLoading = false;
   submissions: Submission[] = [];
-  selectedVersion: number | null = null;
+  selectedSubmissionName: string | null = null;
   selectedSubmission: (Submission & { responses?: Response[] }) | null = null;
   selectedSubmissionData: any = null;
-  selectedVersions = new Set<number>();
+  selectedVersions = new Set<string>(); // Now stores submission_names
   diffResult: any = null;
   @Output() duplicateEdit = new EventEmitter<{ template: string, version: number }>();
   newResponseContent: string = '';
 
-  constructor(private schemaService: SchemaService, private router: Router) {}
+  constructor(private schemaService: SchemaService, private router: Router, private dialog: MatDialog) {}
 
   ngOnInit() {
     this.loadSubmissions();
@@ -247,7 +253,7 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
 
   resetState() {
     this.submissions = [];
-    this.selectedVersion = null;
+    this.selectedSubmissionName = null;
     this.selectedSubmission = null;
     this.selectedSubmissionData = null;
     this.selectedVersions.clear();
@@ -258,64 +264,72 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
     if (!this.templateName) return;
     this.isLoading = true;
     this.schemaService.listSubmissions(this.templateName).subscribe((subs: Submission[]) => {
-      this.submissions = subs.sort((a: Submission, b: Submission) => b.version - a.version);
+      // Sort by submission_name (tev2_1, tev2_2, ...)
+      this.submissions = subs.sort((a: Submission, b: Submission) => {
+        if (!a.submission_name || !b.submission_name) return 0;
+        const aNum = parseInt(a.submission_name.split('_').pop() || '0', 10);
+        const bNum = parseInt(b.submission_name.split('_').pop() || '0', 10);
+        return bNum - aNum;
+      });
       this.isLoading = false;
     });
   }
 
-  viewSubmission(version: number) {
+  viewSubmission(submissionName: string) {
     if (!this.templateName) return;
-    this.selectedVersion = version;
-    this.diffResult = null; // Clear diff when viewing a single submission
-    this.schemaService.getSubmission(this.templateName, version).subscribe(sub => {
+    this.selectedSubmissionName = submissionName;
+    this.diffResult = null;
+    this.schemaService.getSubmissionByName(this.templateName, submissionName).subscribe(sub => {
       this.selectedSubmission = sub;
       this.selectedSubmissionData = sub.data;
     });
   }
 
   addResponse() {
-    if (!this.templateName || !this.selectedVersion || !this.newResponseContent.trim()) return;
+    if (!this.templateName || !this.selectedSubmissionName || !this.newResponseContent.trim()) return;
 
-    // TODO: Get author from a user service/auth
-    const response = {
-      content: this.newResponseContent,
-      author: 'Reviewer' 
-    };
-
-    this.schemaService.addResponse(this.templateName, this.selectedVersion, response).subscribe(newResponse => {
-      if (this.selectedSubmission && this.selectedSubmission.responses) {
-        this.selectedSubmission.responses.push(newResponse);
-      } else if (this.selectedSubmission) {
-        this.selectedSubmission.responses = [newResponse];
-      }
-      this.newResponseContent = '';
+    const dialogRef = this.dialog.open(ResponseNameDialogComponent, {
+      width: '350px',
+      data: { responseName: '' }
+    });
+    dialogRef.afterClosed().subscribe((responseName: string | null) => {
+      if (typeof responseName !== 'string' || !responseName) return;
+      // TODO: Get author from a user service/auth
+      const response = {
+        content: this.newResponseContent,
+        author: 'Reviewer',
+        response_name: responseName
+      };
+      this.schemaService.addResponse(this.templateName!, this.selectedSubmissionName!, response).subscribe(newResponse => {
+        if (this.selectedSubmission && this.selectedSubmission.responses) {
+          this.selectedSubmission.responses.push(newResponse);
+        } else if (this.selectedSubmission) {
+          this.selectedSubmission.responses = [newResponse];
+        }
+        this.newResponseContent = '';
+      });
     });
   }
 
-  async downloadSubmission(version: number) {
+  async downloadSubmission(submissionName: string) {
     if (!this.templateName) return;
-
-    this.schemaService.getSubmission(this.templateName, version).subscribe(async (submission) => {
+    this.schemaService.downloadSubmissionByName(this.templateName, submissionName).subscribe(async (submission: any) => {
       const data = submission.data;
       let confContent = '';
       for (const key in data) {
         if (Object.prototype.hasOwnProperty.call(data, key)) {
           const value = data[key];
-          confContent += `  ${key} = \"${value}\"\n`;
+          confContent += `  ${key} = "${value}"
+`;
         }
       }
-
       const blob = new Blob([confContent], { type: 'text/plain;charset=utf-8' });
-      const fileName = `${this.templateName}-v${version}.conf`;
-
+      const fileName = `${submissionName}.conf`;
       if ('showSaveFilePicker' in window && typeof (window as any).showSaveFilePicker === 'function') {
         try {
           const handle = await (window as any).showSaveFilePicker({
             suggestedName: fileName,
-            types: [{
-              description: 'Config files',
-              accept: { 'text/plain': ['.conf'] },
-            }],
+            types: [{ description: 'Config files', accept: { 'text/plain': ['.conf'] } }],
           });
           const writable = await handle.createWritable();
           await writable.write(blob);
@@ -338,41 +352,39 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
     });
   }
 
-  toggleVersion(version: number) {
-    if (this.selectedVersions.has(version)) {
-      this.selectedVersions.delete(version);
+  toggleVersion(submissionName: string) {
+    if (this.selectedVersions.has(submissionName)) {
+      this.selectedVersions.delete(submissionName);
     } else {
-      this.selectedVersions.add(version);
+      this.selectedVersions.add(submissionName);
     }
   }
 
   compareVersions() {
-    if (!this.templateName || this.selectedVersions.size !== 2) return;
-    const versions = Array.from(this.selectedVersions).sort((a, b) => a - b);
-    this.diffResult = null; // Clear previous diff
-    this.schemaService.diffSubmissions(this.templateName, versions[0], versions[1]).subscribe(result => {
-      this.diffResult = result.diff;
-    });
+    // Disable or refactor: diffSubmissions is version-based, but now we use submission_name
+    // Option 1: Hide/disable comparison for now
+    return;
   }
 
-  duplicateAndEdit(version: number) {
+  duplicateAndEdit(submissionName: string) {
     if (!this.templateName) return;
-    this.schemaService.duplicateSubmission(this.templateName, version).subscribe(res => {
+    this.schemaService.duplicateSubmissionByName(this.templateName, submissionName).subscribe(res => {
       this.duplicateEdit.emit({ template: this.templateName!, version: res.version });
+      this.loadSubmissions();
     });
   }
 
-  deleteSubmission(version: number) {
+  deleteSubmission(submissionName: string) {
     if (!this.templateName) return;
-    if (confirm('Are you sure you want to delete this submission version?')) {
-      this.schemaService.deleteSubmission(this.templateName, version).subscribe(() => {
+    if (confirm('Are you sure you want to delete this submission?')) {
+      this.schemaService.deleteSubmissionByName(this.templateName, submissionName).subscribe(() => {
         this.loadSubmissions();
-        if (this.selectedVersion === version) {
-          this.selectedVersion = null;
+        if (this.selectedSubmissionName === submissionName) {
+          this.selectedSubmissionName = null;
           this.selectedSubmission = null;
           this.selectedSubmissionData = null;
         }
       });
     }
   }
-} 
+}
