@@ -1,28 +1,49 @@
 /* You can add global styles to this file, and also import other style files */
 
-/* Global Styles */
+/* Import Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap');
 
+/* =========================
+   CSS Variables
+   ========================= */
 :root {
-  --primary-color: #A6C9E2;        /* Ice Blue */
-  --secondary-color: #BCDFF5;      /* Powder Blue */
-  --accent-color: #92B8D6;         /* Sky Mist */
-  --background-color: #F5FAFD;     /* Very Light Blue Background */
-  --surface-color: #FFFFFF;        /* White Surface */
-  --text-color: #2C3E50;           /* Dark Slate Text */
-  --text-muted-color: #7A9BAE;     /* Muted Blue-Grey Text */
-  --border-color: #D8E6F0;         /* Light Blue Border */
-  --danger-color: #F4B6C2;         /* Pastel Red */
-  --success-color: #B3E5C4;        /* Pastel Mint */
-  --info-color: #B2D8F7;           /* Light Sky Blue */
-  --warning-color: #FFE4A1;        /* Soft Yellow */
-
-  --shadow-color-light: rgba(0, 0, 0, 0.04);
-  --shadow-color-dark: rgba(0, 0, 0, 0.12);
+  --primary-color: #6aaadf;
+  --secondary-color: #C7E3F8;
+  --accent-color: #5B9DD9;
+  --background-color: #F0F8FC;
+  --surface-color: #FFFFFF;
+  --text-color: #1E2F3C;
+  --text-muted-color: #6A88A0;
+  --border-color: #C2D6E5;
+  --danger-color: #F5A8B3;
+  --success-color: #A7E6BD;
+  --info-color: #A3CCF5;
+  --warning-color: #FFDA85;
+  --shadow-color-light: rgba(0, 0, 0, 0.05);
+  --shadow-color-dark: rgba(0, 0, 0, 0.15);
 }
 
+/* Dark Theme Variables */
+.dark-theme {
+  --primary-color: #5B9DD9;
+  --secondary-color: #3B78A6;
+  --accent-color: #76B8F3;
+  --background-color: #101C26;
+  --surface-color: #1A2A36;
+  --text-color: #DDE9F2;
+  --text-muted-color: #A3B7C7;
+  --border-color: #455d75;
+  --danger-color: #D98A9E;
+  --success-color: #83D8A4;
+  --info-color: #81BFF1;
+  --warning-color: #F5C96B;
+  --shadow-color-light: rgba(0, 0, 0, 0.2);
+  --shadow-color-dark: rgba(0, 0, 0, 0.6);
+}
 
-
+/* =========================
+   Base Styles
+   ========================= */
 html, body {
   height: 100%;
 }
@@ -40,28 +61,33 @@ body {
   padding: 2rem 3rem;
 }
 
+/* =========================
+   Typography
+   ========================= */
 h1, h2, h3, h4, h5, h6 {
   font-weight: 400;
   color: var(--text-color);
 }
 
 h2 {
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 0.5rem;
-    margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
 }
 
 h4 {
-    margin-top: 0;
+  margin-top: 0;
 }
 
-
+/* =========================
+   Buttons
+   ========================= */
 button, .btn {
   background-color: var(--primary-color);
   color: var(--surface-color);
   padding: 0.65rem 1.25rem;
   border: 1px solid transparent;
-  border-radius: 8px; /* Softer radius */
+  border-radius: 8px;
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 700;
@@ -76,23 +102,25 @@ button:hover, .btn:hover {
 }
 
 button:disabled, .btn:disabled {
-    background-color: #cccccc;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
+  background-color: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 button.secondary, .btn.secondary {
   background-color: var(--secondary-color);
   color: var(--text-color);
 }
+
 button.danger, .btn.danger {
   background-color: var(--danger-color);
   color: var(--surface-color);
 }
 
-
-/* Form Styles */
+/* =========================
+   Forms
+   ========================= */
 .form-field {
   margin-bottom: 1.5rem;
 }
@@ -126,6 +154,9 @@ button.danger, .btn.danger {
   box-shadow: 0 0 0 px var(--secondary-color);
 }
 
+/* =========================
+   Actions
+   ========================= */
 .actions button[mat-icon-button] {
   background: var(--secondary-color);
   margin: 0 0.15rem;
@@ -141,7 +172,16 @@ button.danger, .btn.danger {
   background: var(--danger-color);
 }
 
-/* Card Styles */
+/* Only change color to black on hover for action icons in the actions column */
+.actions button.mat-icon-button:hover .action-icon,
+.actions .mat-icon-button:hover .action-icon,
+.actions button[mat-icon-button]:hover .action-icon {
+  color: #000 !important;
+}
+
+/* =========================
+   Cards
+   ========================= */
 .card {
   background-color: var(--surface-color);
   border-radius: 12px;
@@ -151,11 +191,11 @@ button.danger, .btn.danger {
   transition: all 0.3s ease;
   animation: card-enter 0.4s ease-out;
 }
-.card:hover {
-    box-shadow: 0 8px 24px var(--shadow-color-dark);
-    transform: translateY(-2px);
-}
 
+.card:hover {
+  box-shadow: 0 8px 24px var(--shadow-color-dark);
+  transform: translateY(-2px);
+}
 
 @keyframes card-enter {
   from {
@@ -168,7 +208,9 @@ button.danger, .btn.danger {
   }
 }
 
-/* Table Styles */
+/* =========================
+   Tables
+   ========================= */
 table {
   width: 100%;
   border-collapse: collapse;
@@ -191,29 +233,20 @@ th {
 }
 
 tr:last-child td {
-    border-bottom: none;
+  border-bottom: none;
 }
 
 tr:hover {
-    background-color: var(--background-color);
+  background-color: var(--background-color);
 }
 
-/* Dark Theme Variables */
-.dark-theme {
-  --primary-color: #88AECB;        /* Muted Pastel Blue */
-  --secondary-color: #A0BCD4;      /* Dusty Sky Blue */
-  --accent-color: #F49B9B;         /* Soft Warm Red */
-  --background-color: #1A1D23;     /* Deep Blue-Grey */
-  --surface-color: #2A2F38;        /* Slate Panel Surface */
-  --text-color: #E8ECEF;           /* Soft Light Grey */
-  --text-muted-color: #AAB2BA;     /* Muted Blue-Grey */
-  --border-color: #3C4452;         /* Deep Cool Border */
-  --danger-color: #F4A4A4;         /* Warm Pastel Red */
-  --success-color: #9EDFCC;        /* Light Pastel Green */
+/* =========================
+   Material Icons
+   ========================= */
+.mat-icon {
+  color: var(--primary-color);
+}
 
-  --info-color: #95CBE9;           /* Soft Blue for Info */
-  --warning-color: #F9D58B;        /* Soft Gold/Yellow */
-
-  --shadow-color-light: rgba(0, 0, 0, 0.25);
-  --shadow-color-dark: rgba(0, 0, 0, 0.45);
+.dark-theme .mat-icon {
+  color: var(--accent-color);
 }
