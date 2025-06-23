@@ -301,11 +301,7 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
       for (const key in data) {
         if (Object.prototype.hasOwnProperty.call(data, key)) {
           const value = data[key];
-          if (typeof value === 'string') {
-            confContent += `${key} = "${value}"\n`;
-          } else {
-            confContent += `${key} = ${value}\n`;
-          }
+          confContent += `  ${key} = \"${value}\"\n`;
         }
       }
 

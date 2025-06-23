@@ -53,6 +53,9 @@ async def create_template(template: TemplateModel = Body(...)):
     encoded_template = jsonable_encoder(template)
     if "_id" in encoded_template and not encoded_template["_id"]:
         del encoded_template["_id"]
+    # Remove lock-related fields if present
+    encoded_template.pop("is_locked", None)
+    encoded_template.pop("lock_password", None)
     new_template = await template_collection.insert_one(encoded_template)
     
     # Also create the first version in history
@@ -77,7 +80,7 @@ async def list_templates():
         description = schema.get("description", "") if isinstance(schema, dict) else ""
         result.append({
             "name": t.get("name"),
-            "is_locked": t.get("is_locked", False),
+            # Remove is_locked from API response
             "description": description,
             "created_at": t.get("created_at")
         })
@@ -86,9 +89,8 @@ async def list_templates():
 @app.get("/templates/{name}", response_description="Get a single template")
 async def get_template(name: str):
     if (template := await template_collection.find_one({"name": name})) is not None:
-        # Never return the password hash
-        if "lock_password" in template:
-            del template["lock_password"]
+        # Remove lock_password from API response
+        template.pop("lock_password", None)
         return serialize_mongo(template)
     raise HTTPException(status_code=404, detail=f"Template {name} not found")
 
@@ -102,9 +104,7 @@ async def edit_template(name: str, req: UpdateTemplateRequest = Body(...)):
     if not existing_template:
         raise HTTPException(status_code=404, detail=f"Template {name} not found")
 
-    if existing_template.get("is_locked"):
-        raise HTTPException(status_code=403, detail="Template is locked. Cannot edit.")
-
+    # Remove lock check
     current_version = existing_template.get("version", 1)
     
     # Save current state to version history
@@ -133,9 +133,8 @@ async def edit_template(name: str, req: UpdateTemplateRequest = Body(...)):
         raise HTTPException(status_code=404, detail=f"Template {name} not found")
         
     updated_template = await template_collection.find_one({"name": name})
-    # Never return the password hash
-    if "lock_password" in updated_template:
-        del updated_template["lock_password"]
+    # Remove lock_password from API response
+    updated_template.pop("lock_password", None)
     return serialize_mongo(updated_template)
 
 @app.delete("/templates/{name}", response_description="Delete a template")
@@ -155,9 +154,9 @@ async def duplicate_template(name: str):
     if not original_template:
         raise HTTPException(status_code=404, detail="Template not found.")
     
-    # Duplicated template should not be locked
-    original_template['is_locked'] = False
-    original_template['lock_password'] = None
+    # Remove lock-related fields
+    original_template.pop('is_locked', None)
+    original_template.pop('lock_password', None)
 
     i = 1
     while True:
@@ -171,8 +170,6 @@ async def duplicate_template(name: str):
     new_template_data["name"] = new_name
     new_template_data["created_at"] = datetime.datetime.utcnow()
     new_template_data["updated_at"] = datetime.datetime.utcnow()
-    new_template_data["is_locked"] = False
-    new_template_data["lock_password"] = None
     new_template_data["version"] = 1
 
     await template_collection.insert_one(new_template_data)
@@ -207,9 +204,6 @@ async def rollback_template(name: str, version: int):
     if not current_template:
         raise HTTPException(status_code=404, detail=f"Template '{name}' not found.")
 
-    if current_template.get("is_locked"):
-        raise HTTPException(status_code=403, detail="Cannot roll back a locked template.")
-
     # Save the current state to history before rolling back
     current_version_num = current_template.get("version", 1)
     version_data = TemplateVersionModel(
@@ -240,49 +234,6 @@ async def rollback_template(name: str, version: int):
     await template_version_collection.insert_one(jsonable_encoder(rollback_log_entry))
 
     return {"message": f"Template '{name}' rolled back to version {version}. New version is {new_version_num}."}
-
-# --- Template Locking Endpoints ---
-@app.post("/templates/{name}/lock", response_description="Lock a template")
-async def lock_template(name: str, request: Request):
-    data = await request.json()
-    password = data.get("password")
-    if not password:
-        raise HTTPException(status_code=400, detail="Password is required to lock a template.")
-
-    hashed_password = get_password_hash(password)
-    update_result = await template_collection.update_one(
-        {"name": name},
-        {"$set": {"is_locked": True, "lock_password": hashed_password}}
-    )
-    if update_result.matched_count == 0:
-        raise HTTPException(status_code=404, detail=f"Template {name} not found")
-    return {"message": f"Template '{name}' locked successfully."}
-
-@app.post("/templates/{name}/unlock", response_description="Unlock a template")
-async def unlock_template(name: str, request: Request):
-    data = await request.json()
-    password = data.get("password")
-    if not password:
-        raise HTTPException(status_code=400, detail="Password is required to unlock a template.")
-    
-    template = await template_collection.find_one({"name": name})
-    if not template:
-        raise HTTPException(status_code=404, detail=f"Template {name} not found")
-    
-    if not template.get("is_locked"):
-        return {"message": "Template is not locked."}
-
-    if not verify_password(password, template.get("lock_password")):
-        raise HTTPException(status_code=401, detail="Invalid password.")
-
-    update_result = await template_collection.update_one(
-        {"name": name},
-        {"$set": {"is_locked": False, "lock_password": None}}
-    )
-    if update_result.matched_count == 0:
-        # This case is unlikely if the find_one above succeeded, but good practice
-        raise HTTPException(status_code=404, detail=f"Template {name} not found")
-    return {"message": f"Template '{name}' unlocked successfully."}
 
 # --- Submission Endpoints ---
 @app.post("/submissions/{template_name}", response_description="Add new submission")

@@ -24,8 +24,6 @@ class TemplateModel(BaseModel):
     schema: Optional[Dict[str, Any]] = Field(default=None)
     created_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
     updated_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
-    is_locked: bool = Field(default=False)
-    lock_password: Optional[str] = Field(default=None)
 
     model_config = ConfigDict(
         populate_by_name=True,

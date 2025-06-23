@@ -8,12 +8,10 @@ export interface TemplateSchema {
     description?: string;
     fields: any[];
   };
-  is_locked?: boolean;
 }
 
 export interface TemplateInfo {
   name: string;
-  is_locked: boolean;
   description: string;
   created_at: string;
 }
@@ -80,14 +78,6 @@ export class SchemaService {
 
   duplicateTemplate(name: string): Observable<any> {
     return this.http.post(`${this.apiUrl}/templates/${name}/duplicate`, {});
-  }
-
-  lockTemplate(name: string, password: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/templates/${name}/lock`, { password });
-  }
-
-  unlockTemplate(name: string, password: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/templates/${name}/unlock`, { password });
   }
 
   // Versioning endpoints

@@ -35,15 +35,20 @@ import { Router } from '@angular/router';
         <div class="filter-bar card">
           <input type="text" class="filter-input" placeholder="Search by name..." [(ngModel)]="filterName" (ngModelChange)="applyFilters()">
           <input type="text" class="filter-input" placeholder="Search by description..." [(ngModel)]="filterDescription" (ngModelChange)="applyFilters()">
-          <select class="filter-select" [(ngModel)]="filterLockStatus" (ngModelChange)="applyFilters()">
-            <option value="all">All Statuses</option>
-            <option value="locked">Locked</option>
-            <option value="unlocked">Unlocked</option>
-          </select>
           <div class="date-range-filter">
-            <input type="date" class="filter-input" [(ngModel)]="filterStartDate" (ngModelChange)="applyFilters()">
+            <div class="date-input-group">
+              <input #startDateInput type="date" class="filter-input" [(ngModel)]="filterStartDate" (ngModelChange)="applyFilters()">
+              <button mat-icon-button tabindex="-1" class="calendar-btn" matTooltip="Pick start date" type="button" (click)="openDatePicker(startDateInput)">
+                <mat-icon>calendar_today</mat-icon>
+              </button>
+            </div>
             <span class="date-range-separator">to</span>
-            <input type="date" class="filter-input" [(ngModel)]="filterEndDate" (ngModelChange)="applyFilters()">
+            <div class="date-input-group">
+              <input #endDateInput type="date" class="filter-input" [(ngModel)]="filterEndDate" (ngModelChange)="applyFilters()">
+              <button mat-icon-button tabindex="-1" class="calendar-btn" matTooltip="Pick end date" type="button" (click)="openDatePicker(endDateInput)">
+                <mat-icon>calendar_today</mat-icon>
+              </button>
+            </div>
           </div>
           <button (click)="resetFilters()" class="clear-filters-btn">Clear</button>
         </div>
@@ -74,7 +79,6 @@ import { Router } from '@angular/router';
                     <div>
                       <h3>
                         {{ template.name }}
-                        <mat-icon *ngIf="template.is_locked" class="lock-icon" matTooltip="Template is locked">lock</mat-icon>
                       </h3>
                       <p class="template-desc" *ngIf="template.description">{{ template.description }}</p>
                       <div class="template-meta" *ngIf="template.created_at">
@@ -88,7 +92,7 @@ import { Router } from '@angular/router';
                   <button mat-icon-button (click)="useTemplate(template.name)" matTooltip="Fill Out Form">
                     <mat-icon fontIcon="dynamic_form" class="action-icon"></mat-icon>
                   </button>
-                  <button mat-icon-button (click)="editTemplate(template)" matTooltip="Edit Schema" [disabled]="template.is_locked">
+                  <button mat-icon-button (click)="editTemplate(template)" matTooltip="Edit Schema">
                     <mat-icon fontIcon="edit" class="action-icon"></mat-icon>
                   </button>
                   <button mat-icon-button (click)="previewTemplate(template.name)" matTooltip="Preview Form">
@@ -99,13 +103,6 @@ import { Router } from '@angular/router';
                   </button>
                   <button mat-icon-button (click)="viewHistory(template.name)" matTooltip="View History">
                     <mat-icon fontIcon="history" class="action-icon"></mat-icon>
-                  </button>
-                  <div class="divider"></div>
-                   <button *ngIf="!template.is_locked" mat-icon-button (click)="lockTemplate(template.name)" matTooltip="Lock Template">
-                    <mat-icon fontIcon="lock_open" class="action-icon"></mat-icon>
-                  </button>
-                  <button *ngIf="template.is_locked" mat-icon-button (click)="unlockTemplate(template.name)" matTooltip="Unlock Template">
-                    <mat-icon fontIcon="lock" class="action-icon"></mat-icon>
                   </button>
                   <button mat-icon-button (click)="duplicateTemplate(template.name)" matTooltip="Duplicate">
                     <mat-icon fontIcon="content_copy" class="action-icon"></mat-icon>
@@ -126,7 +123,6 @@ import { Router } from '@angular/router';
                 <div>
                   <h3>
                     {{ template.name }}
-                    <mat-icon *ngIf="template.is_locked" class="lock-icon" matTooltip="Template is locked">lock</mat-icon>
                   </h3>
                   <p class="template-desc" *ngIf="template.description">{{ template.description }}</p>
                   <div class="template-meta" *ngIf="template.created_at">
@@ -139,7 +135,7 @@ import { Router } from '@angular/router';
                 <button mat-icon-button (click)="useTemplate(template.name)" matTooltip="Fill Out Form">
                   <mat-icon fontIcon="dynamic_form" class="action-icon"></mat-icon>
                 </button>
-                <button mat-icon-button (click)="editTemplate(template)" matTooltip="Edit Schema" [disabled]="template.is_locked">
+                <button mat-icon-button (click)="editTemplate(template)" matTooltip="Edit Schema">
                   <mat-icon fontIcon="edit" class="action-icon"></mat-icon>
                 </button>
                 <button mat-icon-button (click)="previewTemplate(template.name)" matTooltip="Preview Form">
@@ -150,13 +146,6 @@ import { Router } from '@angular/router';
                 </button>
                 <button mat-icon-button (click)="viewHistory(template.name)" matTooltip="View History">
                   <mat-icon fontIcon="history" class="action-icon"></mat-icon>
-                </button>
-                <div class="divider"></div>
-                <button *ngIf="!template.is_locked" mat-icon-button (click)="lockTemplate(template.name)" matTooltip="Lock Template">
-                  <mat-icon fontIcon="lock_open" class="action-icon"></mat-icon>
-                </button>
-                <button *ngIf="template.is_locked" mat-icon-button (click)="unlockTemplate(template.name)" matTooltip="Unlock Template">
-                  <mat-icon fontIcon="lock" class="action-icon"></mat-icon>
                 </button>
                 <button mat-icon-button (click)="duplicateTemplate(template.name)" matTooltip="Duplicate">
                   <mat-icon fontIcon="content_copy" class="action-icon"></mat-icon>
@@ -321,12 +310,6 @@ import { Router } from '@angular/router';
       align-items: center;
       gap: 1rem;
     }
-    .lock-icon {
-      font-size: 1.1rem;
-      vertical-align: middle;
-      margin-left: 0.25rem;
-      color: var(--text-muted-color);
-    }
     .filter-bar {
       display: flex;
       gap: 1rem;
@@ -349,6 +332,19 @@ import { Router } from '@angular/router';
       display: flex;
       align-items: center;
       gap: 0.5rem;
+    }
+    .date-input-group {
+      display: flex;
+      align-items: center;
+      gap: 0.2rem;
+    }
+    .calendar-btn {
+      padding: 0 0.2rem;
+      font-size: 1rem;
+      color: var(--text-muted-color);
+      background: none;
+      border: none;
+      cursor: pointer;
     }
     .clear-filters-btn {
         background: none;
@@ -403,7 +399,6 @@ export class DashboardComponent implements OnInit {
   // Filter properties
   filterName: string = '';
   filterDescription: string = '';
-  filterLockStatus: 'all' | 'locked' | 'unlocked' = 'all';
   filterStartDate: string = '';
   filterEndDate: string = '';
 
@@ -437,11 +432,6 @@ export class DashboardComponent implements OnInit {
       templates = templates.filter(t => t.description?.toLowerCase().includes(this.filterDescription.toLowerCase()));
     }
 
-    if (this.filterLockStatus !== 'all') {
-      const isLocked = this.filterLockStatus === 'locked';
-      templates = templates.filter(t => t.is_locked === isLocked);
-    }
-
     if (this.filterStartDate) {
       templates = templates.filter(t => new Date(t.created_at) >= new Date(this.filterStartDate));
     }
@@ -456,7 +446,6 @@ export class DashboardComponent implements OnInit {
   resetFilters() {
     this.filterName = '';
     this.filterDescription = '';
-    this.filterLockStatus = 'all';
     this.filterStartDate = '';
     this.filterEndDate = '';
     this.applyFilters();
@@ -475,34 +464,8 @@ export class DashboardComponent implements OnInit {
   }
 
   editTemplate(template: TemplateInfo) {
-    console.log('editTemplate called for', template.name, 'initial is_locked:', template.is_locked);
-    this.schemaService.getTemplate(template.name).subscribe(latestTemplate => {
-      console.log('Fetched latestTemplate:', latestTemplate);
-      if (latestTemplate.is_locked) {
-        const password = prompt('This template is locked. Please enter the password to edit.');
-        if (password) {
-          this.schemaService.unlockTemplate(template.name, password).subscribe({
-            next: () => {
-              // After unlock, fetch the template again to confirm it's unlocked
-              this.schemaService.getTemplate(template.name).subscribe(refreshedTemplate => {
-                console.log('After unlock, refreshedTemplate:', refreshedTemplate);
-                if (!refreshedTemplate.is_locked) {
-                  this.loadTemplates();
-                  this.mode = 'edit';
-                  this.selectedTemplate = template.name;
-                } else {
-                  alert('Failed to unlock template.');
-                }
-              });
-            },
-            error: () => alert('Incorrect password.')
-          });
-        }
-      } else {
-        this.mode = 'edit';
-        this.selectedTemplate = template.name;
-      }
-    });
+    this.mode = 'edit';
+    this.selectedTemplate = template.name;
   }
 
   previewTemplate(template: string) {
@@ -561,29 +524,15 @@ export class DashboardComponent implements OnInit {
     }
   }
 
-  lockTemplate(templateName: string) {
-    const password = prompt('Enter a password to lock this template. This will prevent accidental edits.');
-    if (password) {
-      this.schemaService.lockTemplate(templateName, password).subscribe(() => {
-        this.loadTemplates();
-      });
-    }
-  }
-
-  unlockTemplate(templateName: string) {
-    const password = prompt('Enter the password to unlock this template.');
-    if (password) {
-      this.schemaService.unlockTemplate(templateName, password).subscribe({
-        next: () => {
-          alert('Template unlocked successfully.');
-          this.loadTemplates();
-        },
-        error: (err) => alert(`Failed to unlock template: ${err.error.detail || 'Incorrect password.'}`)
-      });
-    }
-  }
-
   viewHistory(name: string) {
     this.router.navigate(['/history', name]);
+  }
+
+  openDatePicker(input: HTMLInputElement) {
+    if (input.showPicker) {
+      input.showPicker();
+    } else {
+      input.focus();
+    }
   }
 }
