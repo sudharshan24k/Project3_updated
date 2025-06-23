@@ -194,6 +194,7 @@ import { Router } from '@angular/router';
       border-radius: 1rem;
       padding: 2rem 2.5rem 1.5rem 2.5rem;
       box-shadow: 0 4px 24px var(--shadow-color-dark);
+      background-color: var(--surface-color);
     }
     .dashboard-header h1 {
         margin-bottom: 0.25rem;
@@ -215,12 +216,14 @@ import { Router } from '@angular/router';
       width: 100%;
       border-collapse: separate;
       border-spacing: 0 0.5rem;
+      
     }
     .template-list-table th, .template-list-table td {
       padding: 1.25rem 1.5rem;
       background: var(--card-bg);
       border-radius: 0.75rem;
       vertical-align: middle;
+      background-color: var(--surface-color);
     }
     .template-list-table th {
       text-align: left;
@@ -234,6 +237,7 @@ import { Router } from '@angular/router';
       text-align: right;
       white-space: nowrap;
       background: none;
+      background-color: var(--surface-color);
     }
     .template-list-table tr {
       transition: box-shadow 0.2s;
@@ -324,6 +328,16 @@ import { Router } from '@angular/router';
       border: 1px solid var(--border-color);
       background-color: var(--surface-color);
       color: var(--text-color);
+    }
+    .filter-input:focus {
+      border-color:#5B9DD9 !important; /* Highlight border color on focus */
+      box-shadow: 0 0 0 2px rgba(91, 157, 217, 0.15);
+      outline: none;
+    }
+    .dark-theme .filter-input:focus {
+      border-color: #5B9DD9 !important;
+      box-shadow: 0 0 0 2px rgba(118, 184, 243, 0.18);
+      outline: none;
     }
     .filter-input {
       flex-grow: 1;
