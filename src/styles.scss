@@ -4,23 +4,23 @@
 @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap');
 
 :root {
-  --primary-color: #0d86f1;        /* Strong Citi Navy Blue */
-  --secondary-color: #0091e5;      /* Brighter Sky Blue */
-  --accent-color: #E31837;         /* Citi Red for key highlights */
-  --background-color: #F0F4F8;     /* Very light bluish-grey */
-  --surface-color: #FFFFFF;        /* Pure white for cards, surfaces */
-  --text-color: #1A1A1A;           /* Rich black for main text */
-  --text-muted-color: #5E6E80;     /* Muted grey-blue for secondary text */
-  --border-color: #C7D2DA;         /* Cool light border */
-  --danger-color: #e45353;         /* Vivid red for error states */
-  --success-color: #45a34a;        /* Vivid green for success */
-
-  --info-color: #0288D1;           /* Info blue */
-  --warning-color: #F57C00;        /* Strong orange for warnings */
+  --primary-color: #A6C9E2;        /* Ice Blue */
+  --secondary-color: #BCDFF5;      /* Powder Blue */
+  --accent-color: #92B8D6;         /* Sky Mist */
+  --background-color: #F5FAFD;     /* Very Light Blue Background */
+  --surface-color: #FFFFFF;        /* White Surface */
+  --text-color: #2C3E50;           /* Dark Slate Text */
+  --text-muted-color: #7A9BAE;     /* Muted Blue-Grey Text */
+  --border-color: #D8E6F0;         /* Light Blue Border */
+  --danger-color: #F4B6C2;         /* Pastel Red */
+  --success-color: #B3E5C4;        /* Pastel Mint */
+  --info-color: #B2D8F7;           /* Light Sky Blue */
+  --warning-color: #FFE4A1;        /* Soft Yellow */
 
   --shadow-color-light: rgba(0, 0, 0, 0.04);
   --shadow-color-dark: rgba(0, 0, 0, 0.12);
 }
+
 
 
 html, body {
@@ -200,16 +200,20 @@ tr:hover {
 
 /* Dark Theme Variables */
 .dark-theme {
-  --primary-color: rgb(0, 96, 180);        /* Strong Citi Navy Blue */
-  --secondary-color: #0174b8;
-  --accent-color: #ffb74d;
-  --background-color: #202427;
-  --surface-color: #23272a;
-  --text-color: #f4f6f8;
-  --text-muted-color: #b0b8c1;
-  --border-color: #383f46;
-  --danger-color: #b71c1c;
-  --success-color: #81c784;
+  --primary-color: #88AECB;        /* Muted Pastel Blue */
+  --secondary-color: #A0BCD4;      /* Dusty Sky Blue */
+  --accent-color: #F49B9B;         /* Soft Warm Red */
+  --background-color: #1A1D23;     /* Deep Blue-Grey */
+  --surface-color: #2A2F38;        /* Slate Panel Surface */
+  --text-color: #E8ECEF;           /* Soft Light Grey */
+  --text-muted-color: #AAB2BA;     /* Muted Blue-Grey */
+  --border-color: #3C4452;         /* Deep Cool Border */
+  --danger-color: #F4A4A4;         /* Warm Pastel Red */
+  --success-color: #9EDFCC;        /* Light Pastel Green */
+
+  --info-color: #95CBE9;           /* Soft Blue for Info */
+  --warning-color: #F9D58B;        /* Soft Gold/Yellow */
+
   --shadow-color-light: rgba(0, 0, 0, 0.25);
-  --shadow-color-dark: rgba(0, 0, 0, 0.5);
+  --shadow-color-dark: rgba(0, 0, 0, 0.45);
 }
