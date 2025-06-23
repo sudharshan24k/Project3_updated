@@ -216,7 +216,7 @@ import { MatCheckboxChange } from '@angular/material/checkbox';
               <div class="form-field">
                 <label>Default Value</label>
                 <!-- For dropdown and mcq_single -->
-                <ng-container *ngIf="fieldForm.get('type')?.value === 'dropdown' || fieldForm.get('type')?.value === 'mcq_single'; else defaultTextInput">
+                <ng-container *ngIf="fieldForm.get('type')?.value === 'dropdown' || fieldForm.get('type')?.value === 'mcq_single'">
                   <select formControlName="defaultValue">
                     <option *ngFor="let opt of options.controls" [value]="opt.value.value">{{ opt.value.label }}</option>
                   </select>
@@ -239,9 +239,9 @@ import { MatCheckboxChange } from '@angular/material/checkbox';
                   </select>
                 </ng-container>
                 <!-- For other types -->
-                <ng-template #defaultTextInput>
+                <ng-container *ngIf="fieldForm.get('type')?.value !== 'dropdown' && fieldForm.get('type')?.value !== 'mcq_single' && fieldForm.get('type')?.value !== 'mcq_multiple' && fieldForm.get('type')?.value !== 'boolean'">
                   <input formControlName="defaultValue" placeholder="Optional default value">
-                </ng-template>
+                </ng-container>
               </div>
               <div class="form-field" *ngIf="fieldForm.get('type')?.value === 'text'">
                 <label>Validation Regex <mat-icon matTooltip="Pattern the input must match (e.g., ^[a-zA-Z]+$)">help_outline</mat-icon></label>
@@ -279,8 +279,7 @@ import { MatCheckboxChange } from '@angular/material/checkbox';
                 <div class="section-heading"><mat-icon>list</mat-icon> Dropdown Options</div>
                 <div formArrayName="options">
                    <div *ngFor="let option of options.controls; let i = index" [formGroupName]="i" class="option-item">
-                    <input formControlName="label" placeholder="Option Label">
-                    <input formControlName="value" placeholder="Option Value">
+                    <input formControlName="label" placeholder="Option " (input)="syncOptionLabelValue(i)">
                     <button type="button" class="action-delete" (click)="removeOption(i)" mat-icon-button matTooltip="Remove Option">
                       <mat-icon>remove_circle_outline</mat-icon>
                     </button>
@@ -297,8 +296,7 @@ import { MatCheckboxChange } from '@angular/material/checkbox';
                 <div class="section-heading"><mat-icon>list</mat-icon> MCQ Options</div>
                 <div formArrayName="options">
                    <div *ngFor="let option of options.controls; let i = index" [formGroupName]="i" class="option-item">
-                    <input formControlName="label" placeholder="Option Label">
-                    <input formControlName="value" placeholder="Option Value">
+                    <input formControlName="label" placeholder="Option " (input)="syncOptionLabelValue(i)">
                     <button type="button" class="action-delete" (click)="removeOption(i)" mat-icon-button matTooltip="Remove Option">
                       <mat-icon>remove_circle_outline</mat-icon>
                     </button>
@@ -341,7 +339,15 @@ import { MatCheckboxChange } from '@angular/material/checkbox';
                       <option [ngValue]="true">true</option>
                       <option [ngValue]="false">false</option>
                     </select>
-                    <input *ngIf="!isBooleanField(visibleIfKey)" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value (e.g. true, 1, etc.)">
+                    <select *ngIf="getFieldOptions(visibleIfKey) && !isBooleanField(visibleIfKey) && getFieldType(visibleIfKey) !== 'mcq_multiple'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}">
+                      <option *ngFor="let opt of getFieldOptions(visibleIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
+                    </select>
+                    <div *ngIf="getFieldType(visibleIfKey) === 'mcq_multiple' && getFieldOptions(visibleIfKey)">
+                      <div *ngFor="let opt of getFieldOptions(visibleIfKey)">
+                        <input type="checkbox" [value]="opt.value" (change)="onMultiCondChange($event, 'visible')" [checked]="isArray(visibleIfValue) && visibleIfValue.includes(opt.value)"> {{ opt.label }}
+                      </div>
+                    </div>
+                    <input *ngIf="!isBooleanField(visibleIfKey) && !getFieldOptions(visibleIfKey)" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value (e.g. true, 1, etc.)">
                   </ng-container>
                 </div>
               </div>
@@ -357,7 +363,15 @@ import { MatCheckboxChange } from '@angular/material/checkbox';
                       <option [ngValue]="true">true</option>
                       <option [ngValue]="false">false</option>
                     </select>
-                    <input *ngIf="!isBooleanField(mandatoryIfKey)" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value (e.g. true, 1, etc.)">
+                    <select *ngIf="getFieldOptions(mandatoryIfKey) && !isBooleanField(mandatoryIfKey) && getFieldType(mandatoryIfKey) !== 'mcq_multiple'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}">
+                      <option *ngFor="let opt of getFieldOptions(mandatoryIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
+                    </select>
+                    <div *ngIf="getFieldType(mandatoryIfKey) === 'mcq_multiple' && getFieldOptions(mandatoryIfKey)">
+                      <div *ngFor="let opt of getFieldOptions(mandatoryIfKey)">
+                        <input type="checkbox" [value]="opt.value" (change)="onMultiCondChange($event, 'mandatory')" [checked]="isArray(mandatoryIfValue) && mandatoryIfValue.includes(opt.value)"> {{ opt.label }}
+                      </div>
+                    </div>
+                    <input *ngIf="!isBooleanField(mandatoryIfKey) && !getFieldOptions(mandatoryIfKey)" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value (e.g. true, 1, etc.)">
                   </ng-container>
                 </div>
               </div>
@@ -1187,5 +1201,56 @@ export class DynamicForm implements OnInit, OnChanges {
     } catch (e) {
       this.keyValueJsonError = 'Invalid JSON.';
     }
+  }
+
+  // Helper to get options for a field key (for conditional logic)
+  getFieldOptions(key: string | null) {
+    if (!key) return null;
+    const field = this.schema.fields.find((f: any) => f.key === key);
+    if (!field) return null;
+    if (["dropdown", "mcq_single", "mcq_multiple"].includes(field.type)) {
+      return field.options || [];
+    }
+    return null;
+  }
+
+  // Helper to get field type by key
+  getFieldType(key: string | null): string | null {
+    if (!key) return null;
+    const field = this.schema.fields.find((f: any) => f.key === key);
+    return field ? field.type : null;
+  }
+
+  // Handler for multi-select condition value (for mcq_multiple)
+  onMultiCondChange(event: any, cond: 'visible' | 'mandatory') {
+    const value = event.target.value;
+    const checked = event.target.checked;
+    if (cond === 'visible') {
+      let arr = Array.isArray(this.visibleIfValue) ? [...this.visibleIfValue] : [];
+      if (checked) {
+        arr.push(value);
+      } else {
+        arr = arr.filter((v: any) => v !== value);
+      }
+      this.visibleIfValue = arr;
+    } else if (cond === 'mandatory') {
+      let arr = Array.isArray(this.mandatoryIfValue) ? [...this.mandatoryIfValue] : [];
+      if (checked) {
+        arr.push(value);
+      } else {
+        arr = arr.filter((v: any) => v !== value);
+      }
+      this.mandatoryIfValue = arr;
+    }
+  }
+
+  isArray(val: any): boolean {
+    return Array.isArray(val);
+  }
+
+  syncOptionLabelValue(index: number) {
+    const opts = this.options;
+    const label = opts.at(index).get('label')?.value;
+    opts.at(index).get('value')?.setValue(label);
   }
 }
