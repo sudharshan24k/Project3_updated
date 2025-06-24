@@ -57,31 +57,31 @@ import { MatInput } from '@angular/material/input';
             <p class="panel-subtitle" *ngIf="isEditMode">This is how your form will look to users.</p>
           </header>
           <form [formGroup]="form" (ngSubmit)="onSubmit()">
-            <div *ngFor="let field of visibleFields" class="form-field horizontal-field" [ngSwitch]="field.type">
-              <div class="field-label-horizontal">
+            <div *ngFor="let field of visibleFields" class="form-field vertical-field" [ngSwitch]="field.type">
+              <div class="field-label-vertical">
                 <span>{{ field.label }}</span>
-                <span *ngIf="isFieldRequired(field)" class="required-asterisk-horizontal">*</span>
+                <span *ngIf="isFieldRequired(field)" class="required-asterisk-vertical">*</span>
               </div>
-              <div class="field-input-horizontal">
+              <div class="field-input-vertical">
                 <ng-container [ngSwitch]="field.type">
-                  <input *ngSwitchCase="'text'" matInput [formControlName]="field.key" [placeholder]="field.placeholder || 'Enter ' + field.label" [readonly]="isReadOnly || !field.editable" class="input-horizontal modern-placeholder" />
-                  <input *ngSwitchCase="'number'" matInput type="number" [formControlName]="field.key" [placeholder]="field.placeholder || 'Enter ' + field.label" [readonly]="isReadOnly || !field.editable" class="input-horizontal modern-placeholder" />
-                  <input *ngSwitchCase="'email'" matInput type="email" [formControlName]="field.key" [placeholder]="field.placeholder || 'Enter ' + field.label" [readonly]="isReadOnly || !field.editable" class="input-horizontal modern-placeholder" />
-                  <input *ngSwitchCase="'timestamp'" matInput type="datetime-local" [formControlName]="field.key" [readonly]="isReadOnly || !field.editable" class="input-horizontal modern-placeholder" />
-                  <mat-select *ngSwitchCase="'dropdown'" [formControlName]="field.key" [disabled]="isReadOnly || !field.editable" [placeholder]="field.placeholder || ''" class="input-horizontal">
+                  <input *ngSwitchCase="'text'" matInput [formControlName]="field.key" [placeholder]="field.placeholder || 'Enter ' + field.label" [readonly]="isReadOnly || !field.editable" class="input-vertical modern-placeholder" />
+                  <input *ngSwitchCase="'number'" matInput type="number" [formControlName]="field.key" [placeholder]="field.placeholder || 'Enter ' + field.label" [readonly]="isReadOnly || !field.editable" class="input-vertical modern-placeholder" />
+                  <input *ngSwitchCase="'email'" matInput type="email" [formControlName]="field.key" [placeholder]="field.placeholder || 'Enter ' + field.label" [readonly]="isReadOnly || !field.editable" class="input-vertical modern-placeholder" />
+                  <input *ngSwitchCase="'timestamp'" matInput type="datetime-local" [formControlName]="field.key" [readonly]="isReadOnly || !field.editable" class="input-vertical modern-placeholder" />
+                  <mat-select *ngSwitchCase="'dropdown'" [formControlName]="field.key" [disabled]="isReadOnly || !field.editable" [placeholder]="field.placeholder || ''" class="input-vertical">
                     <mat-option *ngFor="let opt of field.options" [value]="opt.value">{{ opt.label }}</mat-option>
                   </mat-select>
-                  <mat-radio-group *ngSwitchCase="'mcq_single'" [formControlName]="field.key" [disabled]="isReadOnly || !field.editable" class="input-horizontal">
+                  <mat-radio-group *ngSwitchCase="'mcq_single'" [formControlName]="field.key" [disabled]="isReadOnly || !field.editable" class="input-vertical">
                     <mat-radio-button *ngFor="let opt of field.options" [value]="opt.value">{{ opt.label }}</mat-radio-button>
                   </mat-radio-group>
-                  <div *ngSwitchCase="'mcq_multiple'" class="mcq-multi-options input-horizontal">
+                  <div *ngSwitchCase="'mcq_multiple'" class="mcq-multi-options input-vertical">
                     <mat-checkbox *ngFor="let opt of field.options" [checked]="form.get(field.key)?.value?.includes(opt.value)" (change)="onMCQMultiChange(field.key, opt.value, getCheckboxChecked($event))" [disabled]="isReadOnly || !field.editable">{{ opt.label }}</mat-checkbox>
                   </div>
-                  <mat-slide-toggle *ngSwitchCase="'boolean'" [formControlName]="field.key" [disabled]="isReadOnly || !field.editable" class="input-horizontal">{{ field.placeholder || field.label }}</mat-slide-toggle>
-                  <div *ngSwitchCase="'keyvalue'" class="keyvalue-array-horizontal">
-                    <div *ngFor="let group of getKeyValueArray(field.key)?.controls; let i = index" [formGroupName]="i" class="keyvalue-pair-horizontal">
-                      <input matInput formControlName="key" [placeholder]="field.placeholder ? field.placeholder + ' (Key)' : 'Enter ' + field.label + ' key'" class="input-horizontal" />
-                      <input matInput formControlName="value" [placeholder]="field.placeholder ? field.placeholder + ' (Value)' : 'Enter ' + field.label + ' value'" class="input-horizontal" />
+                  <mat-slide-toggle *ngSwitchCase="'boolean'" [formControlName]="field.key" [disabled]="isReadOnly || !field.editable" class="input-vertical">{{ field.placeholder || field.label }}</mat-slide-toggle>
+                  <div *ngSwitchCase="'keyvalue'" class="keyvalue-array-vertical">
+                    <div *ngFor="let group of getKeyValueArray(field.key)?.controls; let i = index" [formGroupName]="i" class="keyvalue-pair-vertical">
+                      <input matInput formControlName="key" [placeholder]="field.placeholder ? field.placeholder + ' (Key)' : 'Enter ' + field.label + ' key'" class="input-vertical" />
+                      <input matInput formControlName="value" [placeholder]="field.placeholder ? field.placeholder + ' (Value)' : 'Enter ' + field.label + ' value'" class="input-vertical" />
                       <button mat-icon-button color="warn" type="button" (click)="removeKeyValuePair(field.key, i)">
                         <span class="material-icons">delete</span>
                       </button>
@@ -502,54 +502,132 @@ import { MatInput } from '@angular/material/input';
       padding-bottom: 1rem;
       border-bottom: 1px solid var(--border-color);
     }
+    /* --- Google Forms-like .form-field style --- */
     .form-panel .form-field {
-      background: var(--surface-color);
-      border-radius: 10px;
-      box-shadow: 0 1px 4px var(--shadow-color-light);
-      padding: 1.25rem 1rem 0.5rem 1rem;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: none;
+      border: none;
+      padding: 0; /* Remove all padding */
       margin-bottom: 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
+      gap: 0.7rem;
+      position: relative;
       transition: box-shadow 0.2s, border 0.2s;
+      border-left: 6px solid #4285f4;
+      text-align: left; /* Move text to the left */
     }
     .form-panel .form-field:focus-within {
-      box-shadow: 0 2px 8px var(--shadow-color-dark);
-      border: 1px solid var(--primary-color);
+      box-shadow: 0 2px 8px #4285f433;
+      border-left: 6px solid #174ea6;
+      
     }
-    .form-panel label {
-      font-size: 1.05rem;
-      color: var(--text-muted-color);
-      font-weight: 700;
+    .form-panel .form-field:not(:first-child) {
+      margin-top: 1.5rem;
+    }
+    .form-panel label,
+    .field-label-horizontal label,
+    .field-label-horizontal span {
+      font-size: 1.22rem;
+      color: #202124;
+      font-weight: 600;
       margin-bottom: 0.25rem;
+      letter-spacing: 0.01em;
+      text-align: left; /* Move label text to the left */
+    }
+    .form-panel .required-asterisk,
+    .required-asterisk-horizontal {
+      color: #d93025;
+      margin-left: 0.2rem;
+      font-size: 1.1em;
+    }
+    .form-panel .field-label-horizontal {
+      margin-bottom: 0.7rem;
+      justify-content: flex-start; /* Move label group to the left */
     }
     .form-panel input,
-    .form-panel select {
+    .form-panel select,
+    .form-panel textarea,
+    .input-horizontal {
       font-size: 1.1rem;
-      padding: 0.7rem 1rem;
-      border-radius: 6px;
-      border: 1px solid var(--border-color);
-      background: #f8fafc;
-      color: var(--text-color);
-      transition: border 0.2s, box-shadow 0.2s;
+      padding: 0.7rem 0;
+      border: none;
+      border-bottom: 1.5px solid #dadce0;
+      border-radius: 0;
+      background: transparent;
+      color: #202124;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      margin-bottom: 0.1rem;
+      box-shadow: none;
+      width: 100%;
     }
     .form-panel input:focus,
-    .form-panel select:focus {
-      border: 1.5px solid var(--primary-color);
+    .form-panel select:focus,
+    .form-panel textarea:focus,
+    .input-horizontal:focus {
+      border-bottom: 2px solid #4285f4;
       outline: none;
-      box-shadow: 0 0 0 2px var(--secondary-color);
+      background: transparent;
+      box-shadow: none;
     }
-    .form-panel .required-asterisk {
-      color: var(--danger-color);
-      margin-left: 0.2rem;
+    .form-panel input::placeholder,
+    .form-panel textarea::placeholder {
+      color: #757575;
+      opacity: 1;
+      font-size: 1.08rem;
+      font-style: normal;
     }
     .form-panel .error-message {
-      color: var(--danger-color);
-      font-size: 0.9rem;
+      color: #d93025;
+      font-size: 0.97rem;
       margin-top: 0.25rem;
       font-weight: 500;
     }
-
+    /* Remove divider between fields */
+    .form-panel .form-field:not(:last-child)::after {
+      display: none;
+    }
+    /* Radio group styling for Google Forms look */
+    .form-panel .mat-radio-group,
+    .form-panel .mat-radio-button {
+      display: block;
+      margin-bottom: 0.7rem;
+    }
+    .form-panel .mat-radio-button .mat-radio-label-content {
+      font-size: 1.13rem;
+      color: #202124;
+      padding-left: 0.5rem;
+    }
+    .form-panel .mat-radio-button .mat-radio-outer-circle,
+    .form-panel .mat-radio-button .mat-radio-inner-circle {
+      border-width: 2px;
+    }
+    .form-panel .mat-radio-button.mat-accent .mat-radio-outer-circle {
+      border-color: #4285f4;
+    }
+    .form-panel .mat-radio-button.mat-accent.mat-radio-checked .mat-radio-inner-circle {
+      background-color: #4285f4;
+    }
+    /* Checkbox group styling */
+    .form-panel .mcq-multi-options .mat-checkbox {
+      display: block;
+      margin-bottom: 0.7rem;
+    }
+    .form-panel .mat-checkbox .mat-checkbox-label {
+      font-size: 1.13rem;
+      color: #202124;
+      padding-left: 0.5rem;
+    }
+    .form-panel .mat-checkbox .mat-checkbox-frame {
+      border-width: 2px;
+      border-color: #dadce0;
+    }
+    .form-panel .mat-checkbox.mat-accent .mat-checkbox-frame {
+      border-color: #4285f4;
+    }
+    .form-panel .mat-checkbox.mat-accent.mat-checkbox-checked .mat-checkbox-background {
+      background-color: #4285f4;
+    }
+    /* End Google Forms-like style */
     .checkbox-wrapper { display: flex; align-items: center; gap: 0.5rem; }
     .checkbox-wrapper input[type="checkbox"] { width: auto; }
     .checkbox-wrapper label { margin: 0; font-weight: 400; color: var(--text-color); }
@@ -816,11 +894,107 @@ import { MatInput } from '@angular/material/input';
       margin-bottom: 0.5rem;
     }
 
-    .modern-placeholder::placeholder {
-      color: #b0b8c9;
-      font-style: italic;
-      opacity: 1;
+    /* --- Vertical field layout for live preview --- */
+    .form-panel .vertical-field {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      text-align: left;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: none;
+      border: none;
+      padding: 1rem 1rem 1rem 2rem;
+      margin-bottom: 1.5rem;
+      gap: 0.7rem;
+      position: relative;
+      transition: box-shadow 0.2s, border 0.2s;
+      border-left: 6px solid #4285f4;
     }
+    .form-panel .vertical-field:focus-within {
+      box-shadow: 0 2px 8px #4285f433;
+      border-left: 6px solid #174ea6;
+    }
+    .form-panel .vertical-field:not(:first-child) {
+      margin-top: 1rem;
+    }
+    .form-panel .field-label-vertical {
+      font-size: 1.22rem;
+      color: #202124;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+      letter-spacing: 0.01em;
+      text-align: left;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .form-panel .required-asterisk-vertical {
+      color: #d93025;
+      font-size: 1.1em;
+    }
+    .form-panel .field-input-vertical {
+      width: 100%;
+      margin-top: 1.1 rem;
+      margin-bottom: 0.5rem;
+      color: #d93025;
+    }
+    .form-panel .input-vertical,
+    .form-panel .field-input-vertical input,
+    .form-panel .field-input-vertical select,
+    .form-panel .field-input-vertical textarea {
+      font-size: 1.1rem;
+      padding: 0rem 0;
+      border: none;
+      border-bottom: 1.5px solid #dadce0;
+      border-radius: 0;
+      background: transparent;
+      color: #202124;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      margin-bottom: 0.1rem;
+      box-shadow: none;
+      width: 100%;
+    }
+    .form-panel .input-vertical:focus,
+    .form-panel .field-input-vertical input:focus,
+    .form-panel .field-input-vertical select:focus,
+    .form-panel .field-input-vertical textarea:focus {
+      border-bottom: 2px solid #4285f4;
+      outline: none;
+      background: transparent;
+      box-shadow: none;
+    }
+    .form-panel .input-vertical::placeholder,
+    .form-panel .field-input-vertical input::placeholder,
+    .form-panel .field-input-vertical textarea::placeholder {
+      color: #757575;
+      opacity: 1;
+      font-size: 1.08rem;
+      font-style: normal;
+    }
+    .form-panel .error-message {
+      color: #d93025;
+      font-size: 0.97rem;
+      margin-top: 0.25rem;
+      font-weight: 500;
+    }
+    .form-panel .vertical-field:not(:last-child)::after {
+      display: none;
+    }
+    /* Key-value vertical layout */
+    .form-panel .keyvalue-array-vertical {
+      width: 100%;
+    }
+    .form-panel .keyvalue-pair-vertical {
+      display: flex;
+      flex-direction: row;
+      gap: 0.7rem;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      width: 100%;
+    }
+    /* --- End vertical field layout --- */
 
     .highlight {
       background: yellow;
