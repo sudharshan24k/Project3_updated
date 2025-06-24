@@ -671,14 +671,6 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   }
   selectedTabIndexInWindow = 0;
 
-  // Tab window state for windowed navigation
-  tabWindowStart = 0;
-  tabWindowSize = 6;
-  get visibleBaseNames() {
-    return this.baseNames.slice(this.tabWindowStart, this.tabWindowStart + this.tabWindowSize);
-  }
-  selectedTabIndexInWindow = 0;
-
   constructor(private schemaService: SchemaService, private router: Router) {}
 
   ngOnInit() {
