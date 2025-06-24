@@ -62,7 +62,8 @@ import { MatInput } from '@angular/material/input';
                 <span>{{ field.label }}</span>
                 <span *ngIf="isFieldRequired(field)" class="required-asterisk-vertical">*</span>
               </div>
-              <div class="field-input-vertical">
+              <div class="field-input-vertical"
+                   [ngClass]="{'no-line': field.type === 'mcq_multiple' || field.type === 'boolean'}">
                 <ng-container [ngSwitch]="field.type">
                   <input *ngSwitchCase="'text'" matInput [formControlName]="field.key" [placeholder]="field.placeholder || 'Enter ' + field.label" [readonly]="isReadOnly || !field.editable" class="input-vertical modern-placeholder" />
                   <input *ngSwitchCase="'number'" matInput type="number" [formControlName]="field.key" [placeholder]="field.placeholder || 'Enter ' + field.label" [readonly]="isReadOnly || !field.editable" class="input-vertical modern-placeholder" />
@@ -71,11 +72,22 @@ import { MatInput } from '@angular/material/input';
                   <mat-select *ngSwitchCase="'dropdown'" [formControlName]="field.key" [disabled]="isReadOnly || !field.editable" [placeholder]="field.placeholder || ''" class="input-vertical">
                     <mat-option *ngFor="let opt of field.options" [value]="opt.value">{{ opt.label }}</mat-option>
                   </mat-select>
-                  <mat-radio-group *ngSwitchCase="'mcq_single'" [formControlName]="field.key" [disabled]="isReadOnly || !field.editable" class="input-vertical">
-                    <mat-radio-button *ngFor="let opt of field.options" [value]="opt.value">{{ opt.label }}</mat-radio-button>
+                  <mat-radio-group *ngSwitchCase="'mcq_single'" [formControlName]="field.key" [disabled]="isReadOnly || !field.editable" class="input-vertical mcq-options-vertical">
+                    <div *ngFor="let opt of field.options">
+                      <mat-radio-button [value]="opt.value">{{ opt.label }}</mat-radio-button>
+                    </div>
                   </mat-radio-group>
-                  <div *ngSwitchCase="'mcq_multiple'" class="mcq-multi-options input-vertical">
-                    <mat-checkbox *ngFor="let opt of field.options" [checked]="form.get(field.key)?.value?.includes(opt.value)" (change)="onMCQMultiChange(field.key, opt.value, getCheckboxChecked($event))" [disabled]="isReadOnly || !field.editable">{{ opt.label }}</mat-checkbox>
+                  <div *ngSwitchCase="'mcq_multiple'" class="mcq-multi-options input-vertical mcq-options-vertical">
+                    <!-- Each option on a separate line -->
+                    <div *ngFor="let opt of field.options" style="width: 100%;">
+                      <div style="display: flex; align-items: center;">
+                        <mat-checkbox [checked]="form.get(field.key)?.value?.includes(opt.value)"
+                                      (change)="onMCQMultiChange(field.key, opt.value, getCheckboxChecked($event))"
+                                      [disabled]="isReadOnly || !field.editable">
+                          {{ opt.label }}
+                        </mat-checkbox>
+                      </div>
+                    </div>
                   </div>
                   <mat-slide-toggle *ngSwitchCase="'boolean'" [formControlName]="field.key" [disabled]="isReadOnly || !field.editable" class="input-vertical">{{ field.placeholder || field.label }}</mat-slide-toggle>
                   <div *ngSwitchCase="'keyvalue'" class="keyvalue-array-vertical">
@@ -956,10 +968,10 @@ import { MatInput } from '@angular/material/input';
       box-shadow: none;
       width: 100%;
     }
+    
     .form-panel .input-vertical:focus,
     .form-panel .field-input-vertical input:focus,
     .form-panel .field-input-vertical select:focus,
-    .form-panel .field-input-vertical textarea:focus {
       border-bottom: 2px solid #4285f4;
       outline: none;
       background: transparent;
