@@ -90,16 +90,24 @@ import { MatInput } from '@angular/material/input';
                     </div>
                   </div>
                   <mat-slide-toggle *ngSwitchCase="'boolean'" [formControlName]="field.key" [disabled]="isReadOnly || !field.editable" class="input-vertical">{{ field.placeholder || field.label }}</mat-slide-toggle>
-                  <div *ngSwitchCase="'keyvalue'" class="keyvalue-array-vertical">
-                    <div *ngFor="let group of getKeyValueArray(field.key)?.controls; let i = index" [formGroupName]="i" class="keyvalue-pair-vertical">
-                      <input matInput formControlName="key" [placeholder]="field.placeholder ? field.placeholder + ' (Key)' : 'Enter ' + field.label + ' key'" class="input-vertical" />
-                      <input matInput formControlName="value" [placeholder]="field.placeholder ? field.placeholder + ' (Value)' : 'Enter ' + field.label + ' value'" class="input-vertical" />
-                      <button mat-icon-button color="warn" type="button" (click)="removeKeyValuePair(field.key, i)">
-                        <span class="material-icons">delete</span>
-                      </button>
-                    </div>
-                    <button mat-stroked-button color="primary" type="button" (click)="addKeyValuePair(field.key)">+ Add Pair</button>
-                  </div>
+                  <ng-container *ngSwitchCase="'keyvalue'">
+  <div [formArrayName]="field.key">
+    <div *ngFor="let group of getKeyValueArray(field.key)?.controls; let i = index" [formGroupName]="i" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+      <mat-form-field appearance="fill" style="flex:1;">
+        <mat-label>Key</mat-label>
+        <input matInput formControlName="key">
+      </mat-form-field>
+      <mat-form-field appearance="fill" style="flex:1;">
+        <mat-label>Value</mat-label>
+        <input matInput formControlName="value">
+      </mat-form-field>
+      <button mat-icon-button color="warn" type="button" (click)="removeKeyValuePair(field.key, i)">
+        <span class="material-icons">delete</span>
+      </button>
+    </div>
+    <button mat-stroked-button color="primary" type="button" (click)="addKeyValuePair(field.key)">+ Add Pair</button>
+  </div>
+</ng-container>
                 </ng-container>
               </div>
             </div>
@@ -225,6 +233,7 @@ import { MatInput } from '@angular/material/input';
                       <option value="dropdown">Dropdown</option>
                       <option value="mcq_single">MCQ (Single Select)</option>
                       <option value="mcq_multiple">MCQ (Multiple Select)</option>
+                      <option value="keyvalue">Key-Value</option> <!-- Added keyvalue type -->
                     </select>
                   </div>
                 </div>
@@ -260,8 +269,12 @@ import { MatInput } from '@angular/material/input';
                       <option [ngValue]="false">False</option>
                     </select>
                   </ng-container>
+                  <!-- For keyvalue: hide defaultValue input -->
+                  <ng-container *ngIf="fieldForm.get('type')?.value === 'keyvalue'">
+                    <!-- No default value input for keyvalue -->
+                  </ng-container>
                   <!-- For other types -->
-                  <ng-container *ngIf="fieldForm.get('type')?.value !== 'dropdown' && fieldForm.get('type')?.value !== 'mcq_single' && fieldForm.get('type')?.value !== 'mcq_multiple' && fieldForm.get('type')?.value !== 'boolean'">
+                  <ng-container *ngIf="fieldForm.get('type')?.value !== 'dropdown' && fieldForm.get('type')?.value !== 'mcq_single' && fieldForm.get('type')?.value !== 'mcq_multiple' && fieldForm.get('type')?.value !== 'boolean' && fieldForm.get('type')?.value !== 'keyvalue'">
                     <input formControlName="defaultValue" placeholder="Optional default value">
                   </ng-container>
                 </div>
@@ -1556,6 +1569,16 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       const validators = this.getValidators(field);
       if (field.type === 'mcq_multiple') {
         controls[field.key] = this.fb.array(field.defaultValue || [], validators);
+      } else if (field.type === 'keyvalue') {
+        // Initialize FormArray with default keys as {key, value} objects
+        let initialPairs = [];
+        if (Array.isArray(field.initialKeys)) {
+          initialPairs = field.initialKeys.map((k: string) => ({ key: k, value: '' }));
+        }
+        controls[field.key] = this.fb.array(
+          initialPairs.map((pair: {key: string, value: string}) => this.fb.group(pair)),
+          validators
+        );
       } else {
         controls[field.key] = [field.defaultValue || null, validators];
       }
@@ -1632,6 +1655,7 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       field.options.forEach((opt: any) => this.options.push(this.fb.group(opt)));
     }
     // Sync conditional logic fields
+
     this.visibleIfKey = field.visibleIf?.key || null;
     this.visibleIfValue = field.visibleIf?.value ?? null;
     this.mandatoryIfKey = field.mandatoryIf?.key || null;
@@ -1658,6 +1682,8 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
     if (newField.type === 'keyvalue' && typeof newField.initialKeys === 'string') {
       newField.initialKeys = newField.initialKeys.split(',').map((k: string) => k.trim()).filter((k: string) => k);
     }
+    // Add initialKeys property as requested
+    newField.initialKeys = newField.type === 'keyvalue' && newField.initialKeys ? newField.initialKeys : undefined;
     if (this.currentFieldIndex !== null) {
       this.schema.fields[this.currentFieldIndex] = newField;
     } else {
@@ -1671,6 +1697,15 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
   }
 
   onSubmit() {
+    // Update initialKeys for keyvalue fields from form values BEFORE saving
+    this.schema.fields.forEach((field: any) => {
+      if (field.type === 'keyvalue') {
+        const arr = this.form.get(field.key) as FormArray;
+        if (arr && arr.controls) {
+          field.initialKeys = arr.controls.map(ctrl => ctrl.value.key).filter((k: string) => k && k.trim() !== '');
+        }
+      }
+    });
     if (this.mode === 'create') {
       this.schemaService.createTemplate(this.schema).subscribe(() => {
         this.closeForm();
@@ -1698,6 +1733,7 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       if (!this.templateName) return;
       this.schemaService.submitForm(this.templateName, this.form.getRawValue()).subscribe(() => this.closeForm());
     }
+    
   }
 
   isFormValid(): boolean {
@@ -1725,7 +1761,6 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
   removeOption(index: number) {
     this.options.removeAt(index);
   }
-
   getKeyValueArray(fieldKey: string): FormArray | null {
     const control = this.form.get(fieldKey);
     return control instanceof FormArray ? control : null;
@@ -1734,15 +1769,24 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
     const control = this.form.get(fieldKey);
     if (control instanceof FormArray) {
       control.push(this.fb.group({ key: '', value: '' }));
+      // Removed schema update and animation here
     }
   }
   removeKeyValuePair(fieldKey: string, index: number) {
     const control = this.form.get(fieldKey);
     if (control instanceof FormArray) {
       control.removeAt(index);
+      // Removed schema update and animation here
     }
   }
 
+  keyvalueDefaultKeys: string[] = [];
+  addDefaultKey() {
+    this.keyvalueDefaultKeys.push('');
+  }
+  removeDefaultKey(index: number) {
+    this.keyvalueDefaultKeys.splice(index, 1);
+  }
   isBooleanField(key: string): boolean {
     const field = this.schema.fields.find((f: any) => f.key === key);
     return field ? field.type === 'boolean' : false;
