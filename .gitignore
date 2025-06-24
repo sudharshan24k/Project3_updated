@@ -1,4 +1,4 @@
-# See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+git remote add origin https://github.com/sudharshan24k/Project3_updated.gitgit commit -m "Modernized Angular + FastAPI monorepo: all actions per submission, DB-only storage, updated .gitignore and README"# See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
 # Compiled output
 /dist
