@@ -835,7 +835,7 @@ import { MatInput } from '@angular/material/input';
     .full-width { width: 100%; }
     .mcq-group { margin-bottom: 1.5rem; }
     .mcq-label { font-weight: 600; margin-bottom: 0.5rem; display: block; }
-    .mcq-multi-options { display: flex; flex-wrap: wrap; gap: 1.2rem; }
+    .mcq-multi-options { display: flex; flex-wrap: wrap; gap: 0.1rem; }
     .toggle-group { margin-bottom: 1.5rem; }
 
     [formArrayName] > div {
