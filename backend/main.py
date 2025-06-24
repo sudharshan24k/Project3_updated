@@ -63,6 +63,8 @@ async def create_template(template: TemplateModel = Body(...)):
     encoded_template["version"] = 1
     encoded_template["created_at"] = datetime.datetime.utcnow()
     encoded_template["updated_at"] = datetime.datetime.utcnow()
+    # Ensure author is present
+    encoded_template["author"] = template.author if hasattr(template, 'author') else None
     new_template = await template_collection.insert_one(encoded_template)
     
     # Also create the first version in history
@@ -89,16 +91,15 @@ async def list_templates():
         description = schema.get("description", "") if isinstance(schema, dict) else ""
         result.append({
             "name": t.get("name"),
-            # Remove is_locked from API response
             "description": description,
-            "created_at": t.get("created_at")
+            "created_at": t.get("created_at"),
+            "author": t.get("author", None)
         })
     return serialize_mongo(result)
 
 @app.get("/templates/{name}", response_description="Get a single template")
 async def get_template(name: str):
     if (template := await template_collection.find_one({"name": name})) is not None:
-        # Remove lock_password from API response
         template.pop("lock_password", None)
         return serialize_mongo(template)
     raise HTTPException(status_code=404, detail=f"Template {name} not found")
@@ -111,7 +112,6 @@ class UpdateTemplateRequest(BaseModel):
 async def edit_template(name: str, req: UpdateTemplateRequest = Body(...)):
     existing_template = await template_collection.find_one({"name": name})
     if not existing_template:
-        # If not found, create new template with version 1 and name_v1
         versioned_name = f"{name}_v1"
         new_template = {
             "name": versioned_name,
@@ -121,7 +121,6 @@ async def edit_template(name: str, req: UpdateTemplateRequest = Body(...)):
             "updated_at": datetime.datetime.utcnow()
         }
         await template_collection.insert_one(new_template)
-        # Also create first version in history
         version_data = TemplateVersionModel(
             template_name=versioned_name,
             version=1,
@@ -134,7 +133,6 @@ async def edit_template(name: str, req: UpdateTemplateRequest = Body(...)):
         await template_version_collection.insert_one(version_data_dict)
         return serialize_mongo(new_template)
 
-    # Save current state to version history
     version_data = TemplateVersionModel(
         template_name=existing_template["name"],
         version=existing_template.get("version", 1),

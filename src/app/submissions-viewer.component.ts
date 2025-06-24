@@ -81,7 +81,7 @@ import { ResponseNameDialogComponent } from './response-name-dialog.component';
         <div class="right-column">
           <div *ngIf="diffResult" class="card diff-view">
             <h4>Comparison Result</h4>
-            <app-diff-viewer [diff]="diffResult"></app-diff-viewer>
+            <app-diff-viewer [oldSchema]="oldSchema" [newSchema]="newSchema"></app-diff-viewer>
           </div>
 
           <div *ngIf="selectedSubmissionData" class="card submission-data">
@@ -235,6 +235,8 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
   selectedSubmissionData: any = null;
   selectedVersions = new Set<string>(); // Now stores submission_names
   diffResult: any = null;
+  oldSchema: any[] = [];
+  newSchema: any[] = [];
   @Output() duplicateEdit = new EventEmitter<{ template: string, version: number }>();
   newResponseContent: string = '';
 
@@ -258,6 +260,8 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
     this.selectedSubmissionData = null;
     this.selectedVersions.clear();
     this.diffResult = null;
+    this.oldSchema = [];
+    this.newSchema = [];
   }
 
   loadSubmissions() {
@@ -360,10 +364,26 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
     }
   }
 
-  compareVersions() {
-    // Disable or refactor: diffSubmissions is version-based, but now we use submission_name
-    // Option 1: Hide/disable comparison for now
-    return;
+  async compareVersions() {
+    if (this.selectedVersions.size !== 2 || !this.templateName) return;
+    const [nameA, nameB] = Array.from(this.selectedVersions);
+    // Fetch both submissions
+    const subA = await this.schemaService.getSubmissionByName(this.templateName, nameA).toPromise();
+    const subB = await this.schemaService.getSubmissionByName(this.templateName, nameB).toPromise();
+    // Defensive: fallback to this.templateName if template_name is not present
+    const templateNameA = (subA && (subA as any).template_name) ? (subA as any).template_name : this.templateName;
+    const templateNameB = (subB && (subB as any).template_name) ? (subB as any).template_name : this.templateName;
+    let schemaA: any = null;
+    let schemaB: any = null;
+    if (templateNameA) {
+      schemaA = await this.schemaService.getTemplate(templateNameA).toPromise();
+    }
+    if (templateNameB) {
+      schemaB = await this.schemaService.getTemplate(templateNameB).toPromise();
+    }
+    this.oldSchema = (schemaA && schemaA.schema && schemaA.schema.fields) ? schemaA.schema.fields : [];
+    this.newSchema = (schemaB && schemaB.schema && schemaB.schema.fields) ? schemaB.schema.fields : [];
+    this.diffResult = true;
   }
 
   duplicateAndEdit(submissionName: string) {

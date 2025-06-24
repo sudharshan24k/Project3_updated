@@ -8,12 +8,14 @@ export interface TemplateSchema {
     description?: string;
     fields: any[];
   };
+  author?: string;
 }
 
 export interface TemplateInfo {
   name: string;
   description: string;
   created_at: string;
+  author?: string;
 }
 
 export interface TemplateVersion {
@@ -63,7 +65,8 @@ export class SchemaService {
         schema: {
             description: template.description,
             fields: template.fields
-        }
+        },
+        author: template.author
     };
     return this.http.post(`${this.apiUrl}/templates/`, payload);
   }

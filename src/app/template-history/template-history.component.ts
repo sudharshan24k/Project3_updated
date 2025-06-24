@@ -5,6 +5,7 @@ import { SchemaService, TemplateVersion } from '../dynamic-form/schema.service';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatButtonModule } from '@angular/material/button';
+import { Location } from '@angular/common';
 
 @Component({
   selector: 'app-template-history',
@@ -72,7 +73,8 @@ export class TemplateHistoryComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private schemaService: SchemaService
+    private schemaService: SchemaService,
+    private location: Location
   ) { }
 
   ngOnInit(): void {
@@ -102,6 +104,6 @@ export class TemplateHistoryComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/']);
+    this.location.back();
   }
 } 

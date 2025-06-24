@@ -70,6 +70,13 @@ import { MatExpansionModule } from '@angular/material/expansion';
             [(ngModel)]="filterDescription"
             (input)="applyFilters()"
           >
+          <input
+            type="text"
+            class="filter-input"
+            placeholder="Author name contains..."
+            [(ngModel)]="filterAuthor"
+            (input)="applyFilters()"
+          >
           <div class="date-range-filter">
             <div class="date-input-group">
               <input #startDateInput type="date" class="filter-input" [(ngModel)]="filterStartDate" (change)="applyFilters()">
@@ -100,7 +107,13 @@ import { MatExpansionModule } from '@angular/material/expansion';
               <mat-icon>chevron_left</mat-icon>
             </button>
             <div class="tab-scrollbar" #tabScrollDiv>
-              <mat-tab-group [(selectedIndex)]="selectedTabIndexInWindow" class="schema-tabs" *ngIf="baseNames.length > 0">
+              <div *ngIf="isLoading" class="loading-container">
+                <div class="loading-spinner">
+                  <mat-icon class="spinning">refresh</mat-icon>
+                  <p>Loading templates...</p>
+                </div>
+              </div>
+              <mat-tab-group [(selectedIndex)]="selectedTabIndexInWindow" class="schema-tabs" *ngIf="!isLoading && baseNames.length > 0">
                 <mat-tab *ngFor="let baseName of visibleBaseNames; let i = index" [label]="baseName">
                   <div class="version-cards">
                     <div class="version-card card" *ngFor="let version of groupedTemplates[baseName]">
@@ -146,7 +159,13 @@ import { MatExpansionModule } from '@angular/material/expansion';
           </div>
         </ng-container>
         <ng-container *ngIf="displayMode === 'list'">
-          <mat-accordion>
+          <div *ngIf="isLoading" class="loading-container">
+            <div class="loading-spinner">
+              <mat-icon class="spinning">refresh</mat-icon>
+              <p>Loading templates...</p>
+            </div>
+          </div>
+          <mat-accordion *ngIf="!isLoading">
             <mat-expansion-panel *ngFor="let baseName of baseNames" [(expanded)]="expandedBase[baseName]">
               <mat-expansion-panel-header (click)="toggleExpand(baseName)">
                 <mat-panel-title>
@@ -584,6 +603,43 @@ import { MatExpansionModule } from '@angular/material/expansion';
       background: var(--primary-color-light);
       border-radius: 3px;
     }
+    .delete-btn:hover .mat-icon {
+      color: #b71c1c !important;
+    }
+    
+    .loading-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 200px;
+      padding: 2rem;
+    }
+    
+    .loading-spinner {
+      text-align: center;
+      color: var(--text-muted-color);
+    }
+    
+    .loading-spinner mat-icon {
+      font-size: 2rem;
+      width: 2rem;
+      height: 2rem;
+      margin-bottom: 1rem;
+    }
+    
+    .loading-spinner p {
+      margin: 0;
+      font-size: 1.1rem;
+    }
+    
+    .spinning {
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
   `]
 })
 export class DashboardComponent implements OnInit, AfterViewInit {
@@ -598,19 +654,15 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   isDarkTheme = false;
   displayMode: 'list' | 'grid' | 'tabcard' = 'tabcard';
   tabPage = 0;
-
-  // New search/advanced search state
   searchText: string = '';
   advancedSearch: boolean = false;
-
-  // New search/filter properties
   filterDescription: string = '';
+  filterAuthor: string = '';
   filterStartDate: string = '';
   filterEndDate: string = '';
-
-  // Tab window state for windowed navigation
   tabWindowStart = 0;
   tabWindowSize = 6;
+  isLoading = false;
   get visibleBaseNames() {
     return this.baseNames.slice(this.tabWindowStart, this.tabWindowStart + this.tabWindowSize);
   }
@@ -619,20 +671,131 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   constructor(private schemaService: SchemaService, private router: Router) {}
 
   ngOnInit() {
+    this.restoreDashboardState();
     this.loadTemplates();
-    this.isDarkTheme = document.body.classList.contains('dark-theme');
-    this.selectedTabIndexInWindow = 0;
-    this.tabWindowStart = 0;
   }
 
   ngAfterViewInit() {
-    // Remove old scroll/resize event listeners for updateTabScrollButtons
-    // setTimeout(() => this.updateTabScrollButtons(), 300);
-    // const tabScrollDiv = document.querySelector('.tab-scrollbar') as HTMLElement;
-    // if (tabScrollDiv) {
-    //   tabScrollDiv.addEventListener('scroll', () => this.updateTabScrollButtons());
-    //   window.addEventListener('resize', () => this.updateTabScrollButtons());
-    // }
+    setTimeout(() => this.restoreScroll(), 0);
+  }
+
+  // --- State Persistence ---
+  saveDashboardState() {
+    sessionStorage.setItem('dashboardTab', this.selectedTabIndexInWindow.toString());
+    sessionStorage.setItem('dashboardSearch', this.searchText);
+    sessionStorage.setItem('dashboardAdvanced', JSON.stringify({
+      advancedSearch: this.advancedSearch,
+      filterDescription: this.filterDescription,
+      filterAuthor: this.filterAuthor,
+      filterStartDate: this.filterStartDate,
+      filterEndDate: this.filterEndDate
+    }));
+    sessionStorage.setItem('dashboardDisplayMode', this.displayMode);
+    sessionStorage.setItem('dashboardTabWindowStart', this.tabWindowStart.toString());
+    sessionStorage.setItem('dashboardScroll', window.scrollY.toString());
+    if (this.selectedTemplate) {
+      sessionStorage.setItem('dashboardSelectedTemplate', this.selectedTemplate);
+    }
+  }
+
+  restoreDashboardState() {
+    const tab = sessionStorage.getItem('dashboardTab');
+    if (tab) this.selectedTabIndexInWindow = +tab;
+    const search = sessionStorage.getItem('dashboardSearch');
+    if (search) this.searchText = search;
+    const adv = sessionStorage.getItem('dashboardAdvanced');
+    if (adv) {
+      const advObj = JSON.parse(adv);
+      this.advancedSearch = advObj.advancedSearch;
+      this.filterDescription = advObj.filterDescription;
+      this.filterAuthor = advObj.filterAuthor;
+      this.filterStartDate = advObj.filterStartDate;
+      this.filterEndDate = advObj.filterEndDate;
+    }
+    const mode = sessionStorage.getItem('dashboardDisplayMode');
+    if (mode) this.displayMode = mode as any;
+    const tabWin = sessionStorage.getItem('dashboardTabWindowStart');
+    if (tabWin) this.tabWindowStart = +tabWin;
+    // Restore selected template and adjust tab index/window if needed
+    const selectedTemplate = sessionStorage.getItem('dashboardSelectedTemplate');
+    if (selectedTemplate && this.displayMode === 'tabcard' && this.baseNames.length > 0) {
+      // Find which baseName and tab window contains the selected template
+      let found = false;
+      for (let i = 0; i < this.baseNames.length; i++) {
+        const base = this.baseNames[i];
+        const versions = this.groupedTemplates[base] || [];
+        if (versions.some(v => v.name === selectedTemplate)) {
+          // Find which window the tab is in
+          const tabWindowSize = this.tabWindowSize || 6;
+          const tabIndex = i;
+          this.selectedTabIndexInWindow = tabIndex % tabWindowSize;
+          this.tabWindowStart = tabIndex - this.selectedTabIndexInWindow;
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        this.selectedTabIndexInWindow = 0;
+        this.tabWindowStart = 0;
+      }
+    }
+  }
+
+  restoreScroll() {
+    const scroll = sessionStorage.getItem('dashboardScroll');
+    if (scroll) window.scrollTo(0, +scroll);
+  }
+
+  // --- Save state before navigation ---
+  useTemplate(template: string) {
+    this.saveDashboardState();
+    this.selectedTemplate = template;
+    this.mode = 'use';
+  }
+  editTemplate(template: TemplateInfo) {
+    this.saveDashboardState();
+    this.selectedTemplate = template.name;
+    this.mode = 'edit';
+  }
+  previewTemplate(template: string) {
+    this.saveDashboardState();
+    this.selectedTemplate = template;
+    this.mode = 'preview';
+  }
+  viewSubmissions(template: string) {
+    this.saveDashboardState();
+    this.selectedTemplate = template;
+    this.mode = 'submissions';
+  }
+  viewSchemaVersions(name: string) {
+    this.saveDashboardState();
+    this.selectedTemplate = name;
+    this.mode = 'edit';
+  }
+  viewHistory(name: string) {
+    this.saveDashboardState();
+    this.selectedTemplate = name;
+    this.mode = 'edit';
+  }
+  // --- Clear state on reset/clear ---
+  clearSearch() {
+    this.searchText = '';
+    this.filterDescription = '';
+    this.filterAuthor = '';
+    this.filterStartDate = '';
+    this.filterEndDate = '';
+    sessionStorage.removeItem('dashboardSearch');
+    sessionStorage.removeItem('dashboardAdvanced');
+    this.applyFilters();
+  }
+  resetFilters() {
+    this.searchText = '';
+    this.filterDescription = '';
+    this.filterAuthor = '';
+    this.filterStartDate = '';
+    this.filterEndDate = '';
+    sessionStorage.clear();
+    this.applyFilters();
   }
 
   isFormMode(): boolean {
@@ -640,9 +803,18 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   }
 
   loadTemplates() {
-    this.schemaService.listTemplates().subscribe(templates => {
-      this.allTemplates = templates;
-      this.applyFilters();
+    if (this.isLoading) return; // Prevent multiple simultaneous loads
+    this.isLoading = true;
+    this.schemaService.listTemplates().subscribe({
+      next: (templates) => {
+        this.allTemplates = templates;
+        this.applyFilters();
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error loading templates:', error);
+        this.isLoading = false;
+      }
     });
   }
 
@@ -652,7 +824,8 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     if (search) {
       filtered = filtered.filter(t =>
         t.name.toLowerCase().includes(search) ||
-        (t.description && t.description.toLowerCase().includes(search))
+        (t.description && t.description.toLowerCase().includes(search)) ||
+        (t.author && t.author.toLowerCase().includes(search))
       );
     }
     if (this.advancedSearch) {
@@ -660,14 +833,32 @@ export class DashboardComponent implements OnInit, AfterViewInit {
         const desc = this.filterDescription.trim().toLowerCase();
         filtered = filtered.filter(t => t.description && t.description.toLowerCase().includes(desc));
       }
+      if (this.filterAuthor.trim()) {
+        const author = this.filterAuthor.trim().toLowerCase();
+        filtered = filtered.filter(t => {
+          // Handle cases where author might be null, undefined, or empty
+          const templateAuthor = (t.author || '').toLowerCase();
+          return templateAuthor.includes(author);
+        });
+      }
       if (this.filterStartDate) {
-        filtered = filtered.filter(t => t.created_at && t.created_at >= this.filterStartDate);
+        filtered = filtered.filter(t => {
+          const templateDate = new Date(t.created_at);
+          const startDate = new Date(this.filterStartDate);
+          return templateDate >= startDate;
+        });
       }
       if (this.filterEndDate) {
-        filtered = filtered.filter(t => t.created_at && t.created_at <= this.filterEndDate);
+        filtered = filtered.filter(t => {
+          const templateDate = new Date(t.created_at);
+          const endDate = new Date(this.filterEndDate);
+          endDate.setHours(23, 59, 59, 999); // Include the entire end date
+          return templateDate <= endDate;
+        });
       }
     }
-    // Remove invalid Observable access. Only use filtered array.
+    
+    // Group templates by base name
     this.groupedTemplates = {};
     for (const t of filtered) {
       const match = t.name.match(/^(.*)_v\d+$/);
@@ -683,78 +874,17 @@ export class DashboardComponent implements OnInit, AfterViewInit {
         return va - vb;
       });
     }
-    // Reset tab window if needed
-    this.tabWindowStart = 0;
-    this.selectedTabIndexInWindow = 0;
+    
+    // Only reset tab window if we're not restoring state
+    const isRestoring = sessionStorage.getItem('dashboardSelectedTemplate');
+    if (!isRestoring) {
+      this.tabWindowStart = 0;
+      this.selectedTabIndexInWindow = 0;
+    }
   }
 
   toggleExpand(baseName: string) {
     this.expandedBase[baseName] = !this.expandedBase[baseName];
-  }
-
-  // Filtering logic for new search bar and advanced search
-  onSearchChange() {
-    let filtered = this.allTemplates;
-    // Main search bar: search by name (base or version)
-    if (this.searchText) {
-      const search = this.searchText.toLowerCase();
-      filtered = filtered.filter(t => t.name.toLowerCase().includes(search));
-    }
-    // Advanced search: description
-    if (this.advancedSearch && this.filterDescription) {
-      const desc = this.filterDescription.toLowerCase();
-      filtered = filtered.filter(t => (t.description || '').toLowerCase().includes(desc));
-    }
-    // Advanced search: date range
-    if (this.advancedSearch && (this.filterStartDate || this.filterEndDate)) {
-      filtered = filtered.filter(t => {
-        if (!t.created_at) return false;
-        const created = new Date(t.created_at);
-        let afterStart = true, beforeEnd = true;
-        if (this.filterStartDate) afterStart = created >= new Date(this.filterStartDate);
-        if (this.filterEndDate) beforeEnd = created <= new Date(this.filterEndDate);
-        return afterStart && beforeEnd;
-      });
-    }
-    // Regroup after filtering
-    this.groupedTemplates = {};
-    for (const t of filtered) {
-      const match = t.name.match(/^(.*)_v\d+$/);
-      const base = match ? match[1] : t.name;
-      if (!this.groupedTemplates[base]) this.groupedTemplates[base] = [];
-      this.groupedTemplates[base].push(t);
-    }
-    this.baseNames = Object.keys(this.groupedTemplates).sort();
-    for (const base of this.baseNames) {
-      this.groupedTemplates[base].sort((a, b) => {
-        const va = parseInt(a.name.split('_v').pop() || '0', 10);
-        const vb = parseInt(b.name.split('_v').pop() || '0', 10);
-        return va - vb;
-      });
-    }
-  }
-
-  clearSearch() {
-    this.searchText = '';
-    this.filterDescription = '';
-    this.filterStartDate = '';
-    this.filterEndDate = '';
-    this.advancedSearch = false;
-    this.applyFilters();
-  }
-
-  toggleAdvancedSearch() {
-    this.advancedSearch = !this.advancedSearch;
-    this.applyFilters();
-  }
-
-  resetFilters() {
-    this.searchText = '';
-    this.filterDescription = '';
-    this.filterStartDate = '';
-    this.filterEndDate = '';
-    this.advancedSearch = false;
-    this.applyFilters();
   }
 
   showCreateTemplate() {
@@ -764,40 +894,18 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     this.loadTemplates();
   }
 
-  useTemplate(template: string) {
-    this.mode = 'use';
-    this.selectedTemplate = template;
-  }
-
-  editTemplate(template: TemplateInfo) {
-    this.mode = 'edit';
-    this.selectedTemplate = template.name;
-  }
-
-  previewTemplate(template: string) {
-    this.mode = 'preview';
-    this.selectedTemplate = template;
-  }
-
-  viewSubmissions(template: string) {
-    this.mode = 'submissions';
-    this.selectedTemplate = template;
-  }
-
-  deleteTemplate(template: string) {
-    if (confirm(`Are you sure you want to delete the template '${template}'?`)) {
-      this.schemaService.deleteTemplate(template).subscribe(() => {
-        this.loadTemplates();
-      });
-    }
-  }
-
   onFormClose() {
     this.mode = 'list';
     this.selectedTemplate = null;
     this.duplicatedVersion = null;
     this.tabPage = 0;
-    this.loadTemplates();
+    // Only reload templates if they're not already loaded
+    if (this.allTemplates.length === 0) {
+      this.loadTemplates();
+    } else {
+      // Just restore state without reloading
+      this.restoreDashboardState();
+    }
   }
 
   getTemplateDesc(template: string): string | null {
@@ -825,14 +933,6 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     }
   }
 
-  viewSchemaVersions(name: string) {
-    this.router.navigate(['/history', name]);
-  }
-
-  viewHistory(name: string) {
-    this.router.navigate(['/history', name]);
-  }
-
   openDatePicker(input: HTMLInputElement) {
     if (input.showPicker) {
       input.showPicker();
@@ -855,5 +955,18 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   }
   get showTabScrollRight() {
     return this.baseNames.length > this.tabWindowSize && (this.tabWindowStart + this.tabWindowSize) < this.baseNames.length;
+  }
+
+  toggleAdvancedSearch() {
+    this.advancedSearch = !this.advancedSearch;
+    this.applyFilters();
+  }
+
+  deleteTemplate(template: string) {
+    if (confirm(`Are you sure you want to delete the template '${template}'?`)) {
+      this.schemaService.deleteTemplate(template).subscribe(() => {
+        this.loadTemplates();
+      });
+    }
   }
 }

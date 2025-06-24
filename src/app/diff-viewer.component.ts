@@ -7,37 +7,57 @@ import { MatIconModule } from '@angular/material/icon';
   standalone: true,
   imports: [CommonModule, MatIconModule],
   template: `
-    <div *ngIf="diff" class="diff-viewer-container">
-      <div *ngIf="changes.length === 0" class="card no-changes">
+    <div class="diff-viewer-container">
+      <div class="diff-mode-toggle">
+        <button (click)="diffMode = 'side-by-side'" [class.active]="diffMode === 'side-by-side'">Side-by-Side</button>
+        <button (click)="diffMode = 'unified'" [class.active]="diffMode === 'unified'">Unified</button>
+      </div>
+      <div *ngIf="fieldDiffs.length === 0" class="card no-changes">
         <mat-icon>check_circle_outline</mat-icon>
         <h4>No Differences Found</h4>
-        <p>The selected submissions are identical.</p>
+        <p>The selected schemas are identical.</p>
       </div>
-      <div *ngIf="changes.length > 0" class="changes-list">
-        <div *ngFor="let change of changes" class="change-item" [ngClass]="change.type">
-          <div class="change-header">
-             <span class="change-type-badge">{{ getChangeTypeText(change.type) }}</span>
-            <strong>{{ change.path }}</strong> 
+      <div *ngIf="fieldDiffs.length > 0">
+        <div *ngIf="diffMode === 'side-by-side'" class="side-by-side-diff">
+          <div class="side-by-side-header">
+            <div>Old Schema</div>
+            <div>New Schema</div>
           </div>
-          <div class="change-body">
-            <div *ngIf="change.type === 'value_changed'" class="value-comparison">
-              <div class="value-wrapper old-value">
-                <span class="value">{{ change.oldValue }}</span>
-              </div>
-              <div class="arrow">→</div>
-              <div class="value-wrapper new-value">
-                <span class="value">{{ change.newValue }}</span>
-              </div>
+          <div *ngFor="let diff of fieldDiffs" class="side-by-side-row" [ngClass]="diff.type">
+            <div class="side old">
+              <ng-container *ngIf="diff.type !== 'added'">
+                <div><strong>{{ diff.oldField.label }}</strong> <span class="field-key">({{ diff.oldField.key }})</span></div>
+                <div *ngFor="let change of diff.changes">
+                  <span class="change-label">{{ change.prop }}</span>:
+                  <span class="old-value">{{ change.oldValue }}</span>
+                </div>
+                <div *ngIf="diff.type === 'removed'" class="removed-label">Field removed</div>
+              </ng-container>
             </div>
-            <div *ngIf="change.type === 'item_added'">
-              <div class="value-wrapper new-value">
-                <span class="value">{{ change.newValue }}</span>
-              </div>
+            <div class="side new">
+              <ng-container *ngIf="diff.type !== 'removed'">
+                <div><strong>{{ diff.newField.label }}</strong> <span class="field-key">({{ diff.newField.key }})</span></div>
+                <div *ngFor="let change of diff.changes">
+                  <span class="change-label">{{ change.prop }}</span>:
+                  <span class="new-value">{{ change.newValue }}</span>
+                </div>
+                <div *ngIf="diff.type === 'added'" class="added-label">Field added</div>
+              </ng-container>
             </div>
-            <div *ngIf="change.type === 'item_removed'">
-              <div class="value-wrapper old-value">
-                <span class="value">{{ change.oldValue }}</span>
-              </div>
+          </div>
+        </div>
+        <div *ngIf="diffMode === 'unified'" class="unified-diff">
+          <div *ngFor="let diff of fieldDiffs" class="unified-row" [ngClass]="diff.type">
+            <div>
+              <span class="field-key">{{ diff.oldField?.key || diff.newField?.key }}</span>
+              <span *ngIf="diff.type === 'added'" class="added-label">+ {{ diff.newField.label }}</span>
+              <span *ngIf="diff.type === 'removed'" class="removed-label">- {{ diff.oldField.label }}</span>
+              <span *ngIf="diff.type === 'changed'">
+                <strong>{{ diff.oldField.label }}</strong> → <strong>{{ diff.newField.label }}</strong>
+                <span *ngFor="let change of diff.changes">
+                  <span class="change-label">{{ change.prop }}</span>: <span class="old-value">{{ change.oldValue }}</span> → <span class="new-value">{{ change.newValue }}</span>
+                </span>
+              </span>
             </div>
           </div>
         </div>
@@ -47,7 +67,81 @@ import { MatIconModule } from '@angular/material/icon';
   styles: [`
     .diff-viewer-container {
       font-family: 'Menlo', 'Monaco', monospace;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
+      padding: 1rem 0;
+    }
+    .diff-mode-toggle {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .diff-mode-toggle button {
+      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.3rem 1.2rem;
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--text-color);
+      transition: background 0.2s;
+    }
+    .diff-mode-toggle button.active, .diff-mode-toggle button:hover {
+      background: var(--primary-color-light);
+      color: var(--primary-color);
+    }
+    .side-by-side-diff {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .side-by-side-header {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+      color: var(--primary-color);
+    }
+    .side-by-side-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      margin-bottom: 0.25rem;
+      background: var(--surface-color);
+    }
+    .side {
+      padding: 0.75rem 1rem;
+      min-height: 3.5rem;
+      border-right: 1px solid var(--border-color);
+    }
+    .side.new { border-right: none; }
+    .field-key {
+      color: #888;
+      font-size: 0.9em;
+      margin-left: 0.5em;
+    }
+    .change-label {
+      color: #b71c1c;
+      font-weight: 600;
+      margin-right: 0.3em;
+    }
+    .old-value { color: #b71c1c; text-decoration: line-through; }
+    .new-value { color: #1b5e20; font-weight: 600; }
+    .added-label { color: #1b5e20; font-weight: 700; }
+    .removed-label { color: #b71c1c; font-weight: 700; }
+    .unified-diff {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .unified-row {
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      margin-bottom: 0.25rem;
+      background: var(--surface-color);
+      padding: 0.75rem 1rem;
     }
     .no-changes {
       padding: 2rem;
@@ -64,121 +158,55 @@ import { MatIconModule } from '@angular/material/icon';
     }
     .no-changes h4 { margin: 0 0 0.25rem 0; color: var(--text-color); }
     .no-changes p { margin: 0; }
-    
-    .changes-list {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
-    .change-item {
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      overflow: hidden;
-      background-color: var(--surface-color);
-    }
-    .change-header {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.75rem 1rem;
-      background-color: var(--background-color);
-      border-bottom: 1px solid var(--border-color);
-    }
-    .change-type-badge {
-      padding: 0.25rem 0.65rem;
-      border-radius: 12px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      color: var(--surface-color);
-      text-transform: uppercase;
-    }
-    .change-body {
-      padding: 1rem;
-    }
-    .value-comparison {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr;
-      align-items: center;
-      gap: 1rem;
-    }
-    .arrow {
-      color: var(--text-muted-color);
-      font-size: 1.5rem;
-    }
-    .value-wrapper {
-        padding: 0.75rem;
-        border-radius: 6px;
-    }
-    .value {
-        white-space: pre-wrap;
-        word-break: break-all;
-    }
-
-    /* Color Coding */
-    :host {
-        --diff-changed-bg: #fff8e1;
-        --diff-changed-text: #6d4c41;
-        --diff-changed-border: #ffc107;
-        
-        --diff-added-bg: #e8f5e9;
-        --diff-added-text: #1b5e20;
-        --diff-added-border: #4caf50;
-
-        --diff-removed-bg: #ffebee;
-        --diff-removed-text: #b71c1c;
-        --diff-removed-border: #f44336;
-    }
-
-    .value_changed { border-left: 4px solid var(--diff-changed-border); }
-    .value_changed .change-type-badge { background-color: var(--diff-changed-border); }
-    
-    .item_added { border-left: 4px solid var(--diff-added-border); }
-    .item_added .change-type-badge { background-color: var(--diff-added-border); }
-    .new-value { background-color: var(--diff-added-bg); color: var(--diff-added-text); }
-
-    .item_removed { border-left: 4px solid var(--diff-removed-border); }
-    .item_removed .change-type-badge { background-color: var(--diff-removed-border); }
-    .old-value { background-color: var(--diff-removed-bg); color: var(--diff-removed-text); text-decoration: line-through; }
   `]
 })
 export class DiffViewerComponent implements OnChanges {
-  @Input() diff: any;
-  changes: any[] = [];
+  @Input() oldSchema: any[] = [];
+  @Input() newSchema: any[] = [];
+  diffMode: 'side-by-side' | 'unified' = 'side-by-side';
+  fieldDiffs: any[] = [];
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['diff'] && this.diff) {
-      this.parseDiff();
+    if (changes['oldSchema'] || changes['newSchema']) {
+      this.fieldDiffs = this.compareSchemas(this.oldSchema, this.newSchema);
     }
   }
 
-  getChangeTypeText(type: string): string {
-      return type.replace(/_/g, ' ').replace('dictionary item', '');
-  }
-
-  parseDiff() {
-    const parsedChanges: any[] = [];
-    const processPath = (p: string) => p.replace(/^root\['|'\]$/g, '').replace(/']\['/g, '.');
-
-    if (this.diff.values_changed) {
-      for (const key in this.diff.values_changed) {
-        parsedChanges.push({
-          type: 'value_changed',
-          path: processPath(key),
-          oldValue: this.diff.values_changed[key].old_value,
-          newValue: this.diff.values_changed[key].new_value
-        });
+  compareSchemas(oldFields: any[], newFields: any[]): any[] {
+    const diffs: any[] = [];
+    const oldMap = new Map(oldFields.map(f => [f.key, f]));
+    const newMap = new Map(newFields.map(f => [f.key, f]));
+    // Find removed and changed fields
+    for (const [key, oldField] of oldMap.entries()) {
+      if (!newMap.has(key)) {
+        diffs.push({ type: 'removed', oldField, newField: null, changes: [] });
+      } else {
+        const newField = newMap.get(key);
+        const changes = this.compareFieldProps(oldField, newField);
+        if (changes.length > 0) {
+          diffs.push({ type: 'changed', oldField, newField, changes });
+        }
       }
     }
-    if (this.diff.dictionary_item_added) {
-        for(const item of this.diff.dictionary_item_added) {
-            parsedChanges.push({ type: 'item_added', path: processPath(item), newValue: 'Value added' });
-        }
+    // Find added fields
+    for (const [key, newField] of newMap.entries()) {
+      if (!oldMap.has(key)) {
+        diffs.push({ type: 'added', oldField: null, newField, changes: [] });
+      }
     }
-     if (this.diff.dictionary_item_removed) {
-        for(const item of this.diff.dictionary_item_removed) {
-            parsedChanges.push({ type: 'item_removed', path: processPath(item), oldValue: 'Value removed' });
-        }
+    return diffs;
+  }
+
+  compareFieldProps(f1: any, f2: any): any[] {
+    const props = ['label', 'type', 'defaultValue', 'options', 'regex', 'mandatory', 'editable', 'placeholder'];
+    const changes = [];
+    for (const prop of props) {
+      const v1 = JSON.stringify(f1[prop] ?? null);
+      const v2 = JSON.stringify(f2[prop] ?? null);
+      if (v1 !== v2) {
+        changes.push({ prop, oldValue: f1[prop], newValue: f2[prop] });
+      }
     }
-    this.changes = parsedChanges;
+    return changes;
   }
 } 
