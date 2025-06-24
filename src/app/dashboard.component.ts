@@ -102,6 +102,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
           </button>
         </div>
         <ng-container *ngIf="displayMode === 'tabcard'">
+        
           <div class="tab-scrollbar-wrapper">
             <button *ngIf="showTabScrollLeft" class="tab-scroll-btn left" mat-icon-button (click)="scrollTabWindow('left')">
               <mat-icon>chevron_left</mat-icon>
@@ -168,9 +169,11 @@ import { MatExpansionModule } from '@angular/material/expansion';
               <mat-icon>chevron_right</mat-icon>
             </button>
           </div>
+          
           <mat-accordion *ngIf="!isLoading">
             <mat-expansion-panel *ngFor="let baseName of baseNames" [(expanded)]="expandedBase[baseName]">
-              <mat-expansion-panel-header (click)="toggleExpand(baseName)">
+            
+            <mat-expansion-panel-header (click)="toggleExpand(baseName)">
                 <mat-panel-title>
                   <mat-icon class="template-icon">folder</mat-icon>
                   <span class="base-name">{{ baseName }}</span>
@@ -381,6 +384,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
       margin-bottom: 2rem;
       padding: 1.5rem;
       flex-wrap: wrap;
+      background: var(--surface-color);
     }
     .filter-input, .filter-select {
       font-size: 1rem;
@@ -445,7 +449,18 @@ import { MatExpansionModule } from '@angular/material/expansion';
     }
     .schema-tabs { margin-top: 2rem; }
     .version-cards { display: flex; flex-wrap: wrap; gap: 2rem; margin-top: 2rem; }
-    .version-card { min-width: 340px; max-width: 400px; flex: 1 1 340px; padding: 1.5rem; border-radius: 1.25rem; box-shadow: 0 2px 8px var(--shadow-color-light); background: var(--card-bg); display: flex; flex-direction: column; justify-content: space-between; }
+    .version-card { 
+      min-width: 340px; 
+      max-width: 400px; 
+      flex: 1 1 340px; 
+      padding: 1.5rem; 
+      border-radius: 1.25rem; 
+      box-shadow: 0 2px 8px var(--shadow-color-light); 
+      background: var(--surface-color); 
+      display: flex; 
+      flex-direction: column; 
+      justify-content: space-between; 
+    }
     .version-card .actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; }
     .base-name { font-weight: 600; font-size: 1.2rem; margin-left: 0.5rem; }
     .modern-search-bar {
@@ -454,7 +469,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
       gap: 1rem;
       padding: 1.5rem;
       margin-bottom: 0.5rem;
-      background: var(--card-bg);
+      background: var(--surface-color);
       border-radius: 1rem;
       box-shadow: 0 2px 8px var(--shadow-color-light);
     }
@@ -513,7 +528,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
       margin-bottom: 1.5rem;
       padding: 1.2rem 1.5rem;
       border-radius: 1rem;
-      background: var(--card-bg);
+      background: var(--surface-color);
       box-shadow: 0 2px 8px var(--shadow-color-light);
     }
     .tab-next-btn, .tab-prev-btn {
