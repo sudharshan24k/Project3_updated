@@ -184,24 +184,27 @@ import { MatInput } from '@angular/material/input';
                <p *ngIf="schema.fields.length === 0" class="no-fields-message">No fields added yet.</p>
             </div>
 
+            <div *ngIf="!isFieldEditorVisible" style="display: flex; justify-content: center; margin-top: 1rem;">
+              <button class="add-field-btn" (click)="showAddFieldEditor()">
+                <mat-icon>add</mat-icon> Add Field
+              </button>
+            </div>
+
             <!-- Add/Edit Field Form -->
-            <div *ngIf="isFieldEditorVisible" class="field-editor-form enhanced-card">
-              <h5>{{ currentFieldIndex === null ? 'Add New Field' : 'Edit Field' }}</h5>
+            <div *ngIf="isFieldEditorVisible" class="field-editor-form card">
+              <h5 class="field-editor-title">{{ currentFieldIndex === null ? 'Add New Field' : 'Edit Field' }}</h5>
               
-              <!-- Basic Info Section -->
-              <div class="section-heading"><mat-icon>info</mat-icon> Basic Info</div>
               <form [formGroup]="fieldForm" class="field-form-grid">
-                <div class="form-field horizontal-field span-2">
-                  <div class="field-label-horizontal">
-                    <label>Field Label <span class="required-asterisk">*</span></label>
-                  </div>
-                  <div class="field-input-horizontal">
-                    <input formControlName="label" placeholder="Visible label (e.g., 'First Name')" class="input-horizontal" />
-                  </div>
+                <!-- Basic Info Section -->
+                <div class="section-heading span-2"><mat-icon>info</mat-icon> Basic Info</div>
+
+                <div class="form-field span-2">
+                  <label>Field Label <span class="required-asterisk">*</span></label>
+                  <input formControlName="label" placeholder="Visible label (e.g., 'First Name')" />
                 </div>
                 <div class="form-field">
                   <label>Field Key <span class="required-asterisk">*</span></label>
-                  <input formControlName="key" placeholder="unique_key">
+                  <input formControlName="key" placeholder="unique_key" [readonly]="currentFieldIndex !== null">
                   <div *ngIf="fieldForm.get('key')?.invalid && fieldForm.get('key')?.touched" class="error-message">Key is required and must be alphanumeric/underscore.</div>
                 </div>
                 <div class="form-field">
@@ -228,14 +231,11 @@ import { MatInput } from '@angular/material/input';
                   </div>
                 </div>
 
-                <div class="section-heading"><mat-icon>tune</mat-icon> Field Settings</div>
-                <div class="form-field horizontal-field span-2">
-                  <div class="field-label-horizontal">
-                    <label>Placeholder / Help Text</label>
-                  </div>
-                  <div class="field-input-horizontal">
-                    <input formControlName="placeholder" placeholder="Help text inside the input or for checkbox" class="input-horizontal" />
-                  </div>
+                <!-- Field Settings Section -->
+                <div class="section-heading span-2"><mat-icon>tune</mat-icon> Field Settings</div>
+                <div class="form-field span-2">
+                  <label>Placeholder / Help Text</label>
+                  <input formControlName="placeholder" placeholder="Help text inside the input or for checkbox" />
                 </div>
                 <div class="form-field">
                   <label>Default Value</label>
@@ -269,21 +269,21 @@ import { MatInput } from '@angular/material/input';
                 </div>
                 <div class="form-field" *ngIf="fieldForm.get('type')?.value === 'text'">
                   <label>Validation Regex <mat-icon matTooltip="Pattern the input must match (e.g., ^[a-zA-Z]+$)">help_outline</mat-icon></label>
-                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <div class="input-with-button">
                     <input formControlName="regex" placeholder="e.g., ^[a-zA-Z]+$">
                     <button type="button" mat-icon-button (click)="regexHelperVisible = !regexHelperVisible" matTooltip="Show Regex Helper">
                       <mat-icon>auto_fix_high</mat-icon>
                     </button>
                   </div>
-                  <div *ngIf="regexHelperVisible" class="regex-helper-dropdown card" style="margin-top: 0.5rem; padding: 0.5rem 1rem;">
+                  <div *ngIf="regexHelperVisible" class="regex-helper-dropdown card">
                     <div style="font-weight: 600; margin-bottom: 0.5rem;">Regex Helper</div>
-                    <div *ngFor="let opt of regexOptions" style="margin-bottom: 0.25rem;">
-                      <button type="button" (click)="fieldForm.get('regex')?.setValue(opt.value); regexHelperVisible = false;" style="background: none; border: none; color: var(--primary-color); cursor: pointer; text-align: left;">
+                    <div *ngFor="let opt of regexOptions" class="regex-option">
+                      <button type="button" (click)="fieldForm.get('regex')?.setValue(opt.value); regexHelperVisible = false;">
                         {{ opt.label }}
-                        <span style="color: var(--text-muted-color); font-size: 0.9em; margin-left: 0.5em;">{{ opt.value }}</span>
+                        <span>{{ opt.value }}</span>
                       </button>
                     </div>
-                    <button type="button" (click)="regexHelperVisible = false" style="margin-top: 0.5rem;">Close</button>
+                    <button type="button" (click)="regexHelperVisible = false" class="close-regex-btn">Close</button>
                   </div>
                 </div>
                 
@@ -299,11 +299,12 @@ import { MatInput } from '@angular/material/input';
                 </div>
 
                 <!-- Dropdown Options Section -->
-                <div *ngIf="fieldForm.get('type')?.value === 'dropdown'" class="dropdown-options-editor span-2">
-                  <div class="section-heading"><mat-icon>list</mat-icon> Dropdown Options</div>
+                <div *ngIf="fieldForm.get('type')?.value === 'dropdown'" class="options-editor span-2">
+                  <h6 class="section-heading"><mat-icon>list</mat-icon> Dropdown Options</h6>
                   <div formArrayName="options">
                      <div *ngFor="let option of options.controls; let i = index" [formGroupName]="i" class="option-item">
-                      <input formControlName="label" placeholder="Option " (input)="syncOptionLabelValue(i)">
+                      <input formControlName="label" placeholder="Option Label">
+                      <input formControlName="value" placeholder="Option Value">
                       <button type="button" class="action-delete" (click)="removeOption(i)" mat-icon-button matTooltip="Remove Option">
                         <mat-icon>remove_circle_outline</mat-icon>
                       </button>
@@ -316,11 +317,12 @@ import { MatInput } from '@angular/material/input';
                 </div>
 
                 <!-- MCQ Options Section -->
-                <div *ngIf="fieldForm.get('type')?.value === 'mcq_single' || fieldForm.get('type')?.value === 'mcq_multiple'" class="dropdown-options-editor span-2">
-                  <div class="section-heading"><mat-icon>list</mat-icon> MCQ Options</div>
+                <div *ngIf="fieldForm.get('type')?.value === 'mcq_single' || fieldForm.get('type')?.value === 'mcq_multiple'" class="options-editor span-2">
+                  <h6 class="section-heading"><mat-icon>list</mat-icon> MCQ Options</h6>
                   <div formArrayName="options">
                      <div *ngFor="let option of options.controls; let i = index" [formGroupName]="i" class="option-item">
-                      <input formControlName="label" placeholder="Option " (input)="syncOptionLabelValue(i)">
+                      <input formControlName="label" placeholder="Option Label">
+                      <input formControlName="value" placeholder="Option Value">
                       <button type="button" class="action-delete" (click)="removeOption(i)" mat-icon-button matTooltip="Remove Option">
                         <mat-icon>remove_circle_outline</mat-icon>
                       </button>
@@ -339,11 +341,11 @@ import { MatInput } from '@angular/material/input';
                 </div>
 
                 <!-- Conditional Logic Section -->
-                <div class="section-heading"><mat-icon>visibility</mat-icon> Conditional Logic</div>
+                <div class="section-heading span-2"><mat-icon>visibility</mat-icon> Conditional Logic</div>
                 <div class="form-field span-2">
                   <label>Visible If (Show this field only if another field has a specific value)</label>
-                  <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    <select [(ngModel)]="visibleIfKey" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                  <div class="conditional-logic-row">
+                    <select [(ngModel)]="visibleIfKey" [ngModelOptions]="{standalone: true}">
                       <option [ngValue]="null">-- Select Field --</option>
                       <option *ngFor="let f of schema.fields" [ngValue]="f.key" [disabled]="f.key === fieldForm.value.key">{{ f.label }}</option>
                     </select>
@@ -690,39 +692,184 @@ import { MatInput } from '@angular/material/input';
     .field-actions .action-delete:hover .mat-icon { color: var(--danger-color); }
 
     .field-editor-form {
-      background-color: var(--background-color);
-      padding: 2rem 2rem 1.5rem 2rem;
-      border-radius: 12px;
+      background: linear-gradient(145deg, var(--surface-color), var(--background-color));
+      padding: 2rem 2.5rem;
+      border-radius: 20px;
       margin-top: 1.5rem;
-      box-shadow: 0 2px 12px var(--shadow-color-light);
-      max-width: 480px;
-      margin-left: auto;
-      margin-right: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
+      border: 1px solid transparent;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
     }
-    .field-editor-form h5 { margin-top: 0; }
+    .field-editor-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin: 0 0 2rem 0;
+      text-align: center;
+      color: var(--text-color);
+      position: relative;
+    }
+    .field-editor-title::after {
+      content: '';
+      display: block;
+      width: 50px;
+      height: 3px;
+      background: var(--primary-color);
+      margin: 0.5rem auto 0;
+      border-radius: 2px;
+    }
     
     .field-form-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 1.2rem;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem 2rem;
     }
     .span-2 { grid-column: span 2; }
 
-    .checkbox-group {
-        display: flex;
-        gap: 2rem;
-        align-items: center;
+    .field-editor-form .section-heading {
+      grid-column: span 2;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding-bottom: 0.75rem;
+      margin: 1.5rem 0 1rem 0;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--primary-color);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border: none;
+      border-bottom: 2px solid var(--secondary-color);
+    }
+    .field-editor-form .section-heading:first-of-type {
+      margin-top: 0;
     }
 
-    .dropdown-options-editor { margin-top: 1rem; }
-    .dropdown-options-editor h6 { margin-top: 0; margin-bottom: 1rem; }
-    .option-item {
-      display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;
+    .field-editor-form .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
     }
-    .option-item input { flex-grow: 1; }
+
+    .field-editor-form .form-field label {
+      font-weight: 500;
+      color: var(--text-muted-color);
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .field-editor-form .form-field label .mat-icon {
+      font-size: 1rem;
+      height: 1rem;
+      width: 1rem;
+    }
+    .field-editor-form .form-field input,
+    .field-editor-form .form-field select {
+      width: 100%;
+      background: var(--background-color);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      transition: all 0.2s ease-in-out;
+    }
+    .field-editor-form .form-field input:focus,
+    .field-editor-form .form-field select:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px var(--secondary-color);
+    }
+
+    .input-with-button {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .input-with-button input {
+      flex-grow: 1;
+    }
+    .regex-helper-dropdown {
+      margin-top: 0.5rem;
+      padding: 1rem;
+      box-shadow: 0 2px 8px var(--shadow-color-dark);
+      background: var(--surface-color);
+      border-radius: 8px;
+    }
+    .regex-option button {
+      background: none; border: none;
+      color: var(--primary-color);
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      padding: 0.4rem 0.2rem;
+      border-radius: 4px;
+      display: block;
+    }
+    .regex-option button:hover {
+      background-color: var(--secondary-color);
+    }
+    .regex-option button span {
+      color: var(--text-muted-color);
+      font-size: 0.9em;
+      margin-left: 0;
+      font-family: monospace;
+      display: block;
+      margin-top: 0.25rem;
+    }
+    .close-regex-btn {
+      margin-top: 0.5rem;
+      width: 100%;
+    }
+
+    .type-select-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .type-select-group mat-icon {
+      color: var(--primary-color);
+      background: var(--secondary-color);
+      padding: 0.5rem;
+      border-radius: 8px;
+    }
+    .type-select-group select {
+      flex-grow: 1;
+    }
+
+    .checkbox-group {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        grid-column: span 2;
+        background: var(--background-color);
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        flex-wrap: wrap;
+    }
+
+    .options-editor { 
+      margin-top: 1rem; 
+      grid-column: span 2;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.5rem;
+      background-color: var(--background-color);
+    }
+    .options-editor .section-heading {
+      border: none;
+      padding: 0;
+      margin: 0 0 1rem 0;
+    }
+    .option-item {
+      display: grid; 
+      grid-template-columns: 1fr 1fr auto;
+      align-items: center; 
+      gap: 1rem; 
+      margin-bottom: 0.75rem;
+      background: var(--surface-color);
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+    }
     
     .add-option-btn {
       background: none; border: 1px dashed var(--secondary-color); color: var(--text-muted-color);
@@ -737,7 +884,28 @@ import { MatInput } from '@angular/material/input';
     }
 
     .field-editor-actions {
-      display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem;
+      display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;
+      grid-column: span 2;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .conditional-logic-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      align-items: center;
+      background-color: var(--background-color);
+      padding: 1rem;
+      border-radius: 8px;
+    }
+    .multi-cond-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      background-color: var(--surface-color);
+      padding: 0.75rem;
+      border-radius: 8px;
     }
 
     .conditions-panel.card {
@@ -1057,6 +1225,20 @@ import { MatInput } from '@angular/material/input';
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
     }
+
+    /* Custom styles for boolean toggle */
+    :host ::ng-deep mat-slide-toggle.mat-checked:not(.mat-disabled) .mat-slide-toggle-bar {
+      background-color: #81c784; /* Green 400 */
+    }
+    :host ::ng-deep mat-slide-toggle.mat-checked:not(.mat-disabled) .mat-slide-toggle-thumb {
+      background-color: #4caf50; /* Green 500 */
+    }
+    :host ::ng-deep mat-slide-toggle:not(.mat-checked) .mat-slide-toggle-bar {
+      background-color: #ef9a9a; /* Red 200 */
+    }
+    :host ::ng-deep mat-slide-toggle:not(.mat-checked) .mat-slide-toggle-thumb {
+      background-color: #f44336; /* Red 500 */
+    }
   `]
 })
 export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
@@ -1094,6 +1276,7 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
     { label: 'IPv4', value: '^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$' },
     { label: 'IPv6', value: '^([\\da-fA-F]{1,4}:){7}[\\da-fA-F]{1,4}$' },
     { label: 'Hex Color', value: '^#?([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$' },
+    { label: 'File Path', value: '^/?(?:[\\w.-]+/)*[\\w.-]+$' },
   ];
 
   importTemplates: TemplateInfo[] = [];
