@@ -112,6 +112,7 @@ class UpdateTemplateRequest(BaseModel):
 async def edit_template(name: str, req: UpdateTemplateRequest = Body(...)):
     existing_template = await template_collection.find_one({"name": name})
     if not existing_template:
+        # If not found, create new template with version 1 and name_v1
         versioned_name = f"{name}_v1"
         new_template = {
             "name": versioned_name,
@@ -121,6 +122,7 @@ async def edit_template(name: str, req: UpdateTemplateRequest = Body(...)):
             "updated_at": datetime.datetime.utcnow()
         }
         await template_collection.insert_one(new_template)
+        # Also create first version in history
         version_data = TemplateVersionModel(
             template_name=versioned_name,
             version=1,
@@ -133,6 +135,7 @@ async def edit_template(name: str, req: UpdateTemplateRequest = Body(...)):
         await template_version_collection.insert_one(version_data_dict)
         return serialize_mongo(new_template)
 
+    # Save current state to version history
     version_data = TemplateVersionModel(
         template_name=existing_template["name"],
         version=existing_template.get("version", 1),

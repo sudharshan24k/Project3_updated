@@ -164,6 +164,9 @@ import { MatExpansionModule } from '@angular/material/expansion';
               <mat-icon class="spinning">refresh</mat-icon>
               <p>Loading templates...</p>
             </div>
+            <button *ngIf="showTabScrollRight" class="tab-scroll-btn right" mat-icon-button (click)="scrollTabWindow('right')">
+              <mat-icon>chevron_right</mat-icon>
+            </button>
           </div>
           <mat-accordion *ngIf="!isLoading">
             <mat-expansion-panel *ngFor="let baseName of baseNames" [(expanded)]="expandedBase[baseName]">
@@ -663,6 +666,14 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   tabWindowStart = 0;
   tabWindowSize = 6;
   isLoading = false;
+  get visibleBaseNames() {
+    return this.baseNames.slice(this.tabWindowStart, this.tabWindowStart + this.tabWindowSize);
+  }
+  selectedTabIndexInWindow = 0;
+
+  // Tab window state for windowed navigation
+  tabWindowStart = 0;
+  tabWindowSize = 6;
   get visibleBaseNames() {
     return this.baseNames.slice(this.tabWindowStart, this.tabWindowStart + this.tabWindowSize);
   }
