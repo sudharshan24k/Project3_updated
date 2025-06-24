@@ -971,7 +971,7 @@ import { MatInput } from '@angular/material/input';
     
     .form-panel .input-vertical:focus,
     .form-panel .field-input-vertical input:focus,
-    .form-panel .field-input-vertical select:focus,
+    .form-panel .field-input-vertical select:focus{
       border-bottom: 2px solid #4285f4;
       outline: none;
       background: transparent;
