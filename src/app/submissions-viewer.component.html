@@ -1,0 +1,97 @@
+<div class="container" *ngIf="templateName">
+      <h2>Submissions: {{ templateName }}</h2>
+
+      <div *ngIf="isLoading" class="loading-spinner">Loading submissions...</div>
+      
+      <div *ngIf="!isLoading && submissions.length === 0" class="card empty-state">
+        <h4>No Submissions Yet</h4>
+        <p>There are no submissions for this template. Use the form to create one!</p>
+      </div>
+
+      <main class="submissions-grid" *ngIf="!isLoading && submissions.length > 0">
+        <!-- Left Column: Submissions List & Comparison -->
+        <div class="left-column">
+          <div class="card">
+            <h4>All Submissions</h4>
+            <table>
+              <thead>
+                <tr>
+                  <th *ngIf="submissions.length > 1"></th>
+                  <th>Response Name</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let sub of submissions" [class.selected]="selectedSubmissionName === (sub.submission_name || '')">
+                  <td *ngIf="submissions.length > 1">
+                    <input type="checkbox"
+                      [id]="'ver-' + (sub.submission_name || '')"
+                      [checked]="selectedVersions.has(sub.submission_name || '')"
+                      (change)="toggleVersion(sub.submission_name || '')"
+                      [disabled]="selectedVersions.size >= 2 && !selectedVersions.has(sub.submission_name || '')">
+                  </td>
+                  <td (click)="viewSubmission(sub.submission_name || '')" class="clickable-row">{{ sub.submission_name || '' }}</td>
+                  <td class="actions-cell">
+                    <button mat-icon-button (click)="viewSubmission(sub.submission_name || '')" matTooltip="View Details">
+                      <mat-icon>visibility</mat-icon>
+                    </button>
+                    <button mat-icon-button (click)="downloadSubmission(sub.submission_name || '')" matTooltip="Download .conf">
+                      <mat-icon>download</mat-icon>
+                    </button>
+                    <button mat-icon-button (click)="duplicateAndEdit(sub.submission_name || '')" matTooltip="Duplicate & Edit">
+                      <mat-icon>content_copy</mat-icon>
+                    </button>
+                    <button mat-icon-button (click)="deleteSubmission(sub.submission_name || '')" matTooltip="Delete Version" class="delete-btn">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card comparison-tool" *ngIf="submissions.length > 1">
+            <h4>Compare Submissions</h4>
+            <p>Select two versions from the list above to compare them.</p>
+            <button [disabled]="selectedVersions.size !== 2" (click)="compareVersions()">
+              <mat-icon>compare_arrows</mat-icon>
+              Compare ({{selectedVersions.size}}/2)
+            </button>
+          </div>
+        </div>
+
+        <!-- Right Column: Details & Diff View -->
+        <div class="right-column">
+          <div *ngIf="diffResult" class="card diff-view">
+            <h4>Comparison Result</h4>
+            <app-diff-viewer [oldSchema]="oldSchema" [newSchema]="newSchema"></app-diff-viewer>
+          </div>
+
+          <div *ngIf="selectedSubmissionData" class="card submission-data">
+            <div class="submission-data-header">
+              <h4>Submission Details</h4>
+              <span>Version {{ selectedSubmissionName }}</span>
+            </div>
+            <pre>{{ formattedSubmissionData }}</pre>
+          </div>
+
+          <!-- Threaded Responses/Comments -->
+          <div *ngIf="selectedSubmission" class="card threaded-responses">
+            <h4>Internal Notes & Comments (v{{selectedSubmissionName}})</h4>
+            <div *ngFor="let response of selectedSubmission.responses" class="response-item">
+              <p><strong>{{response.author || 'Anonymous'}}:</strong> {{response.content}}</p>
+              <!-- TODO: Add nested responses -->
+            </div>
+            <div class="response-form">
+              <textarea [(ngModel)]="newResponseContent" placeholder="Add a comment..."></textarea>
+              <button (click)="addResponse()">Submit</button>
+            </div>
+          </div>
+          <div *ngIf="!diffResult && !selectedSubmissionData" class="card empty-state">
+             <mat-icon>touch_app</mat-icon>
+             <h4>Select an Item</h4>
+             <p>Click a submission to view its details, or select two to compare.</p>
+          </div>
+        </div>
+      </main>
+    </div> 
