@@ -2,17 +2,22 @@ import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, MatIconModule, MatButtonModule],
+  imports: [CommonModule, RouterOutlet, MatIconModule, MatButtonModule],
   template: `
     <header class="app-header">
       <h1>Dynamic Form Builder</h1>
-      <button (click)="toggleTheme()" mat-icon-button matTooltip="Toggle Light/Dark Mode" class="theme-toggle-button">
-        <mat-icon>{{ isDarkTheme ? 'dark_mode' : 'light_mode' }}</mat-icon>
-      </button>
+      
+      <div class="header-right">
+        <button (click)="toggleTheme()" mat-icon-button matTooltip="Toggle Light/Dark Mode" class="theme-toggle-button">
+          <mat-icon>{{ isDarkTheme ? 'dark_mode' : 'light_mode' }}</mat-icon>
+        </button>
+        <span class="datetime">{{ currentDateTime | date:'medium' }}</span>
+      </div>
     </header>
     <main class="app-content">
       <router-outlet />
@@ -48,6 +53,21 @@ import { MatButtonModule } from '@angular/material/button';
 
     .theme-toggle-button {
       color: var(--on-primary-color);
+      background-color: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .datetime {
+      font-size: 1rem;
+      font-weight: 500;
+      padding: 0 0.5rem;
     }
 
     .app-content {
@@ -59,6 +79,13 @@ import { MatButtonModule } from '@angular/material/button';
 })
 export class App {
   isDarkTheme = false;
+  currentDateTime = new Date();
+
+  constructor() {
+    setInterval(() => {
+      this.currentDateTime = new Date();
+    }, 1000);
+  }
 
   toggleTheme() {
     this.isDarkTheme = !this.isDarkTheme;

@@ -24,9 +24,6 @@ import { MatExpansionModule } from '@angular/material/expansion';
             <p class="subtitle">Create, manage, and use your form templates.</p>
           </div>
           <div class="header-actions">
-            <button (click)="toggleTheme()" mat-icon-button matTooltip="Toggle Light/Dark Mode">
-              <mat-icon>{{ isDarkTheme ? 'dark_mode' : 'light_mode' }}</mat-icon>
-            </button>
             <button (click)="showCreateTemplate()" mat-raised-button>
               <mat-icon>add</mat-icon>
               <span>Create New Template</span>
@@ -683,7 +680,6 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   mode: 'list' | 'create' | 'edit' | 'preview' | 'use' | 'submissions' = 'list';
   selectedTemplate: string | null = null;
   duplicatedVersion: number | null = null;
-  isDarkTheme = false;
   displayMode: 'list' | 'grid' | 'tabcard' = 'tabcard';
   tabPage = 0;
   searchText: string = '';
@@ -956,19 +952,11 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     this.duplicatedVersion = event.version;
   }
 
-  toggleTheme() {
-    this.isDarkTheme = !this.isDarkTheme;
-    if (this.isDarkTheme) {
-      document.body.classList.add('dark-theme');
-    } else {
-      document.body.classList.remove('dark-theme');
-    }
-  }
-
   openDatePicker(input: HTMLInputElement) {
-    if (input.showPicker) {
+    try {
       input.showPicker();
-    } else {
+    } catch (e) {
+      // Handle the case where showPicker() is not supported
       input.focus();
     }
   }

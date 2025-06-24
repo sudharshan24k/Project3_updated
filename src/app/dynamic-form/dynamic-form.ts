@@ -217,7 +217,6 @@ import { MatInput } from '@angular/material/input';
                     <mat-icon *ngIf="fieldForm.get('type')?.value === 'dropdown'">arrow_drop_down_circle</mat-icon>
                     <mat-icon *ngIf="fieldForm.get('type')?.value === 'mcq_single'">radio_button_checked</mat-icon>
                     <mat-icon *ngIf="fieldForm.get('type')?.value === 'mcq_multiple'">check_box</mat-icon>
-                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'keyvalue'">key</mat-icon>
                     <select formControlName="type">
                       <option value="text">Text</option>
                       <option value="number">Number</option>
@@ -226,7 +225,6 @@ import { MatInput } from '@angular/material/input';
                       <option value="dropdown">Dropdown</option>
                       <option value="mcq_single">MCQ (Single Select)</option>
                       <option value="mcq_multiple">MCQ (Multiple Select)</option>
-                      <option value="keyvalue">Key-Value</option>
                     </select>
                   </div>
                 </div>
@@ -483,6 +481,13 @@ import { MatInput } from '@angular/material/input';
     .form-subtitle { margin: 0.25rem 0 0; color: var(--text-muted-color); }
     .header-actions button {
         display: flex; align-items: center; gap: 0.5rem;
+    }
+    .datetime-display {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--text-muted-color);
+      margin-right: 1.5rem;
+      align-self: center;
     }
 
     .form-grid {
@@ -1239,6 +1244,19 @@ import { MatInput } from '@angular/material/input';
     :host ::ng-deep mat-slide-toggle:not(.mat-checked) .mat-slide-toggle-thumb {
       background-color: #f44336; /* Red 500 */
     }
+
+    .cdk-drop-list-dragging .field-item:not(.cdk-drag-placeholder) {
+      transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+    }
+
+    .template-author {
+        font-style: italic;
+        color: #888;
+    }
+    .template-description {
+        font-size: 0.8rem;
+        color: #aaa;
+    }
   `]
 })
 export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
@@ -1535,29 +1553,11 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
   buildForm() {
     const controls: { [key: string]: any } = {};
     this.schema.fields.forEach((field: any) => {
-      if (field.type === 'keyvalue') {
-        const arr = new FormArray<FormGroup>([]);
-        if (field.initialKeys && Array.isArray(field.initialKeys)) {
-          field.initialKeys.forEach((k: string) => arr.push(this.fb.group({ key: k, value: '' })));
-        }
-        controls[field.key] = arr;
+      const validators = this.getValidators(field);
+      if (field.type === 'mcq_multiple') {
+        controls[field.key] = this.fb.array(field.defaultValue || [], validators);
       } else {
-        const validators: ValidatorFn[] = [];
-        if (field.regex) {
-          validators.push(Validators.pattern(field.regex));
-        }
-        let defaultValue = field.defaultValue;
-        if (field.type === 'mcq_multiple' && !Array.isArray(defaultValue)) {
-          defaultValue = [];
-        }
-        const control = new FormControl({ value: defaultValue, disabled: this.isReadOnly || (this.mode === 'use' && !field.editable) }, validators);
-        controls[field.key] = control;
-        // --- Fix: Listen for changes on controlling boolean fields to force UI update ---
-        if (field.type === 'boolean') {
-          control.valueChanges.subscribe(() => {
-            this.cdr.detectChanges();
-          });
-        }
+        controls[field.key] = [field.defaultValue || null, validators];
       }
     });
     this.form = this.fb.group(controls);
@@ -1665,6 +1665,9 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
     }
     this.buildForm();
     this.isFieldEditorVisible = false;
+    this.currentFieldIndex = null;
+    this.isDuplicatedEdit = false;
+    this.cdr.detectChanges();
   }
 
   onSubmit() {
@@ -1742,22 +1745,23 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
 
   isBooleanField(key: string): boolean {
     const field = this.schema.fields.find((f: any) => f.key === key);
-    return field?.type === 'boolean';
+    return field ? field.type === 'boolean' : false;
   }
 
   onMCQMultiChange(fieldKey: string, value: any, checked: boolean) {
-    const arr = this.form.get(fieldKey)?.value || [];
+    const array = this.form.get(fieldKey) as FormArray;
     if (checked) {
-      this.form.get(fieldKey)?.setValue([...arr, value]);
+      array.push(new FormControl(value));
     } else {
-      this.form.get(fieldKey)?.setValue(arr.filter((v: any) => v !== value));
+      const index = array.controls.findIndex(x => x.value === value);
+      if (index !== -1) {
+        array.removeAt(index);
+      }
     }
   }
-
-
-
+  
   getCheckboxChecked(event: MatCheckboxChange): boolean {
-    return !!event.checked;
+    return event.checked;
   }
 
   getKeyValueField(form: FormGroup, key: string, i: number, field: 'key' | 'value'): string {
@@ -1773,16 +1777,16 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
   }
 
   onImportTemplateChange(templateName: string | null) {
-    if (!templateName) {
-      this.clearImportedTemplate();
-      return;
-    }
-    this.selectedImportTemplate = templateName;
-    this.schemaService.getTemplate(String(templateName)).subscribe(tmpl => {
-      this.schema.fields = JSON.parse(JSON.stringify(tmpl.schema.fields));
-      this.schema.description = tmpl.schema.description || '';
-      this.isImporting = true;
-    });
+      if (templateName) {
+          this.isLoading = true;
+          this.selectedImportTemplate = templateName;
+          this.schemaService.getTemplate(String(templateName)).subscribe(tmpl => {
+            this.schema.fields = JSON.parse(JSON.stringify(tmpl.schema.fields));
+            this.schema.description = tmpl.schema.description || '';
+            this.isImporting = true;
+            this.isLoading = false;
+          });
+      }
   }
 
   clearImportedTemplate() {
@@ -1883,5 +1887,22 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
   private _filterTemplates(value: string): TemplateInfo[] {
     const filterValue = value ? value.toLowerCase() : '';
     return this.importTemplates.filter(t => t.name.toLowerCase().includes(filterValue));
+  }
+
+  private getValidators(field: any): ValidatorFn[] {
+    const validators: ValidatorFn[] = [];
+    if (field.required) {
+      validators.push(Validators.required);
+    }
+    if (field.minLength) {
+      validators.push(Validators.minLength(field.minLength));
+    }
+    if (field.maxLength) {
+      validators.push(Validators.maxLength(field.maxLength));
+    }
+    if (field.regex) {
+      validators.push(Validators.pattern(field.regex));
+    }
+    return validators;
   }
 }
