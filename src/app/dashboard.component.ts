@@ -115,7 +115,10 @@ import { MatExpansionModule } from '@angular/material/expansion';
                 </div>
               </div>
               <mat-tab-group [(selectedIndex)]="selectedTabIndexInWindow" class="schema-tabs" *ngIf="!isLoading && baseNames.length > 0">
-                <mat-tab *ngFor="let baseName of visibleBaseNames; let i = index" [label]="baseName">
+                <mat-tab *ngFor="let baseName of visibleBaseNames; let i = index">
+                  <ng-template mat-tab-label>
+                    <span class="base-name tabcard-base-name">{{ baseName }}</span>
+                  </ng-template>
                   <div class="version-cards">
                     <div class="version-card card" *ngFor="let version of groupedTemplates[baseName]">
                       <div class="template-title-group">
@@ -302,6 +305,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
       white-space: nowrap;
       background: none;
       background-color: var(--surface-color);
+      
     }
     .template-list-table tr {
       transition: box-shadow 0.2s;
@@ -462,7 +466,10 @@ import { MatExpansionModule } from '@angular/material/expansion';
       justify-content: space-between; 
     }
     .version-card .actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; }
-    .base-name { font-weight: 600; font-size: 1.2rem; margin-left: 0.5rem; }
+    .base-name { font-size: 1.2rem; margin-left: 0.5rem; color: var(--text-color); }
+    .tabcard-base-name {
+      color: var(--text-color);
+    }
     .modern-search-bar {
       display: flex;
       align-items: center;
@@ -586,6 +593,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
       scrollbar-width: thin;
       scrollbar-color: var(--primary-color-light) var(--card-bg);
       min-width: 0;
+      
     }
     .tab-scroll-btn.left, .tab-scroll-btn.right {
       position: absolute;
@@ -658,6 +666,12 @@ import { MatExpansionModule } from '@angular/material/expansion';
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
     }
+    ::ng-deep mat-expansion-panel.mat-expansion-panel {
+      background: var(--surface-color);
+      border-radius : 0.75rem;
+      margin-bottom: 1rem;
+    }
+
   `]
 })
 export class DashboardComponent implements OnInit, AfterViewInit {
