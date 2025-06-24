@@ -26,8 +26,9 @@ export interface TemplateVersion {
 
 export interface Submission {
   version: number;
-  data: any;
+  data?: any;
   responses?: Response[];
+  submission_name?: string;
 }
 
 export interface Response {
@@ -89,6 +90,16 @@ export class SchemaService {
     return this.http.post(`${this.apiUrl}/templates/${name}/rollback/${version}`, {});
   }
 
+  /**
+   * Create a new version of a template (versioned schema)
+   * Calls backend endpoint to create a new version (e.g. name_v2, name_v3, ...)
+   */
+  createNewVersion(name: string, schema: any, change_log: string): Observable<any> {
+    const payload = { schema, change_log };
+    // Backend should handle version increment and naming
+    return this.http.post(`${this.apiUrl}/templates/${name}/newversion`, payload);
+  }
+
   // Submission endpoints
   submitForm(templateName: string, data: any): Observable<any> {
     return this.http.post(`${this.apiUrl}/submissions/${templateName}`, data);
@@ -115,7 +126,25 @@ export class SchemaService {
   }
 
   // Response endpoints
-  addResponse(templateName: string, version: number, response: { content: string, author: string, parent_id?: string }): Observable<Response> {
-    return this.http.post<Response>(`${this.apiUrl}/submissions/${templateName}/${version}/responses`, response);
+  // --- Per-response endpoints (by templateName and submissionName) ---
+  getSubmissionByName(templateName: string, submissionName: string): Observable<Submission> {
+    return this.http.get<Submission>(`${this.apiUrl}/submissions/${templateName}/by-name/${submissionName}`);
+  }
+
+  duplicateSubmissionByName(templateName: string, submissionName: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/submissions/${templateName}/by-name/${submissionName}/duplicate`, {});
+  }
+
+  deleteSubmissionByName(templateName: string, submissionName: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/submissions/${templateName}/by-name/${submissionName}`);
+  }
+
+  addResponse(templateName: string, submissionName: string, response: { content: string, author: string, parent_id?: string }): Observable<Response> {
+    return this.http.post<Response>(`${this.apiUrl}/submissions/${templateName}/by-name/${submissionName}/responses`, response);
+  }
+
+  // Add downloadSubmissionByName using templateName and submissionName
+  downloadSubmissionByName(templateName: string, submissionName: string): Observable<Submission> {
+    return this.http.get<Submission>(`${this.apiUrl}/submissions/${templateName}/by-name/${submissionName}`);
   }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit } from '@angular/core';
 import { CommonModule, NgIf, NgFor } from '@angular/common';
 import { SchemaService, TemplateInfo } from './dynamic-form/schema.service';
 import { DynamicForm } from './dynamic-form/dynamic-form';
@@ -8,11 +8,13 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatButtonModule } from '@angular/material/button';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatExpansionModule } from '@angular/material/expansion';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, NgIf, NgFor, DynamicForm, SubmissionsViewerComponent, MatIconModule, MatTooltipModule, MatButtonModule, FormsModule],
+  imports: [CommonModule, NgIf, NgFor, DynamicForm, SubmissionsViewerComponent, MatIconModule, MatTooltipModule, MatButtonModule, FormsModule, MatTabsModule, MatExpansionModule],
   template: `
     <div class="container">
       <div *ngIf="mode === 'list'">
@@ -31,133 +33,170 @@ import { Router } from '@angular/router';
             </button>
           </div>
         </header>
-
-        <div class="filter-bar card">
-          <input type="text" class="filter-input" placeholder="Search by name..." [(ngModel)]="filterName" (ngModelChange)="applyFilters()">
-          <input type="text" class="filter-input" placeholder="Search by description..." [(ngModel)]="filterDescription" (ngModelChange)="applyFilters()">
+        <div class="filter-bar card modern-search-bar">
+          <input
+            type="text"
+            class="big-search-input"
+            placeholder="Search templates..."
+            [(ngModel)]="searchText"
+            (keyup.enter)="applyFilters()"
+            (input)="applyFilters()"
+          >
+          <button
+            mat-icon-button
+            class="search-icon-btn"
+            (click)="searchText ? clearSearch() : null"
+            [attr.aria-label]="searchText ? 'Clear search' : 'Search'"
+            tabindex="0"
+          >
+            <span *ngIf="!searchText" class="search-emoji">🔍</span>
+            <mat-icon *ngIf="searchText">close</mat-icon>
+          </button>
+          <button
+            mat-stroked-button
+            class="advanced-toggle"
+            (click)="toggleAdvancedSearch()"
+            [class.active]="advancedSearch"
+          >
+            <mat-icon>tune</mat-icon>
+            <span>Advanced Search</span>
+          </button>
+        </div>
+        <div *ngIf="advancedSearch" class="advanced-fields card">
+          <input
+            type="text"
+            class="filter-input"
+            placeholder="Description contains..."
+            [(ngModel)]="filterDescription"
+            (input)="applyFilters()"
+          >
           <div class="date-range-filter">
             <div class="date-input-group">
-              <input #startDateInput type="date" class="filter-input" [(ngModel)]="filterStartDate" (ngModelChange)="applyFilters()">
+              <input #startDateInput type="date" class="filter-input" [(ngModel)]="filterStartDate" (change)="applyFilters()">
               <button mat-icon-button tabindex="-1" class="calendar-btn" matTooltip="Pick start date" type="button" (click)="openDatePicker(startDateInput)">
                 <mat-icon>calendar_today</mat-icon>
               </button>
             </div>
             <span class="date-range-separator">to</span>
             <div class="date-input-group">
-              <input #endDateInput type="date" class="filter-input" [(ngModel)]="filterEndDate" (ngModelChange)="applyFilters()">
+              <input #endDateInput type="date" class="filter-input" [(ngModel)]="filterEndDate" (change)="applyFilters()">
               <button mat-icon-button tabindex="-1" class="calendar-btn" matTooltip="Pick end date" type="button" (click)="openDatePicker(endDateInput)">
                 <mat-icon>calendar_today</mat-icon>
               </button>
             </div>
           </div>
-          <button (click)="resetFilters()" class="clear-filters-btn">Clear</button>
         </div>
-
         <div class="view-switcher">
+          <button mat-icon-button (click)="displayMode = 'tabcard'" [class.active]="displayMode === 'tabcard'" matTooltip="Tab+Card View">
+            <mat-icon>tab</mat-icon>
+          </button>
           <button mat-icon-button (click)="displayMode = 'list'" [class.active]="displayMode === 'list'" matTooltip="List View">
             <mat-icon>view_list</mat-icon>
           </button>
-          <button mat-icon-button (click)="displayMode = 'grid'" [class.active]="displayMode === 'grid'" matTooltip="Grid View">
-            <mat-icon>view_module</mat-icon>
-          </button>
         </div>
-
-        <div *ngIf="filteredTemplates.length > 0" class="templates-list">
-          <!-- List View -->
-          <table class="template-list-table" *ngIf="displayMode === 'list'">
-            <thead>
-              <tr>
-                <th>Form Template</th>
-                <th style="width: 1%; white-space: nowrap;">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let template of filteredTemplates">
-                <td>
-                  <div class="template-title-group">
-                    <mat-icon class="template-icon" matTooltip="Form Template">description</mat-icon>
-                    <div>
-                      <h3>
-                        {{ template.name }}
-                      </h3>
-                      <p class="template-desc" *ngIf="template.description">{{ template.description }}</p>
-                      <div class="template-meta" *ngIf="template.created_at">
-                        <mat-icon>calendar_today</mat-icon>
-                        <span>Created on {{ template.created_at | date:'mediumDate' }}</span>
+        <ng-container *ngIf="displayMode === 'tabcard'">
+          <div class="tab-scrollbar-wrapper">
+            <button *ngIf="showTabScrollLeft" class="tab-scroll-btn left" mat-icon-button (click)="scrollTabWindow('left')">
+              <mat-icon>chevron_left</mat-icon>
+            </button>
+            <div class="tab-scrollbar" #tabScrollDiv>
+              <mat-tab-group [(selectedIndex)]="selectedTabIndexInWindow" class="schema-tabs" *ngIf="baseNames.length > 0">
+                <mat-tab *ngFor="let baseName of visibleBaseNames; let i = index" [label]="baseName">
+                  <div class="version-cards">
+                    <div class="version-card card" *ngFor="let version of groupedTemplates[baseName]">
+                      <div class="template-title-group">
+                        <mat-icon class="template-icon">description</mat-icon>
+                        <div>
+                          <h3>{{ version.name }}</h3>
+                          <p class="template-desc" *ngIf="version.description">{{ version.description }}</p>
+                          <div class="template-meta" *ngIf="version.created_at">
+                            <mat-icon>calendar_today</mat-icon>
+                            <span>Created on {{ version.created_at | date:'mediumDate' }}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="actions">
+                        <button mat-icon-button (click)="useTemplate(version.name)" matTooltip="Fill Out Form">
+                          <mat-icon fontIcon="dynamic_form" class="action-icon"></mat-icon>
+                        </button>
+                        <button mat-icon-button (click)="editTemplate(version)" matTooltip="Edit Schema">
+                          <mat-icon fontIcon="edit" class="action-icon"></mat-icon>
+                        </button>
+                        <button mat-icon-button (click)="previewTemplate(version.name)" matTooltip="Preview Form">
+                          <mat-icon fontIcon="visibility" class="action-icon"></mat-icon>
+                        </button>
+                        <button mat-icon-button (click)="viewSubmissions(version.name)" matTooltip="View Submissions">
+                          <mat-icon fontIcon="list_alt" class="action-icon"></mat-icon>
+                        </button>
+                        <button mat-icon-button (click)="viewHistory(version.name)" matTooltip="View History">
+                          <mat-icon fontIcon="history" class="action-icon"></mat-icon>
+                        </button>
+                        <button mat-icon-button class="action-delete" (click)="deleteTemplate(version.name)" matTooltip="Delete Template">
+                          <mat-icon fontIcon="delete_outline" class="action-icon"></mat-icon>
+                        </button>
                       </div>
                     </div>
                   </div>
-                </td>
-                <td class="actions">
-                  <button mat-icon-button (click)="useTemplate(template.name)" matTooltip="Fill Out Form">
-                    <mat-icon fontIcon="dynamic_form" class="action-icon"></mat-icon>
-                  </button>
-                  <button mat-icon-button (click)="editTemplate(template)" matTooltip="Edit Schema">
-                    <mat-icon fontIcon="edit" class="action-icon"></mat-icon>
-                  </button>
-                  <button mat-icon-button (click)="previewTemplate(template.name)" matTooltip="Preview Form">
-                    <mat-icon fontIcon="visibility" class="action-icon"></mat-icon>
-                  </button>
-                  <button mat-icon-button (click)="viewSubmissions(template.name)" matTooltip="View Submissions">
-                    <mat-icon fontIcon="list_alt" class="action-icon"></mat-icon>
-                  </button>
-                  <button mat-icon-button (click)="viewHistory(template.name)" matTooltip="View History">
-                    <mat-icon fontIcon="history" class="action-icon"></mat-icon>
-                  </button>
-                  <button mat-icon-button (click)="duplicateTemplate(template.name)" matTooltip="Duplicate">
-                    <mat-icon fontIcon="content_copy" class="action-icon"></mat-icon>
-                  </button>
-                  <button mat-icon-button class="action-delete" (click)="deleteTemplate(template.name)" matTooltip="Delete Template">
-                    <mat-icon fontIcon="delete_outline" class="action-icon"></mat-icon>
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <!-- Grid View -->
-          <div class="template-grid" *ngIf="displayMode === 'grid'">
-            <div class="template-card card" *ngFor="let template of filteredTemplates">
-              <div class="template-title-group">
-                <mat-icon class="template-icon" matTooltip="Form Template">description</mat-icon>
-                <div>
-                  <h3>
-                    {{ template.name }}
-                  </h3>
-                  <p class="template-desc" *ngIf="template.description">{{ template.description }}</p>
-                  <div class="template-meta" *ngIf="template.created_at">
-                    <mat-icon>calendar_today</mat-icon>
-                    <span>Created on {{ template.created_at | date:'mediumDate' }}</span>
-                  </div>
-                </div>
-              </div>
-              <div class="actions">
-                <button mat-icon-button (click)="useTemplate(template.name)" matTooltip="Fill Out Form">
-                  <mat-icon fontIcon="dynamic_form" class="action-icon"></mat-icon>
-                </button>
-                <button mat-icon-button (click)="editTemplate(template)" matTooltip="Edit Schema">
-                  <mat-icon fontIcon="edit" class="action-icon"></mat-icon>
-                </button>
-                <button mat-icon-button (click)="previewTemplate(template.name)" matTooltip="Preview Form">
-                  <mat-icon fontIcon="visibility" class="action-icon"></mat-icon>
-                </button>
-                <button mat-icon-button (click)="viewSubmissions(template.name)" matTooltip="View Submissions">
-                  <mat-icon fontIcon="list_alt" class="action-icon"></mat-icon>
-                </button>
-                <button mat-icon-button (click)="viewHistory(template.name)" matTooltip="View History">
-                  <mat-icon fontIcon="history" class="action-icon"></mat-icon>
-                </button>
-                <button mat-icon-button (click)="duplicateTemplate(template.name)" matTooltip="Duplicate">
-                  <mat-icon fontIcon="content_copy" class="action-icon"></mat-icon>
-                </button>
-                <button mat-icon-button class="action-delete" (click)="deleteTemplate(template.name)" matTooltip="Delete Template">
-                  <mat-icon fontIcon="delete_outline" class="action-icon"></mat-icon>
-                </button>
-              </div>
+                </mat-tab>
+              </mat-tab-group>
             </div>
+            <button *ngIf="showTabScrollRight" class="tab-scroll-btn right" mat-icon-button (click)="scrollTabWindow('right')">
+              <mat-icon>chevron_right</mat-icon>
+            </button>
           </div>
-        </div>
-        <div *ngIf="filteredTemplates.length === 0" class="card empty-state enhanced-card">
+        </ng-container>
+        <ng-container *ngIf="displayMode === 'list'">
+          <mat-accordion>
+            <mat-expansion-panel *ngFor="let baseName of baseNames" [(expanded)]="expandedBase[baseName]">
+              <mat-expansion-panel-header (click)="toggleExpand(baseName)">
+                <mat-panel-title>
+                  <mat-icon class="template-icon">folder</mat-icon>
+                  <span class="base-name">{{ baseName }}</span>
+                </mat-panel-title>
+              </mat-expansion-panel-header>
+              <table class="template-list-table" *ngIf="groupedTemplates[baseName]?.length">
+                <tbody>
+                  <tr *ngFor="let version of groupedTemplates[baseName]">
+                    <td>
+                      <div class="template-title-group">
+                        <mat-icon class="template-icon" matTooltip="Form Template">description</mat-icon>
+                        <div>
+                          <h3 class="clickable-schema" (click)="viewSchemaVersions(version.name)">{{ version.name }}</h3>
+                          <p class="template-desc" *ngIf="version.description">{{ version.description }}</p>
+                          <div class="template-meta" *ngIf="version.created_at">
+                            <mat-icon>calendar_today</mat-icon>
+                            <span>Created on {{ version.created_at | date:'mediumDate' }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="actions">
+                      <button mat-icon-button (click)="useTemplate(version.name)" matTooltip="Fill Out Form">
+                        <mat-icon fontIcon="dynamic_form" class="action-icon"></mat-icon>
+                      </button>
+                      <button mat-icon-button (click)="editTemplate(version)" matTooltip="Edit Schema">
+                        <mat-icon fontIcon="edit" class="action-icon"></mat-icon>
+                      </button>
+                      <button mat-icon-button (click)="previewTemplate(version.name)" matTooltip="Preview Form">
+                        <mat-icon fontIcon="visibility" class="action-icon"></mat-icon>
+                      </button>
+                      <button mat-icon-button (click)="viewSubmissions(version.name)" matTooltip="View Submissions">
+                        <mat-icon fontIcon="list_alt" class="action-icon"></mat-icon>
+                      </button>
+                      <button mat-icon-button (click)="viewHistory(version.name)" matTooltip="View History">
+                        <mat-icon fontIcon="history" class="action-icon"></mat-icon>
+                      </button>
+                      <button mat-icon-button class="action-delete" (click)="deleteTemplate(version.name)" matTooltip="Delete Template">
+                        <mat-icon fontIcon="delete_outline" class="action-icon"></mat-icon>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </mat-expansion-panel>
+          </mat-accordion>
+        </ng-container>
+        <div *ngIf="baseNames.length === 0" class="card empty-state enhanced-card">
             <mat-icon class="empty-illustration">search</mat-icon>
             <h4>No templates match your filters.</h4>
             <p>Try adjusting your search criteria.</p>
@@ -382,45 +421,218 @@ import { Router } from '@angular/router';
     .view-switcher button.active {
       background-color: var(--secondary-color);
     }
-    .template-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-      gap: 1.5rem;
-      margin-top: 1.5rem;
-    }
-    .template-card {
+    .schema-tabs { margin-top: 2rem; }
+    .version-cards { display: flex; flex-wrap: wrap; gap: 2rem; margin-top: 2rem; }
+    .version-card { min-width: 340px; max-width: 400px; flex: 1 1 340px; padding: 1.5rem; border-radius: 1.25rem; box-shadow: 0 2px 8px var(--shadow-color-light); background: var(--card-bg); display: flex; flex-direction: column; justify-content: space-between; }
+    .version-card .actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; }
+    .base-name { font-weight: 600; font-size: 1.2rem; margin-left: 0.5rem; }
+    .modern-search-bar {
       display: flex;
-      flex-direction: column;
-      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.5rem;
+      margin-bottom: 0.5rem;
+      background: var(--card-bg);
+      border-radius: 1rem;
+      box-shadow: 0 2px 8px var(--shadow-color-light);
     }
-    .template-card .actions {
-      border-top: 1px solid var(--border-color);
-      margin-top: 1.5rem;
-      padding-top: 1rem;
-      text-align: right;
+    .big-search-input {
+      flex: 1 1 auto;
+      font-size: 1.25rem;
+      padding: 1.1rem 2.2rem 1.1rem 1.2rem; /* reduce right padding from 1.2rem to 2.2rem */
+      border-radius: 2rem;
+      border: 1.5px solid var(--border-color);
+      background: var(--surface-color);
+      color: var(--text-color);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .search-icon-btn {
+      margin-left: -4.5rem; /* was -3.2rem, shift button left less */
+      background: none;
+      border: none;
+      border-radius: 50%;
+      width: 2.5rem;
+      height: 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      color: var(--text-muted-color);
+      cursor: pointer;
+      z-index: 2;
+    }
+    .search-emoji {
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+    .advanced-toggle {
+      margin-left: 1rem;
+      border-radius: 2rem;
+      font-size: 1rem;
+      padding: 0.5rem 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: none;
+      border: 1.5px solid var(--border-color);
+      color: var(--text-muted-color);
+      transition: background 0.2s, color 0.2s;
+    }
+    .advanced-toggle.active, .advanced-toggle:hover {
+      background: var(--primary-color-lightest);
+      color: var(--primary-color);
+      border-color: var(--primary-color);
+    }
+    .advanced-fields {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+      padding: 1.2rem 1.5rem;
+      border-radius: 1rem;
+      background: var(--card-bg);
+      box-shadow: 0 2px 8px var(--shadow-color-light);
+    }
+    .tab-next-btn, .tab-prev-btn {
+      margin: 0 0.5rem;
+      background: var(--card-bg);
+      border-radius: 50%;
+      box-shadow: 0 2px 8px var(--shadow-color-light);
+      width: 2.2rem;
+      height: 2.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      cursor: pointer;
+      opacity: 0.95;
+      transition: background 0.2s;
+    }
+    .tab-next-btn:active, .tab-next-btn:focus, .tab-prev-btn:active, .tab-prev-btn:focus {
+      background: var(--primary-color-lightest);
+    }
+    .tab-pagination-row {
+      display: flex;
+      align-items: center;
+      margin-top: 2rem;
+      margin-bottom: -2rem;
+    }
+    .tab-next-btn-standalone, .tab-prev-btn-standalone {
+      margin-left: 0.5rem;
+      background: var(--card-bg);
+      border-radius: 50%;
+      box-shadow: 0 2px 8px var(--shadow-color-light);
+      width: 2.2rem;
+      height: 2.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      cursor: pointer;
+      opacity: 0.95;
+      transition: background 0.2s;
+    }
+    .tab-next-btn-standalone:active, .tab-next-btn-standalone:focus, .tab-prev-btn-standalone:active, .tab-prev-btn-standalone:focus {
+      background: var(--primary-color-lightest);
+    }
+    .tab-scrollbar-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      margin-top: 2rem;
+      margin-bottom: -2rem;
+    }
+    .tab-scrollbar {
+      overflow-x: auto;
+      flex: 1 1 auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--primary-color-light) var(--card-bg);
+      min-width: 0;
+    }
+    .tab-scroll-btn.left, .tab-scroll-btn.right {
+      position: absolute;
+      top: 15%; /* was 50%, move higher for better alignment */
+      transform: translateY(-50%);
+      z-index: 3;
+      background: var(--card-bg);
+      border-radius: 50%;
+      box-shadow: 0 2px 8px var(--shadow-color-light);
+      width: 2.2rem;
+      height: 2.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      cursor: pointer;
+      opacity: 0.95;
+      transition: background 0.2s;
+    }
+    .tab-scroll-btn.left {
+      left: 0.2rem;
+    }
+    .tab-scroll-btn.right {
+      right: 0.2rem;
+    }
+    .tab-scroll-btn:active, .tab-scroll-btn:focus {
+      background: var(--primary-color-lightest);
+    }
+    .tab-scrollbar::-webkit-scrollbar {
+      height: 6px;
+    }
+    .tab-scrollbar::-webkit-scrollbar-thumb {
+      background: var(--primary-color-light);
+      border-radius: 3px;
     }
   `]
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, AfterViewInit {
   allTemplates: TemplateInfo[] = [];
-  filteredTemplates: TemplateInfo[] = [];
+  groupedTemplates: { [baseName: string]: TemplateInfo[] } = {};
+  baseNames: string[] = [];
+  selectedTabIndex: number = 0;
+  expandedBase: { [baseName: string]: boolean } = {};
   mode: 'list' | 'create' | 'edit' | 'preview' | 'use' | 'submissions' = 'list';
   selectedTemplate: string | null = null;
   duplicatedVersion: number | null = null;
   isDarkTheme = false;
-  displayMode: 'list' | 'grid' = 'list';
+  displayMode: 'list' | 'grid' | 'tabcard' = 'tabcard';
+  tabPage = 0;
 
-  // Filter properties
-  filterName: string = '';
+  // New search/advanced search state
+  searchText: string = '';
+  advancedSearch: boolean = false;
+
+  // New search/filter properties
   filterDescription: string = '';
   filterStartDate: string = '';
   filterEndDate: string = '';
+
+  // Tab window state for windowed navigation
+  tabWindowStart = 0;
+  tabWindowSize = 6;
+  get visibleBaseNames() {
+    return this.baseNames.slice(this.tabWindowStart, this.tabWindowStart + this.tabWindowSize);
+  }
+  selectedTabIndexInWindow = 0;
 
   constructor(private schemaService: SchemaService, private router: Router) {}
 
   ngOnInit() {
     this.loadTemplates();
     this.isDarkTheme = document.body.classList.contains('dark-theme');
+    this.selectedTabIndexInWindow = 0;
+    this.tabWindowStart = 0;
+  }
+
+  ngAfterViewInit() {
+    // Remove old scroll/resize event listeners for updateTabScrollButtons
+    // setTimeout(() => this.updateTabScrollButtons(), 300);
+    // const tabScrollDiv = document.querySelector('.tab-scrollbar') as HTMLElement;
+    // if (tabScrollDiv) {
+    //   tabScrollDiv.addEventListener('scroll', () => this.updateTabScrollButtons());
+    //   window.addEventListener('resize', () => this.updateTabScrollButtons());
+    // }
   }
 
   isFormMode(): boolean {
@@ -431,37 +643,117 @@ export class DashboardComponent implements OnInit {
     this.schemaService.listTemplates().subscribe(templates => {
       this.allTemplates = templates;
       this.applyFilters();
-      console.log('Templates loaded:', this.allTemplates);
     });
   }
 
   applyFilters() {
-    let templates = this.allTemplates;
-
-    if (this.filterName) {
-      templates = templates.filter(t => t.name.toLowerCase().includes(this.filterName.toLowerCase()));
+    let filtered = this.allTemplates;
+    const search = this.searchText.trim().toLowerCase();
+    if (search) {
+      filtered = filtered.filter(t =>
+        t.name.toLowerCase().includes(search) ||
+        (t.description && t.description.toLowerCase().includes(search))
+      );
     }
-
-    if (this.filterDescription) {
-      templates = templates.filter(t => t.description?.toLowerCase().includes(this.filterDescription.toLowerCase()));
+    if (this.advancedSearch) {
+      if (this.filterDescription.trim()) {
+        const desc = this.filterDescription.trim().toLowerCase();
+        filtered = filtered.filter(t => t.description && t.description.toLowerCase().includes(desc));
+      }
+      if (this.filterStartDate) {
+        filtered = filtered.filter(t => t.created_at && t.created_at >= this.filterStartDate);
+      }
+      if (this.filterEndDate) {
+        filtered = filtered.filter(t => t.created_at && t.created_at <= this.filterEndDate);
+      }
     }
-
-    if (this.filterStartDate) {
-      templates = templates.filter(t => new Date(t.created_at) >= new Date(this.filterStartDate));
+    // Remove invalid Observable access. Only use filtered array.
+    this.groupedTemplates = {};
+    for (const t of filtered) {
+      const match = t.name.match(/^(.*)_v\d+$/);
+      const base = match ? match[1] : t.name;
+      if (!this.groupedTemplates[base]) this.groupedTemplates[base] = [];
+      this.groupedTemplates[base].push(t);
     }
-
-    if (this.filterEndDate) {
-      templates = templates.filter(t => new Date(t.created_at) <= new Date(this.filterEndDate));
+    this.baseNames = Object.keys(this.groupedTemplates).sort();
+    for (const base of this.baseNames) {
+      this.groupedTemplates[base].sort((a, b) => {
+        const va = parseInt(a.name.split('_v').pop() || '0', 10);
+        const vb = parseInt(b.name.split('_v').pop() || '0', 10);
+        return va - vb;
+      });
     }
-
-    this.filteredTemplates = templates;
+    // Reset tab window if needed
+    this.tabWindowStart = 0;
+    this.selectedTabIndexInWindow = 0;
   }
 
-  resetFilters() {
-    this.filterName = '';
+  toggleExpand(baseName: string) {
+    this.expandedBase[baseName] = !this.expandedBase[baseName];
+  }
+
+  // Filtering logic for new search bar and advanced search
+  onSearchChange() {
+    let filtered = this.allTemplates;
+    // Main search bar: search by name (base or version)
+    if (this.searchText) {
+      const search = this.searchText.toLowerCase();
+      filtered = filtered.filter(t => t.name.toLowerCase().includes(search));
+    }
+    // Advanced search: description
+    if (this.advancedSearch && this.filterDescription) {
+      const desc = this.filterDescription.toLowerCase();
+      filtered = filtered.filter(t => (t.description || '').toLowerCase().includes(desc));
+    }
+    // Advanced search: date range
+    if (this.advancedSearch && (this.filterStartDate || this.filterEndDate)) {
+      filtered = filtered.filter(t => {
+        if (!t.created_at) return false;
+        const created = new Date(t.created_at);
+        let afterStart = true, beforeEnd = true;
+        if (this.filterStartDate) afterStart = created >= new Date(this.filterStartDate);
+        if (this.filterEndDate) beforeEnd = created <= new Date(this.filterEndDate);
+        return afterStart && beforeEnd;
+      });
+    }
+    // Regroup after filtering
+    this.groupedTemplates = {};
+    for (const t of filtered) {
+      const match = t.name.match(/^(.*)_v\d+$/);
+      const base = match ? match[1] : t.name;
+      if (!this.groupedTemplates[base]) this.groupedTemplates[base] = [];
+      this.groupedTemplates[base].push(t);
+    }
+    this.baseNames = Object.keys(this.groupedTemplates).sort();
+    for (const base of this.baseNames) {
+      this.groupedTemplates[base].sort((a, b) => {
+        const va = parseInt(a.name.split('_v').pop() || '0', 10);
+        const vb = parseInt(b.name.split('_v').pop() || '0', 10);
+        return va - vb;
+      });
+    }
+  }
+
+  clearSearch() {
+    this.searchText = '';
     this.filterDescription = '';
     this.filterStartDate = '';
     this.filterEndDate = '';
+    this.advancedSearch = false;
+    this.applyFilters();
+  }
+
+  toggleAdvancedSearch() {
+    this.advancedSearch = !this.advancedSearch;
+    this.applyFilters();
+  }
+
+  resetFilters() {
+    this.searchText = '';
+    this.filterDescription = '';
+    this.filterStartDate = '';
+    this.filterEndDate = '';
+    this.advancedSearch = false;
     this.applyFilters();
   }
 
@@ -492,12 +784,6 @@ export class DashboardComponent implements OnInit {
     this.selectedTemplate = template;
   }
 
-  duplicateTemplate(template: string) {
-    this.schemaService.duplicateTemplate(template).subscribe(() => {
-      this.loadTemplates();
-    });
-  }
-
   deleteTemplate(template: string) {
     if (confirm(`Are you sure you want to delete the template '${template}'?`)) {
       this.schemaService.deleteTemplate(template).subscribe(() => {
@@ -510,6 +796,7 @@ export class DashboardComponent implements OnInit {
     this.mode = 'list';
     this.selectedTemplate = null;
     this.duplicatedVersion = null;
+    this.tabPage = 0;
     this.loadTemplates();
   }
 
@@ -538,6 +825,10 @@ export class DashboardComponent implements OnInit {
     }
   }
 
+  viewSchemaVersions(name: string) {
+    this.router.navigate(['/history', name]);
+  }
+
   viewHistory(name: string) {
     this.router.navigate(['/history', name]);
   }
@@ -548,5 +839,21 @@ export class DashboardComponent implements OnInit {
     } else {
       input.focus();
     }
+  }
+
+  // Add scrollTabWindow method for windowed tab navigation
+  scrollTabWindow(direction: 'left' | 'right') {
+    if (direction === 'left' && this.tabWindowStart > 0) {
+      this.tabWindowStart--;
+    } else if (direction === 'right' && (this.tabWindowStart + this.tabWindowSize) < this.baseNames.length) {
+      this.tabWindowStart++;
+    }
+  }
+
+  get showTabScrollLeft() {
+    return this.baseNames.length > this.tabWindowSize && this.tabWindowStart > 0;
+  }
+  get showTabScrollRight() {
+    return this.baseNames.length > this.tabWindowSize && (this.tabWindowStart + this.tabWindowSize) < this.baseNames.length;
   }
 }
