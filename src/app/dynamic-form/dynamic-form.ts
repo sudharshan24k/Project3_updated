@@ -1118,7 +1118,15 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
     // For each key, check if the controlling value matches any of the expected values
     return keys.every((key: string, idx: number) => {
       const controllingValue = this.form?.get(key)?.value;
-      const expected = Array.isArray(values) ? values[idx] ?? values[0] : values;
+      let expected = Array.isArray(values) ? values[idx] ?? values[0] : values;
+      
+      // Handle boolean string/actual boolean mismatch
+      if (typeof controllingValue === 'boolean' && typeof expected === 'string') {
+        if (expected.toLowerCase() === 'true' || expected.toLowerCase() === 'false') {
+          expected = expected.toLowerCase() === 'true';
+        }
+      }
+      
       if (Array.isArray(expected)) {
         return expected.some((v: any) => controllingValue == v);
       } else {
@@ -1145,7 +1153,16 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       // For each key, check if the controlling value matches any of the expected values
       return keys.every((key: string, idx: number) => {
         const controllingValue = this.form?.get(key)?.value;
-        const expected = Array.isArray(values) ? values[idx] ?? values[0] : values;
+        let expected = Array.isArray(values) ? values[idx] ?? values[0] : values;
+          // Handle boolean string/actual boolean mismatch
+        if (typeof controllingValue === 'boolean' && typeof expected === 'string') {
+          if (expected.toLowerCase() === 'true' || expected.toLowerCase() === 'false') {
+            expected = expected.toLowerCase() === 'true';
+          }
+        }
+        
+        
+        
         if (Array.isArray(expected)) {
           return expected.some((v: any) => controllingValue == v);
         } else {
