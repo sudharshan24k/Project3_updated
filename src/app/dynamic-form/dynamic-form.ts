@@ -38,10 +38,10 @@ import { MatInput } from '@angular/material/input';
           <p class="form-subtitle" *ngIf="schema.description">{{ schema.description }}</p>
         </div>
         <div class="header-actions">
-           <button *ngIf="isEditMode" (click)="onSubmit()" [disabled]="!isFormValid()" mat-raised-button>
+           <button *ngIf="isEditMode" type="submit" [disabled]="!isFormValid()" mat-raised-button>
              <mat-icon>save</mat-icon> {{ submitButtonText }}
            </button>
-           <button *ngIf="!isEditMode && mode !== 'preview'" (click)="onSubmit()" [disabled]="form.invalid" mat-raised-button>
+           <button *ngIf="!isEditMode && mode !== 'preview'" type="submit" [disabled]="form.invalid" mat-raised-button>
              <mat-icon>send</mat-icon> {{ submitButtonText }}
            </button>
         </div>
@@ -110,6 +110,14 @@ import { MatInput } from '@angular/material/input';
 </ng-container>
                 </ng-container>
               </div>
+            </div>
+            <div class="form-submit-bottom">
+              <button *ngIf="isEditMode" type="submit" [disabled]="!isFormValid()" mat-raised-button color="primary">
+                <mat-icon>save</mat-icon> {{ submitButtonText }}
+              </button>
+              <button *ngIf="!isEditMode && mode !== 'preview'" type="submit" [disabled]="form.invalid" mat-raised-button color="accent">
+                <mat-icon>send</mat-icon> {{ submitButtonText }}
+              </button>
             </div>
           </form>
         </div>
@@ -1285,9 +1293,10 @@ import { MatInput } from '@angular/material/input';
   `]
 })
 export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
-  @Input() mode: 'create' | 'edit' | 'use' | 'preview' | 'list' | 'submissions' = 'use';
+  @Input() mode: 'create' | 'edit' | 'use' | 'preview' | 'list' | 'submissions' | 'history' = 'use';
   @Input() templateName: string | null = null;
   @Input() prefillVersion: number | null = null;
+  @Input() prefillSubmissionName: string | null = null;
   @Output() formClose = new EventEmitter<void>();
 
   form: FormGroup;
@@ -1508,37 +1517,34 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
   }
 
   setupComponent() {
-    this.isReadOnly = this.mode === 'preview';
     this.isEditMode = this.mode === 'create' || this.mode === 'edit';
+    this.isReadOnly = this.mode === 'preview';
 
-    switch (this.mode) {
-      case 'create':
-        this.title = 'Create New Template';
-        this.submitButtonText = 'Save Template';
-        this.schema = { name: '', description: '', fields: [], version: '' };
-        this.buildForm();
-        break;
-      case 'edit':
-        this.title = `Edit Template: ${this.templateName}`;
+    if (this.mode === 'create') {
+      this.title = 'Create New Template';
+      this.submitButtonText = 'Save Template';
+      this.schema = { name: '', description: '', fields: [], version: '' };
+      this.buildForm();
+    } else if (this.templateName) {
+      if (this.prefillSubmissionName) {
+        // This is a "Duplicate & Edit" from a submission
+        this.loadTemplateWithSubmissionPrefill();
+      } else if (this.prefillVersion) {
+        // This is a "Duplicate & Edit" from a template version
+        this.loadTemplateWithPrefill();
+      } else {
+        this.loadTemplate();
+      }
+    }
+    // Set default button text for other modes
+    if (!this.submitButtonText) {
+      if (this.mode === 'edit') {
         this.submitButtonText = 'Update Template';
-        this.loadTemplate();
-        break;
-      case 'use':
-        this.title = `Fill Form: ${this.templateName}`;
-        this.submitButtonText = 'Submit Form';
-        this.isReadOnly = false;
-        if (this.submissionVersion && this.isDuplicatedEdit) {
-          this.loadTemplateWithPrefill();
-        } else {
-          this.loadTemplate();
-        }
-        break;
-      case 'preview':
-        this.title = `Preview: ${this.templateName}`;
-        this.submitButtonText = '';
-        this.isReadOnly = true;
-        this.loadTemplate();
-        break;
+      } else if (this.mode === 'use') {
+        this.submitButtonText = 'Submit';
+      } else if (this.mode === 'submissions') {
+        this.submitButtonText = 'Submit';
+      }
     }
   }
 
@@ -1551,6 +1557,12 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
         this.schema.name = data.name; // ensure name is populated
         this.buildForm();
         this.isLoading = false;
+        // Set button text for edit/use modes if not already set
+        if (this.mode === 'edit') {
+          this.submitButtonText = 'Update Template';
+        } else if (this.mode === 'use' || this.mode === 'submissions') {
+          this.submitButtonText = 'Submit';
+        }
         this.cdr.detectChanges(); // Force UI update
       },
       error: (error) => {
@@ -1570,6 +1582,30 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       this.schemaService.getSubmission(this.templateName!, this.submissionVersion!).subscribe(sub => {
         this.buildForm();
         this.form.patchValue(sub.data);
+        this.isLoading = false;
+      });
+    });
+  }
+
+  loadTemplateWithSubmissionPrefill() {
+    if (!this.templateName || !this.prefillSubmissionName) {
+      return;
+    }
+
+    this.isLoading = true;
+    const currentTemplateName = this.templateName;
+    const currentSubmissionName = this.prefillSubmissionName;
+
+    this.schemaService.getTemplate(currentTemplateName).subscribe(schema => {
+      this.schema = schema.schema;
+      this.schema.name = schema.name; // Keep the original template name
+      this.title = `Editing Submission for: ${currentTemplateName}`;
+      this.submitButtonText = 'Submit as New';
+
+      // Now, fetch the submission data to prefill the form
+      this.schemaService.getSubmissionByName(currentTemplateName, currentSubmissionName).subscribe(submission => {
+        this.buildForm(); // Build form first
+        this.form.patchValue(submission.data || {}); // Then patch with data
         this.isLoading = false;
       });
     });

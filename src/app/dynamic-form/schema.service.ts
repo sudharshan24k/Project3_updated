@@ -26,6 +26,7 @@ export interface TemplateVersion {
   schema: any;
   change_log: string;
   created_at: string;
+  author?: string;
 }
 
 export interface Submission {

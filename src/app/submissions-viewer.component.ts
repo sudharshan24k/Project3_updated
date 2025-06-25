@@ -31,7 +31,7 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
   diffResult: any = null;
   oldSchema: any[] = [];
   newSchema: any[] = [];
-  @Output() duplicateEdit = new EventEmitter<{ template: string, version: number }>();
+  @Output() duplicateEdit = new EventEmitter<{ template: string, submissionName: string }>();
   newResponseContent: string = '';
 
   constructor(private schemaService: SchemaService, private router: Router, private dialog: MatDialog) {}
@@ -185,12 +185,17 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
     if (!this.templateName) return;
 
     this.schemaService.duplicateSubmissionByName(this.templateName, submissionName).subscribe(response => {
-      if(response && response.submission_name) {
-        this.router.navigate(['/dynamic-form', this.templateName, response.submission_name]);
+      if (response && response.submission_name) {
+        this.duplicateEdit.emit({
+          template: this.templateName!,
+          submissionName: response.submission_name
+        });
       } else {
-        // Fallback or error handling
-        console.warn("Duplication successful, but no submission name returned. Navigating without it.");
-        this.router.navigate(['/dynamic-form', this.templateName]);
+        // Fallback: emit the original submission name (should not happen)
+        this.duplicateEdit.emit({
+          template: this.templateName!,
+          submissionName: submissionName
+        });
       }
     });
   }

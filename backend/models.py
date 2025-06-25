@@ -10,6 +10,7 @@ class TemplateVersionModel(BaseModel):
     schema: Optional[Dict[str, Any]] = Field(default=None)
     change_log: Optional[str] = Field(default="Initial version.")
     created_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
+    author: Optional[str] = Field(default=None)
 
     model_config = ConfigDict(
         populate_by_name=True,

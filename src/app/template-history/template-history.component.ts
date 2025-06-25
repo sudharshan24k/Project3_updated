@@ -1,23 +1,19 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
 import { SchemaService, TemplateVersion } from '../dynamic-form/schema.service';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatButtonModule } from '@angular/material/button';
 import { Location } from '@angular/common';
+import { DiffViewerComponent } from '../diff-viewer.component';
 
 @Component({
   selector: 'app-template-history',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatTooltipModule, MatButtonModule],
+  imports: [CommonModule, MatIconModule, MatTooltipModule, MatButtonModule, DiffViewerComponent],
   template: `
     <div class="container">
       <header class="page-header">
-        <button (click)="goBack()" class="back-button">
-          <mat-icon>arrow_back</mat-icon>
-          <span>Back to Dashboard</span>
-        </button>
         <h1>Version History for "{{ templateName }}"</h1>
       </header>
 
@@ -32,25 +28,45 @@ import { Location } from '@angular/common';
         <table>
           <thead>
             <tr>
+              <th></th>
               <th>Version</th>
+              <th>Author</th>
               <th>Change Log</th>
               <th>Timestamp</th>
-              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let version of history">
-              <td>{{ version.version }}</td>
-              <td>{{ version.change_log }}</td>
-              <td>{{ version.created_at | date:'medium' }}</td>
+            <tr *ngFor="let update of history">
               <td>
-                <button mat-icon-button (click)="rollback(version.version)" matTooltip="Rollback to this version">
-                  <mat-icon>history</mat-icon>
-                </button>
+                <input type="checkbox"
+                  [checked]="selectedUpdates.has(update.created_at)"
+                  (change)="toggleUpdate(update)"
+                  [disabled]="selectedUpdates.size >= 2 && !selectedUpdates.has(update.created_at)">
               </td>
+              <td>{{ update.version }}</td>
+              <td>{{ update.author || 'N/A' }}</td>
+              <td>{{ update.change_log }}</td>
+              <td>{{ update.created_at | date:'medium' }}</td>
             </tr>
           </tbody>
         </table>
+        <div class="compare-bar" *ngIf="history.length > 1">
+          <button mat-raised-button color="primary" [disabled]="selectedUpdates.size !== 2" (click)="compareUpdates()">
+            <mat-icon>compare_arrows</mat-icon>
+            Compare Selected Updates
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="diffResult" class="github-diff-card">
+        <div class="github-diff-header">
+          <mat-icon class="diff-icon">difference</mat-icon>
+          <span class="diff-title">Schema Comparison Result</span>
+          <span class="diff-meta">Comparing updates</span>
+        </div>
+        <div class="github-diff-body">
+          <app-diff-viewer [oldSchema]="oldSchema" [newSchema]="newSchema"></app-diff-viewer>
+        </div>
       </div>
     </div>
   `,
@@ -62,23 +78,64 @@ import { Location } from '@angular/common';
     .back-button { background: none; border: none; cursor: pointer; }
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 1rem; border-bottom: 1px solid var(--border-color); text-align: left; }
+
+    /* GitHub-style diff card */
+    .github-diff-card {
+      background: #f6f8fa;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      margin: 2.5rem 0 1.5rem 0;
+      box-shadow: 0 2px 8px #0001;
+      overflow: hidden;
+    }
+    .github-diff-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: #f3f4f6;
+      border-bottom: 1px solid #d0d7de;
+      padding: 1.1rem 1.5rem 1.1rem 1.2rem;
+      font-size: 1.18rem;
+      font-weight: 600;
+      color: #24292f;
+    }
+    .github-diff-header .diff-icon {
+      color: #8250df;
+      font-size: 2rem;
+    }
+    .github-diff-header .diff-title {
+      font-weight: 700;
+      font-size: 1.18rem;
+      margin-right: 1.2rem;
+    }
+    .github-diff-header .diff-meta {
+      font-size: 0.98rem;
+      color: #57606a;
+      margin-left: auto;
+      font-weight: 400;
+    }
+    .github-diff-body {
+      padding: 2rem 2.5rem 2.5rem 2.5rem;
+      background: #fff;
+    }
     `
   ]
 })
 export class TemplateHistoryComponent implements OnInit {
-  templateName: string | null = null;
+  @Input() templateName: string | null = null;
   history: TemplateVersion[] = [];
   isLoading = false;
+  selectedUpdates = new Set<string>();
+  diffResult: any = null;
+  oldSchema: any[] = [];
+  newSchema: any[] = [];
 
   constructor(
-    private route: ActivatedRoute,
-    private router: Router,
     private schemaService: SchemaService,
     private location: Location
   ) { }
 
   ngOnInit(): void {
-    this.templateName = this.route.snapshot.paramMap.get('name');
     if (this.templateName) {
       this.loadHistory();
     }
@@ -87,20 +144,39 @@ export class TemplateHistoryComponent implements OnInit {
   loadHistory() {
     if (!this.templateName) return;
     this.isLoading = true;
-    this.schemaService.getTemplateHistory(this.templateName).subscribe(history => {
-      this.history = history;
-      this.isLoading = false;
+    this.schemaService.getTemplateHistory(this.templateName).subscribe({
+      next: (history) => {
+        this.history = history.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error('Error loading template history:', err);
+        this.history = []; // Ensure history is empty on error
+        this.isLoading = false;
+      }
     });
   }
 
-  rollback(version: number) {
-    if (!this.templateName) return;
-    if (confirm(`Are you sure you want to roll back to version ${version}? This will create a new version.`)) {
-      this.schemaService.rollbackTemplate(this.templateName, version).subscribe(() => {
-        alert('Rollback successful. A new version has been created.');
-        this.loadHistory();
-      });
+  toggleUpdate(update: any) {
+    const updateId = update.created_at;
+    if (this.selectedUpdates.has(updateId)) {
+      this.selectedUpdates.delete(updateId);
+    } else {
+      if (this.selectedUpdates.size < 2) {
+        this.selectedUpdates.add(updateId);
+      }
     }
+  }
+
+  compareUpdates() {
+    if (this.selectedUpdates.size !== 2) return;
+    const ids = Array.from(this.selectedUpdates);
+    const [id1, id2] = ids;
+    const upd1 = this.history.find(h => h.created_at === id1);
+    const upd2 = this.history.find(h => h.created_at === id2);
+    this.oldSchema = upd1?.schema?.fields || [];
+    this.newSchema = upd2?.schema?.fields || [];
+    this.diffResult = { update1: id1, update2: id2 };
   }
 
   goBack() {

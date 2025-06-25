@@ -33,6 +33,11 @@ export interface VersionDialogData {
     .full-width { width: 100%; }
     .action-group { display: flex; gap: 1rem; margin: 1.5rem 0 0.5rem 0; }
     textarea { min-width: 300px; }
+    .action-group button {
+      color: #fff !important;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
   `],
   standalone: true,
   imports: [MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, FormsModule]

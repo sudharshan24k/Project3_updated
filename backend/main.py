@@ -74,7 +74,8 @@ async def create_template(template: TemplateModel = Body(...)):
         template_name=versioned_name,
         version=1,
         schema=template.schema,
-        change_log="Initial version."
+        change_log="Initial version.",
+        author=template.author
     )
     version_data_dict = jsonable_encoder(version_data)
     version_data_dict.pop('_id', None)
@@ -131,7 +132,8 @@ async def edit_template(name: str, req: UpdateTemplateRequest = Body(...)):
             version=1,
             schema=req.schema,
             change_log=req.change_log or "Initial version.",
-            created_at=new_template["created_at"]
+            created_at=new_template["created_at"],
+            author=existing_template.get("author")
         )
         version_data_dict = jsonable_encoder(version_data)
         version_data_dict.pop('_id', None)
@@ -144,7 +146,8 @@ async def edit_template(name: str, req: UpdateTemplateRequest = Body(...)):
         version=existing_template.get("version", 1),
         schema=existing_template.get("schema"),
         change_log=req.change_log,
-        created_at=existing_template.get("updated_at")
+        created_at=existing_template.get("updated_at"),
+        author=existing_template.get("author")
     )
     version_data_dict = jsonable_encoder(version_data)
     version_data_dict.pop('_id', None)
@@ -201,7 +204,8 @@ async def duplicate_template(name: str):
         template_name=new_name,
         version=1,
         schema=new_template_data.get("schema"),
-        change_log="Duplicated from " + name
+        change_log="Duplicated from " + name,
+        author=original_template.get("author")
     )
     version_data_dict = jsonable_encoder(version_data)
     version_data_dict.pop('_id', None)
@@ -235,7 +239,8 @@ async def rollback_template(name: str, version: int):
         version=current_version_num,
         schema=current_template.get("schema"),
         change_log=f"Pre-rollback save of version {current_version_num}.",
-        created_at=current_template.get("updated_at")
+        created_at=current_template.get("updated_at"),
+        author=current_template.get("author")
     )
     await template_version_collection.insert_one(jsonable_encoder(version_data))
 
@@ -254,6 +259,8 @@ async def rollback_template(name: str, version: int):
         version=new_version_num,
         schema=template_to_restore.get("schema"),
         change_log=f"Rolled back to version {version}.",
+        created_at=datetime.datetime.utcnow(),
+        author=current_template.get("author")
     )
     rollback_log_entry_dict = jsonable_encoder(rollback_log_entry)
     rollback_log_entry_dict.pop('_id', None)
@@ -295,7 +302,8 @@ async def create_new_version(name: str, req: UpdateTemplateRequest = Body(...)):
         version=new_version,
         schema=req.schema,
         change_log=req.change_log or "Initial version.",
-        created_at=new_template["created_at"]
+        created_at=new_template["created_at"],
+        author=current_template.get("author")
     )
     version_data_dict = jsonable_encoder(version_data)
     version_data_dict.pop('_id', None)

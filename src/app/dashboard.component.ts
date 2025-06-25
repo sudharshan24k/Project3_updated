@@ -1,20 +1,21 @@
-import { Component, OnInit, AfterViewInit } from '@angular/core';
 import { CommonModule, NgIf, NgFor } from '@angular/common';
-import { SchemaService, TemplateInfo } from './dynamic-form/schema.service';
-import { DynamicForm } from './dynamic-form/dynamic-form';
-import { SubmissionsViewerComponent } from './submissions-viewer.component';
-import { MatIconModule } from '@angular/material/icon';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatButtonModule } from '@angular/material/button';
+import { Component, OnInit, AfterViewInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { MatTabsModule } from '@angular/material/tabs';
+import { MatButtonModule } from '@angular/material/button';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { Router } from '@angular/router';
+import { DynamicForm } from './dynamic-form/dynamic-form';
+import { SchemaService, TemplateInfo } from './dynamic-form/schema.service';
+import { SubmissionsViewerComponent } from './submissions-viewer.component';
+import { TemplateHistoryComponent } from './template-history/template-history.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, NgIf, NgFor, DynamicForm, SubmissionsViewerComponent, MatIconModule, MatTooltipModule, MatButtonModule, FormsModule, MatTabsModule, MatExpansionModule],
+  imports: [CommonModule, NgIf, NgFor, DynamicForm, SubmissionsViewerComponent, MatIconModule, MatTooltipModule, MatButtonModule, FormsModule, MatTabsModule, MatExpansionModule, TemplateHistoryComponent],
   template: `
     <div class="container">
       <div *ngIf="mode === 'list'">
@@ -186,35 +187,37 @@ import { MatExpansionModule } from '@angular/material/expansion';
               <mat-icon>chevron_right</mat-icon>
             </button>
           </div>
-          <mat-accordion *ngIf="!isLoading">
+          <mat-accordion *ngIf="!isLoading" class="list-view-accordion">
             <mat-expansion-panel *ngFor="let baseName of baseNames" [(expanded)]="expandedBase[baseName]">
-              <mat-expansion-panel-header (click)="toggleExpand(baseName)">
-                <mat-panel-title>
-                  <mat-icon class="template-icon">folder</mat-icon>
+              <mat-expansion-panel-header>
+                <mat-panel-title class="list-view-panel-title">
+                  <mat-icon class="template-icon">folder_open</mat-icon>
                   <span class="base-name">{{ baseName }}</span>
+                  <span class="version-count-badge">{{ groupedTemplates[baseName].length }} versions</span>
                 </mat-panel-title>
               </mat-expansion-panel-header>
-              <table class="template-list-table" *ngIf="groupedTemplates[baseName]?.length">
-                <thead>
-                  <tr>
-                    <th>Template Name</th>
-                    <th>Author</th>
-                    <th>Version</th>
-                    <th>Description</th>
-                    <th>Date Created</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let version of groupedTemplates[baseName]">
-                    <td>
+              
+              <div class="list-view-table" *ngIf="groupedTemplates[baseName]?.length">
+                <div class="list-view-header">
+                  <div class="list-cell">Template Name</div>
+                  <div class="list-cell">Author</div>
+                  <div class="list-cell">Version</div>
+                  <div class="list-cell">Description</div>
+                  <div class="list-cell">Date Created</div>
+                  <div class="list-cell actions-header">Actions</div>
+                </div>
+                <div class="list-view-row" *ngFor="let version of groupedTemplates[baseName]">
+                    <div class="list-cell name-cell">
                       <span class="clickable-schema" (click)="viewSchemaVersions(version.name)">{{ version.name }}</span>
-                    </td>
-                    <td>{{ version.author || '-' }}</td>
-                    <td>{{ version.version_tag || '-' }}</td>
-                    <td>{{ version.description || '-' }}</td>
-                    <td>{{ version.created_at ? (version.created_at | date:'mediumDate') : '-' }}</td>
-                    <td class="actions">
+                    </div>
+                    <div class="list-cell">{{ version.author || '-' }}</div>
+                    <div class="list-cell">
+                        <span class="version-tag" *ngIf="version.version_tag">{{ version.version_tag }}</span>
+                        <span *ngIf="!version.version_tag">-</span>
+                    </div>
+                    <div class="list-cell description-cell">{{ version.description || '-' }}</div>
+                    <div class="list-cell date-cell">{{ version.created_at ? (version.created_at | date:'mediumDate') : '-' }}</div>
+                    <div class="list-cell actions-cell">
                       <button mat-icon-button (click)="useTemplate(version.name)" matTooltip="Fill Out Form">
                         <mat-icon fontIcon="dynamic_form" class="action-icon"></mat-icon>
                       </button>
@@ -233,10 +236,9 @@ import { MatExpansionModule } from '@angular/material/expansion';
                       <button mat-icon-button class="action-delete" (click)="deleteTemplate(version.name)" matTooltip="Delete Template">
                         <mat-icon fontIcon="delete_outline" class="action-icon"></mat-icon>
                       </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                    </div>
+                </div>
+              </div>
             </mat-expansion-panel>
           </mat-accordion>
           <div *ngIf="baseNames.length === 0" class="card empty-state enhanced-card">
@@ -252,6 +254,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
           [mode]="mode"
           [templateName]="selectedTemplate"
           [prefillVersion]="duplicatedVersion"
+          [prefillSubmissionName]="prefillSubmissionName"
           (formClose)="onFormClose()">
         </app-dynamic-form>
       </div>
@@ -264,6 +267,16 @@ import { MatExpansionModule } from '@angular/material/expansion';
           </button>
         </header>
         <app-submissions-viewer [templateName]="selectedTemplate" (duplicateEdit)="onDuplicateEdit($event)"></app-submissions-viewer>
+      </div>
+      
+      <div *ngIf="mode === 'history'">
+        <header class="page-header">
+          <button (click)="onFormClose()" class="back-button">
+            <mat-icon>arrow_back</mat-icon>
+            <span>Back to Templates</span>
+          </button>
+        </header>
+        <app-template-history [templateName]="selectedTemplate"></app-template-history>
       </div>
     </div>
   `,
@@ -698,6 +711,131 @@ import { MatExpansionModule } from '@angular/material/expansion';
       margin-bottom: 1rem;
     }
 
+    /* New styles for list view enhancement */
+    .list-view-accordion {
+      margin-top: 2rem;
+    }
+
+    ::ng-deep .list-view-accordion .mat-expansion-panel {
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: 12px !important; /* using important to override material styles */
+      margin-bottom: 1.2rem;
+      box-shadow: 0 1px 3px var(--shadow-color-light);
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+
+    ::ng-deep .list-view-accordion .mat-expansion-panel:hover {
+      box-shadow: 0 4px 12px var(--shadow-color-light);
+      border-color: var(--primary-color-light);
+    }
+
+    .list-view-panel-title {
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+
+    .list-view-panel-title .template-icon {
+      color: var(--primary-color);
+      margin-right: 1rem;
+    }
+
+    .list-view-panel-title .base-name {
+      font-weight: 600;
+      font-size: 1.2rem;
+    }
+
+    .version-count-badge {
+      margin-left: auto;
+      background-color: var(--primary-color-lightest);
+      color: var(--primary-color);
+      padding: 0.25rem 0.75rem;
+      border-radius: 1rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .list-view-table {
+      display: flex;
+      flex-direction: column;
+      padding: 0.5rem 1rem 1.5rem 1rem;
+    }
+
+    .list-view-header, .list-view-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 2.5fr 1.5fr 1.5fr; /* Adjust column ratios */
+      gap: 1.5rem;
+      align-items: center;
+      padding: 0.75rem 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .list-view-header {
+      font-weight: 600;
+      color: var(--text-muted-color);
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding-bottom: 1rem;
+    }
+
+    .list-view-row {
+      background: var(--surface-color);
+      transition: background-color 0.2s, box-shadow 0.2s, transform 0.2s;
+      border-radius: 8px;
+    }
+
+    .list-view-row:hover {
+      background-color: var(--primary-color-lightest);
+      box-shadow: 0 2px 8px var(--shadow-color-light);
+      transform: translateY(-2px);
+    }
+
+    .list-view-row:last-child {
+      border-bottom: none;
+    }
+
+    .list-cell {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .list-cell.name-cell .clickable-schema {
+      font-weight: 600;
+      color: var(--text-color);
+    }
+
+    .list-cell.description-cell {
+      color: var(--text-muted-color);
+      font-size: 0.95rem;
+    }
+
+    .list-cell.date-cell {
+      font-size: 0.95rem;
+    }
+
+    .version-tag {
+        display: inline-block;
+        padding: 0.2rem 0.6rem;
+        border-radius: 1rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        background-color: var(--secondary-color);
+        color: var(--on-secondary-color);
+    }
+
+    .list-cell.actions-cell, .list-cell.actions-header {
+      text-align: right;
+      justify-content: center;
+      display: flex;
+    }
+    .list-cell.actions-cell {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
   `]
 })
 export class DashboardComponent implements OnInit, AfterViewInit {
@@ -706,9 +844,11 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   baseNames: string[] = [];
   selectedTabIndex: number = 0;
   expandedBase: { [baseName: string]: boolean } = {};
-  mode: 'list' | 'create' | 'edit' | 'preview' | 'use' | 'submissions' = 'list';
+  mode: 'list' | 'create' | 'edit' | 'preview' | 'use' | 'submissions' | 'history' = 'list';
+  private modeHistory: string[] = ['list'];
   selectedTemplate: string | null = null;
   duplicatedVersion: number | null = null;
+  prefillSubmissionName: string | null = null;
   displayMode: 'list' | 'grid' | 'tabcard' = 'tabcard';
   tabPage = 0;
   searchText: string = '';
@@ -811,31 +951,37 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     this.saveDashboardState();
     this.selectedTemplate = template;
     this.mode = 'use';
+    this.modeHistory.push('use');
   }
   editTemplate(template: TemplateInfo) {
     this.saveDashboardState();
     this.selectedTemplate = template.name;
     this.mode = 'edit';
+    this.modeHistory.push('edit');
   }
   previewTemplate(template: string) {
     this.saveDashboardState();
     this.selectedTemplate = template;
     this.mode = 'preview';
+    this.modeHistory.push('preview');
   }
   viewSubmissions(template: string) {
     this.saveDashboardState();
     this.selectedTemplate = template;
     this.mode = 'submissions';
+    this.modeHistory.push('submissions');
   }
   viewSchemaVersions(name: string) {
     this.saveDashboardState();
     this.selectedTemplate = name;
     this.mode = 'edit';
+    this.modeHistory.push('edit');
   }
   viewHistory(name: string) {
     this.saveDashboardState();
     this.selectedTemplate = name;
-    this.mode = 'edit';
+    this.mode = 'history';
+    this.modeHistory.push('history');
   }
   // --- Clear state on reset/clear ---
   clearSearch() {
@@ -954,23 +1100,33 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   }
 
   showCreateTemplate() {
-    this.mode = 'create';
+    this.saveDashboardState();
     this.selectedTemplate = null;
     this.duplicatedVersion = null;
-    this.loadTemplates();
+    this.prefillSubmissionName = null;
+    this.mode = 'create';
+    this.modeHistory.push('create');
   }
 
   onFormClose() {
-    this.mode = 'list';
-    this.selectedTemplate = null;
+    if (this.modeHistory.length > 1) {
+      this.modeHistory.pop();
+    }
+    this.mode = (this.modeHistory[this.modeHistory.length - 1] || 'list') as any;
+
+    // Reset form-specific data
     this.duplicatedVersion = null;
-    this.tabPage = 0;
-    // Only reload templates if they're not already loaded
-    if (this.allTemplates.length === 0) {
-      this.loadTemplates();
-    } else {
-      // Just restore state without reloading
+    this.prefillSubmissionName = null;
+
+    if (this.mode === 'list') {
+      this.selectedTemplate = null;
       this.restoreDashboardState();
+      // A small delay to allow the view to switch and elements to be available
+      setTimeout(() => {
+        this.restoreScroll();
+        // After restoring, we can clear the selected template from session storage
+        sessionStorage.removeItem('dashboardSelectedTemplate');
+      }, 50);
     }
   }
 
@@ -984,10 +1140,12 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     return t ? t.created_at : null;
   }
 
-  onDuplicateEdit(event: { template: string, version: number }) {
-    this.mode = 'use';
+  onDuplicateEdit(event: { template: string, submissionName: string }) {
+    this.saveDashboardState();
+    this.mode = 'edit';
     this.selectedTemplate = event.template;
-    this.duplicatedVersion = event.version;
+    this.prefillSubmissionName = event.submissionName;
+    this.modeHistory.push('edit');
   }
 
   openDatePicker(input: HTMLInputElement) {
