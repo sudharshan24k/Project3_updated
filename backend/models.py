@@ -22,6 +22,7 @@ class TemplateModel(BaseModel):
     id: Optional[Any] = Field(alias="_id", default=None)
     name: str = Field(...)
     version: int = Field(default=1)
+    team_name: str = Field(...)
     version_tag: Optional[str] = Field(default=None)
     schema: Optional[Dict[str, Any]] = Field(default=None)
     author: Optional[str] = Field(default=None)
@@ -36,6 +37,7 @@ class TemplateModel(BaseModel):
             "example": {
                 "name": "My Form Template",
                 "author": "John Doe",
+                "team_name": "My Team",
                 "schema": {
                     "description": "A sample form schema.",
                     "fields": [

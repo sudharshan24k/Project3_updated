@@ -167,6 +167,13 @@ import { MatInput } from '@angular/material/input';
               <input [(ngModel)]="schema.author" placeholder="Author of this template" [ngModelOptions]="{standalone: true}">
             </div>
             <div class="form-field" *ngIf="mode === 'create'">
+              <label>Team Name</label>
+              <mat-select [(ngModel)]="schema.team_name" [ngModelOptions]="{standalone: true}" required placeholder="Select team">
+                <mat-option *ngFor="let team of teamNames" [value]="team">{{ team }}</mat-option>
+              </mat-select>
+              <small class="field-help">Team name is required and cannot be changed later.</small>
+            </div>
+            <div class="form-field" *ngIf="mode === 'create'">
               <label>Version Tag</label>
               <input [(ngModel)]="schema.version" placeholder="e.g., v1.0, beta, stable" [ngModelOptions]="{standalone: true}">
               <small class="field-help">Version tag can only be set during creation and cannot be changed later.</small>
@@ -1339,6 +1346,8 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
   @ViewChild('auto') matAutocomplete!: MatAutocomplete;
   @ViewChild('templateInput') templateInput!: ElementRef<HTMLInputElement>;
 
+  teamNames: string[] = ['Framework Team', 'PID Team'];
+
   // --- Add for dynamic conditional logic ---
   get visibleFields() {
     // Force recalculation on every access to ensure visibility is always up to date
@@ -1489,6 +1498,10 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
     if (changes['templateName'] && this.templateName) {
       this.setupComponent();
     }
+    // Also call setupComponent when prefillSubmissionName changes
+    if (changes['prefillSubmissionName'] && this.prefillSubmissionName) {
+      this.setupComponent();
+    }
   }
 
   ngAfterViewInit() {
@@ -1601,12 +1614,26 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       this.title = `Editing Submission for: ${currentTemplateName}`;
       this.submitButtonText = 'Submit as New';
 
-      // Now, fetch the submission data to prefill the form
-      this.schemaService.getSubmissionByName(currentTemplateName, currentSubmissionName).subscribe(submission => {
-        this.buildForm(); // Build form first
-        this.form.patchValue(submission.data || {}); // Then patch with data
-        this.isLoading = false;
-      });
+      // Add a short delay to avoid race condition
+      setTimeout(() => {
+        this.schemaService.getSubmissionByName(currentTemplateName, currentSubmissionName).subscribe({
+          next: (submission) => {
+            this.buildForm(); // Build form first
+            this.form.patchValue(submission.data || {}); // Then patch with data
+            this.isLoading = false;
+            this.cdr.detectChanges();
+          },
+          error: (err) => {
+            console.error('Error loading duplicated submission:', err);
+            this.isLoading = false;
+            this.cdr.detectChanges();
+          }
+        });
+      }, 150);
+    }, error => {
+      console.error('Error loading template for duplicated submission:', error);
+      this.isLoading = false;
+      this.cdr.detectChanges();
     });
   }
 
@@ -1770,7 +1797,15 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       }
     });
     if (this.mode === 'create') {
-      this.schemaService.createTemplate(this.schema).subscribe(() => {
+      const template = {
+        name: this.schema.name,
+        description: this.schema.description,
+        fields: this.schema.fields,
+        author: this.schema.author,
+        team_name: this.schema.team_name,
+        version: this.schema.version
+      };
+      this.schemaService.createTemplate(template).subscribe(() => {
         this.closeForm();
       });
     } else if (this.mode === 'edit') {
@@ -1794,7 +1829,21 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       });
     } else if (this.mode === 'use') {
       if (!this.templateName) return;
-      this.schemaService.submitForm(this.templateName, this.form.getRawValue()).subscribe(() => this.closeForm());
+      if (this.prefillSubmissionName) {
+        // Only duplicate on submit
+        this.schemaService.duplicateSubmissionByName(this.templateName, this.prefillSubmissionName).subscribe(response => {
+          // After duplication, update the new submission with the edited data
+          const newSubmissionName = response && response.submission_name ? response.submission_name : this.prefillSubmissionName;
+          this.schemaService.getSubmissionByName(this.templateName!, newSubmissionName).subscribe(sub => {
+            // Patch the new submission with the edited data
+            // (Assuming backend allows updating submission by name, otherwise just submit as new)
+            // If not supported, just submit as a new submission
+            this.schemaService.submitForm(this.templateName!, this.form.getRawValue()).subscribe(() => this.closeForm());
+          });
+        });
+      } else {
+        this.schemaService.submitForm(this.templateName, this.form.getRawValue()).subscribe(() => this.closeForm());
+      }
     }
     
   }

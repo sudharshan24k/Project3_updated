@@ -29,10 +29,11 @@ import { DiffViewerComponent } from '../diff-viewer.component';
           <thead>
             <tr>
               <th></th>
-              <th>Version</th>
+              <!-- <th>Version</th> -->
               <th>Author</th>
               <th>Change Log</th>
               <th>Timestamp</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -43,10 +44,15 @@ import { DiffViewerComponent } from '../diff-viewer.component';
                   (change)="toggleUpdate(update)"
                   [disabled]="selectedUpdates.size >= 2 && !selectedUpdates.has(update.created_at)">
               </td>
-              <td>{{ update.version }}</td>
+              <!-- <td>{{ update.version }}</td> -->
               <td>{{ update.author || 'N/A' }}</td>
               <td>{{ update.change_log }}</td>
               <td>{{ update.created_at | date:'medium' }}</td>
+              <td>
+                <button mat-stroked-button color="warn" (click)="onRollback(update)" [disabled]="isRollingBack">
+                  <mat-icon>restore</mat-icon> Rollback
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -129,6 +135,7 @@ export class TemplateHistoryComponent implements OnInit {
   diffResult: any = null;
   oldSchema: any[] = [];
   newSchema: any[] = [];
+  isRollingBack = false;
 
   constructor(
     private schemaService: SchemaService,
@@ -181,5 +188,22 @@ export class TemplateHistoryComponent implements OnInit {
 
   goBack() {
     this.location.back();
+  }
+
+  onRollback(update: TemplateVersion) {
+    if (!this.templateName || !update.version) return;
+    if (!confirm(`Are you sure you want to rollback to version ${update.version}? This will overwrite the current template.`)) return;
+    this.isRollingBack = true;
+    this.schemaService.rollbackTemplate(this.templateName, update.version).subscribe({
+      next: () => {
+        this.isRollingBack = false;
+        this.loadHistory();
+        alert('Rollback successful!');
+      },
+      error: (err) => {
+        this.isRollingBack = false;
+        alert('Rollback failed: ' + (err?.error?.detail || err.message || err));
+      }
+    });
   }
 } 

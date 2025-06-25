@@ -31,10 +31,14 @@ import { TemplateHistoryComponent } from './template-history/template-history.co
             </button>
           </div>
         </header>
-        <div class="filter-bar card modern-search-bar">
+        <div class="filter-bar card modern-search-bar team-search-bar">
+          <select class="team-dropdown" [(ngModel)]="selectedTeam" (change)="applyFilters()">
+            <option value="">All Teams</option>
+            <option *ngFor="let team of teamNames" [value]="team">{{ team }}</option>
+          </select>
           <input
             type="text"
-            class="big-search-input"
+            class="main-search-input"
             placeholder="Search templates..."
             [(ngModel)]="searchText"
             (keyup.enter)="applyFilters()"
@@ -140,6 +144,10 @@ import { TemplateHistoryComponent } from './template-history/template-history.co
                               <mat-icon>person</mat-icon>
                               <span>{{ version.author }}</span>
                             </div>
+                            <div class="template-meta" *ngIf="version.team_name">
+                              <mat-icon>group</mat-icon>
+                              <span>{{ version.team_name }}</span>
+                            </div>
                             <div class="template-meta" *ngIf="version.version_tag">
                               <mat-icon>sell</mat-icon>
                               <span>{{ version.version_tag }}</span>
@@ -201,8 +209,8 @@ import { TemplateHistoryComponent } from './template-history/template-history.co
                 <div class="list-view-header">
                   <div class="list-cell">Template Name</div>
                   <div class="list-cell">Author</div>
+                  <div class="list-cell">Team</div>
                   <div class="list-cell">Version</div>
-                  <div class="list-cell">Description</div>
                   <div class="list-cell">Date Created</div>
                   <div class="list-cell actions-header">Actions</div>
                 </div>
@@ -211,11 +219,11 @@ import { TemplateHistoryComponent } from './template-history/template-history.co
                       <span class="clickable-schema" (click)="viewSchemaVersions(version.name)">{{ version.name }}</span>
                     </div>
                     <div class="list-cell">{{ version.author || '-' }}</div>
+                    <div class="list-cell">{{ version.team_name || '-' }}</div>
                     <div class="list-cell">
                         <span class="version-tag" *ngIf="version.version_tag">{{ version.version_tag }}</span>
                         <span *ngIf="!version.version_tag">-</span>
                     </div>
-                    <div class="list-cell description-cell">{{ version.description || '-' }}</div>
                     <div class="list-cell date-cell">{{ version.created_at ? (version.created_at | date:'mediumDate') : '-' }}</div>
                     <div class="list-cell actions-cell">
                       <button mat-icon-button (click)="useTemplate(version.name)" matTooltip="Fill Out Form">
@@ -519,31 +527,50 @@ import { TemplateHistoryComponent } from './template-history/template-history.co
       border-radius: 1rem;
       box-shadow: 0 2px 8px var(--shadow-color-light);
     }
-    .big-search-input {
-      flex: 1 1 auto;
-      font-size: 1.25rem;
-      padding: 1.1rem 2.2rem 1.1rem 1.2rem; /* reduce right padding from 1.2rem to 2.2rem */
-      border-radius: 2rem;
-      border: 1.5px solid var(--border-color);
+    .filter-bar.team-search-bar {
+      display: flex;
+      align-items: center;
+      flex-direction: row;
+      width: 100%;
+      max-width: 100vw;
+      box-sizing: border-box;
+      gap: 0.75rem;
+      min-height: 48px;
+      padding: 0.5rem 0.5rem 0.5rem 0.5rem;
       background: var(--surface-color);
-      color: var(--text-color);
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .search-icon-btn {
-      margin-left: -4.5rem; /* was -3.2rem, shift button left less */
-      background: none;
-      border: none;
-      border-radius: 50%;
-      width: 2.5rem;
-      height: 2.5rem;
+    .team-dropdown {
+      flex: 0 0 260px;
+      max-width: 260px;
+      min-width: 120px;
+      height: 40px;
+      padding: 0 1rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border-color, #ccc);
+      font-size: 1rem;
+      background: var(--surface-color);
+      box-sizing: border-box;
+    }
+    .main-search-input {
+      flex: 1 1 0%;
+      min-width: 180px;
+      font-size: 1.1rem;
+      padding: 0 1rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border-color, #ccc);
+      background: var(--surface-color);
+      width: 100%;
+      box-sizing: border-box;
+      height: 40px;
+      vertical-align: middle;
+    }
+    .search-icon-btn, .advanced-toggle {
+      height: 40px;
+      min-width: 40px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.5rem;
-      color: var(--text-muted-color);
-      cursor: pointer;
-      z-index: 2;
+      margin: 0 0.25rem;
     }
     .search-emoji {
       font-size: 1.5rem;
@@ -764,9 +791,10 @@ import { TemplateHistoryComponent } from './template-history/template-history.co
 
     .list-view-header, .list-view-row {
       display: grid;
-      grid-template-columns: 2fr 1fr 1fr 2.5fr 1.5fr 1.5fr; /* Adjust column ratios */
-      gap: 1.5rem;
       align-items: center;
+      grid-template-columns: 2.5fr 1.5fr 1.5fr 1.2fr 1.7fr 1.7fr;
+      /* Template Name, Author, Team, Version, Date Created, Actions */
+      gap: 1.5rem;
       padding: 0.75rem 1.5rem;
       border-bottom: 1px solid var(--border-color);
     }
@@ -797,19 +825,14 @@ import { TemplateHistoryComponent } from './template-history/template-history.co
     }
 
     .list-cell {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      padding: 0.85rem 1.1rem;
+      font-size: 1.08rem;
+      color: var(--text-color);
     }
 
     .list-cell.name-cell .clickable-schema {
       font-weight: 600;
       color: var(--text-color);
-    }
-
-    .list-cell.description-cell {
-      color: var(--text-muted-color);
-      font-size: 0.95rem;
     }
 
     .list-cell.date-cell {
@@ -836,6 +859,19 @@ import { TemplateHistoryComponent } from './template-history/template-history.co
       justify-content: space-between;
       align-items: center;
     }
+    .team-search-bar {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .team-dropdown {
+      min-width: 160px;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border-color, #ccc);
+      font-size: 1rem;
+      background: var(--surface-color);
+    }
   `]
 })
 export class DashboardComponent implements OnInit, AfterViewInit {
@@ -852,6 +888,8 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   displayMode: 'list' | 'grid' | 'tabcard' = 'tabcard';
   tabPage = 0;
   searchText: string = '';
+  selectedTeam: string = '';
+  teamNames: string[] = ['Framework Team', 'PID Team'];
   advancedSearch: boolean = false;
   filterDescription: string = '';
   filterAuthor: string = '';
@@ -1036,6 +1074,9 @@ export class DashboardComponent implements OnInit, AfterViewInit {
         (t.author && t.author.toLowerCase().includes(search))
       );
     }
+    if (this.selectedTeam) {
+      filtered = filtered.filter(t => t.team_name === this.selectedTeam);
+    }
     if (this.advancedSearch) {
       if (this.filterDescription.trim()) {
         const desc = this.filterDescription.trim().toLowerCase();
@@ -1142,10 +1183,10 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   onDuplicateEdit(event: { template: string, submissionName: string }) {
     this.saveDashboardState();
-    this.mode = 'edit';
+    this.mode = 'use';
     this.selectedTemplate = event.template;
     this.prefillSubmissionName = event.submissionName;
-    this.modeHistory.push('edit');
+    this.modeHistory.push('use');
   }
 
   openDatePicker(input: HTMLInputElement) {

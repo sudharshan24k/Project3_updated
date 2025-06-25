@@ -9,6 +9,7 @@ export interface TemplateSchema {
     fields: any[];
   };
   author?: string;
+  team_name: string;
   version_tag?: string;
 }
 
@@ -17,6 +18,7 @@ export interface TemplateInfo {
   description: string;
   created_at: string;
   author?: string;
+  team_name: string;
   version_tag?: string;
 }
 
@@ -70,6 +72,7 @@ export class SchemaService {
             fields: template.fields
         },
         author: template.author,
+        team_name: template.team_name,
         version_tag: template.version
     };
     return this.http.post(`${this.apiUrl}/templates/`, payload);

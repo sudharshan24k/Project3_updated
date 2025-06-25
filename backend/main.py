@@ -65,6 +65,8 @@ async def create_template(template: TemplateModel = Body(...)):
     encoded_template["updated_at"] = datetime.datetime.utcnow()
     # Ensure author is present
     encoded_template["author"] = template.author if hasattr(template, 'author') else None
+    # Store team_name (required)
+    encoded_template["team_name"] = template.team_name if hasattr(template, 'team_name') else None
     # Store version_tag if provided (can only be set during creation)
     encoded_template["version_tag"] = template.version_tag if hasattr(template, 'version_tag') else None
     new_template = await template_collection.insert_one(encoded_template)
@@ -97,6 +99,7 @@ async def list_templates():
             "description": description,
             "created_at": t.get("created_at"),
             "author": t.get("author", None),
+            "team_name": t.get("team_name", None),
             "version_tag": t.get("version_tag", None)
         })
     return serialize_mongo(result)
@@ -242,7 +245,9 @@ async def rollback_template(name: str, version: int):
         created_at=current_template.get("updated_at"),
         author=current_template.get("author")
     )
-    await template_version_collection.insert_one(jsonable_encoder(version_data))
+    version_data_dict = jsonable_encoder(version_data)
+    version_data_dict.pop('_id', None)
+    await template_version_collection.insert_one(version_data_dict)
 
     # Restore the old version
     new_version_num = current_version_num + 1
