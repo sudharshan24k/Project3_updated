@@ -147,3 +147,4 @@ export class App {
     document.body.classList.toggle('dark-theme', this.isDarkTheme);
   }
 }
+
