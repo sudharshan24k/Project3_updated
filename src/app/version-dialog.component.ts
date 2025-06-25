@@ -21,8 +21,8 @@ export interface VersionDialogData {
         <textarea matInput [(ngModel)]="data.description" rows="3" placeholder="E.g. Added new field, fixed typo..."></textarea>
       </mat-form-field>
       <div class="action-group">
-        <button mat-raised-button color="primary" (click)="choose('update')">Update This Schema</button>
-        <button mat-stroked-button color="accent" (click)="choose('newVersion')">Create New Version</button>
+        <button mat-raised-button color="primary" (click)="choose('update')" [disabled]="!data.description || data.description.trim() === ''">Update This Schema</button>
+        <button mat-stroked-button color="accent" (click)="choose('newVersion')" [disabled]="!data.description || data.description.trim() === ''">Create New Version</button>
       </div>
     </mat-dialog-content>
     <mat-dialog-actions align="end">

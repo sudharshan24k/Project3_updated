@@ -74,6 +74,13 @@ import { MatExpansionModule } from '@angular/material/expansion';
             [(ngModel)]="filterAuthor"
             (input)="applyFilters()"
           >
+          <input
+            type="text"
+            class="filter-input"
+            placeholder="Version tag contains..."
+            [(ngModel)]="filterVersionTag"
+            (input)="applyFilters()"
+          >
           <div class="date-range-filter">
             <div class="date-input-group">
               <input #startDateInput type="date" class="filter-input" [(ngModel)]="filterStartDate" (change)="applyFilters()">
@@ -123,9 +130,19 @@ import { MatExpansionModule } from '@angular/material/expansion';
                         <div>
                           <h3>{{ version.name }}</h3>
                           <p class="template-desc" *ngIf="version.description">{{ version.description }}</p>
-                          <div class="template-meta" *ngIf="version.created_at">
-                            <mat-icon>calendar_today</mat-icon>
-                            <span>Created on {{ version.created_at | date:'mediumDate' }}</span>
+                          <div class="template-meta-container">
+                            <div class="template-meta" *ngIf="version.created_at">
+                              <mat-icon>calendar_today</mat-icon>
+                              <span>{{ version.created_at | date:'mediumDate' }}</span>
+                            </div>
+                            <div class="template-meta" *ngIf="version.author">
+                              <mat-icon>person</mat-icon>
+                              <span>{{ version.author }}</span>
+                            </div>
+                            <div class="template-meta" *ngIf="version.version_tag">
+                              <mat-icon>sell</mat-icon>
+                              <span>{{ version.version_tag }}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -169,32 +186,34 @@ import { MatExpansionModule } from '@angular/material/expansion';
               <mat-icon>chevron_right</mat-icon>
             </button>
           </div>
-          
           <mat-accordion *ngIf="!isLoading">
             <mat-expansion-panel *ngFor="let baseName of baseNames" [(expanded)]="expandedBase[baseName]">
-            
-            <mat-expansion-panel-header (click)="toggleExpand(baseName)">
+              <mat-expansion-panel-header (click)="toggleExpand(baseName)">
                 <mat-panel-title>
                   <mat-icon class="template-icon">folder</mat-icon>
                   <span class="base-name">{{ baseName }}</span>
                 </mat-panel-title>
               </mat-expansion-panel-header>
               <table class="template-list-table" *ngIf="groupedTemplates[baseName]?.length">
+                <thead>
+                  <tr>
+                    <th>Template Name</th>
+                    <th>Author</th>
+                    <th>Version</th>
+                    <th>Description</th>
+                    <th>Date Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
                 <tbody>
                   <tr *ngFor="let version of groupedTemplates[baseName]">
                     <td>
-                      <div class="template-title-group">
-                        <mat-icon class="template-icon" matTooltip="Form Template">description</mat-icon>
-                        <div>
-                          <h3 class="clickable-schema" (click)="viewSchemaVersions(version.name)">{{ version.name }}</h3>
-                          <p class="template-desc" *ngIf="version.description">{{ version.description }}</p>
-                          <div class="template-meta" *ngIf="version.created_at">
-                            <mat-icon>calendar_today</mat-icon>
-                            <span>Created on {{ version.created_at | date:'mediumDate' }}</span>
-                          </div>
-                        </div>
-                      </div>
+                      <span class="clickable-schema" (click)="viewSchemaVersions(version.name)">{{ version.name }}</span>
                     </td>
+                    <td>{{ version.author || '-' }}</td>
+                    <td>{{ version.version_tag || '-' }}</td>
+                    <td>{{ version.description || '-' }}</td>
+                    <td>{{ version.created_at ? (version.created_at | date:'mediumDate') : '-' }}</td>
                     <td class="actions">
                       <button mat-icon-button (click)="useTemplate(version.name)" matTooltip="Fill Out Form">
                         <mat-icon fontIcon="dynamic_form" class="action-icon"></mat-icon>
@@ -220,12 +239,12 @@ import { MatExpansionModule } from '@angular/material/expansion';
               </table>
             </mat-expansion-panel>
           </mat-accordion>
-        </ng-container>
-        <div *ngIf="baseNames.length === 0" class="card empty-state enhanced-card">
+          <div *ngIf="baseNames.length === 0" class="card empty-state enhanced-card">
             <mat-icon class="empty-illustration">search</mat-icon>
             <h4>No templates match your filters.</h4>
             <p>Try adjusting your search criteria.</p>
-        </div>
+          </div>
+        </ng-container>
       </div>
 
       <div *ngIf="isFormMode()">
@@ -329,10 +348,20 @@ import { MatExpansionModule } from '@angular/material/expansion';
     .template-meta {
         display: flex;
         align-items: center;
-        gap: 0.3rem;
+        gap: 0.4rem;
         color: var(--text-muted-color);
-        font-size: 0.95rem;
-        margin-top: 0.1rem;
+        font-size: 0.9rem;
+    }
+    .template-meta mat-icon {
+        font-size: 1rem;
+        height: 1rem;
+        width: 1rem;
+    }
+    .version-card .template-meta-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1.5rem; /* row-gap column-gap */
+      margin-top: 0.75rem;
     }
     .empty-state {
         text-align: center;
@@ -688,6 +717,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   filterAuthor: string = '';
   filterStartDate: string = '';
   filterEndDate: string = '';
+  filterVersionTag: string = '';
   tabWindowStart = 0;
   tabWindowSize = 6;
   isLoading = false;
@@ -716,7 +746,8 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       filterDescription: this.filterDescription,
       filterAuthor: this.filterAuthor,
       filterStartDate: this.filterStartDate,
-      filterEndDate: this.filterEndDate
+      filterEndDate: this.filterEndDate,
+      filterVersionTag: this.filterVersionTag
     }));
     sessionStorage.setItem('dashboardDisplayMode', this.displayMode);
     sessionStorage.setItem('dashboardTabWindowStart', this.tabWindowStart.toString());
@@ -739,6 +770,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       this.filterAuthor = advObj.filterAuthor;
       this.filterStartDate = advObj.filterStartDate;
       this.filterEndDate = advObj.filterEndDate;
+      this.filterVersionTag = advObj.filterVersionTag;
     }
     const mode = sessionStorage.getItem('dashboardDisplayMode');
     if (mode) this.displayMode = mode as any;
@@ -812,6 +844,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     this.filterAuthor = '';
     this.filterStartDate = '';
     this.filterEndDate = '';
+    this.filterVersionTag = '';
     sessionStorage.removeItem('dashboardSearch');
     sessionStorage.removeItem('dashboardAdvanced');
     this.applyFilters();
@@ -822,6 +855,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     this.filterAuthor = '';
     this.filterStartDate = '';
     this.filterEndDate = '';
+    this.filterVersionTag = '';
     sessionStorage.clear();
     this.applyFilters();
   }
@@ -868,6 +902,10 @@ export class DashboardComponent implements OnInit, AfterViewInit {
           const templateAuthor = (t.author || '').toLowerCase();
           return templateAuthor.includes(author);
         });
+      }
+      if (this.filterVersionTag.trim()) {
+        const versionTag = this.filterVersionTag.trim().toLowerCase();
+        filtered = filtered.filter(t => (t.version_tag || '').toLowerCase().includes(versionTag));
       }
       if (this.filterStartDate) {
         filtered = filtered.filter(t => {

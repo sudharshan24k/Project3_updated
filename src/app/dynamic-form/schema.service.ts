@@ -9,6 +9,7 @@ export interface TemplateSchema {
     fields: any[];
   };
   author?: string;
+  version_tag?: string;
 }
 
 export interface TemplateInfo {
@@ -16,6 +17,7 @@ export interface TemplateInfo {
   description: string;
   created_at: string;
   author?: string;
+  version_tag?: string;
 }
 
 export interface TemplateVersion {
@@ -66,13 +68,15 @@ export class SchemaService {
             description: template.description,
             fields: template.fields
         },
-        author: template.author
+        author: template.author,
+        version_tag: template.version
     };
     return this.http.post(`${this.apiUrl}/templates/`, payload);
   }
 
   updateTemplate(name: string, schema: any, change_log: string): Observable<any> {
     const payload = { schema, change_log };
+    // Note: version_tag field is intentionally excluded from updates to prevent modification
     return this.http.put(`${this.apiUrl}/templates/${name}`, payload);
   }
 

@@ -65,6 +65,8 @@ async def create_template(template: TemplateModel = Body(...)):
     encoded_template["updated_at"] = datetime.datetime.utcnow()
     # Ensure author is present
     encoded_template["author"] = template.author if hasattr(template, 'author') else None
+    # Store version_tag if provided (can only be set during creation)
+    encoded_template["version_tag"] = template.version_tag if hasattr(template, 'version_tag') else None
     new_template = await template_collection.insert_one(encoded_template)
     
     # Also create the first version in history
@@ -93,7 +95,8 @@ async def list_templates():
             "name": t.get("name"),
             "description": description,
             "created_at": t.get("created_at"),
-            "author": t.get("author", None)
+            "author": t.get("author", None),
+            "version_tag": t.get("version_tag", None)
         })
     return serialize_mongo(result)
 

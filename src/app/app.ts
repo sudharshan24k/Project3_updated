@@ -13,9 +13,20 @@ import { CommonModule } from '@angular/common';
       <h1>Dynamic Form Builder</h1>
       
       <div class="header-right">
-        <button (click)="toggleTheme()" mat-icon-button matTooltip="Toggle Light/Dark Mode" class="theme-toggle-button">
-          <mat-icon>{{ isDarkTheme ? 'dark_mode' : 'light_mode' }}</mat-icon>
-        </button>
+<button
+  (click)="toggleTheme()"
+  mat-raised-button
+  color="accent"
+  class="theme-toggle-chip"
+  aria-label="Toggle Light/Dark Mode"
+>
+  <mat-icon class="theme-icon">
+    {{ isDarkTheme ? 'dark_mode' : 'light_mode' }}
+  </mat-icon>
+  <span>{{ isDarkTheme ? 'Dark' : 'Light' }}</span>
+</button>
+
+
         <span class="datetime">{{ currentDateTime | date:'medium' }}</span>
       </div>
     </header>
@@ -51,17 +62,38 @@ import { CommonModule } from '@angular/common';
       font-weight: 400;
     }
 
-    .theme-toggle-button {
-      color: var(--on-primary-color);
-      background-color: rgba(255, 255, 255, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      border-radius: 50%;
-    }
+.theme-toggle-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 1rem;
+  border-radius: 2rem;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.theme-toggle-chip:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.theme-toggle-chip:active {
+  transform: scale(0.95);
+}
+
+.theme-icon {
+  font-size: 20px;
+}
+
+
 
     .header-right {
       display: flex;
       align-items: center;
       gap: 1rem;
+      margin-right: 3rem;
     }
 
     .datetime {

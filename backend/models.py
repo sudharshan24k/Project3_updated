@@ -21,6 +21,7 @@ class TemplateModel(BaseModel):
     id: Optional[Any] = Field(alias="_id", default=None)
     name: str = Field(...)
     version: int = Field(default=1)
+    version_tag: Optional[str] = Field(default=None)
     schema: Optional[Dict[str, Any]] = Field(default=None)
     author: Optional[str] = Field(default=None)
     created_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)

@@ -158,6 +158,11 @@ import { MatInput } from '@angular/material/input';
               <label>Author Name</label>
               <input [(ngModel)]="schema.author" placeholder="Author of this template" [ngModelOptions]="{standalone: true}">
             </div>
+            <div class="form-field" *ngIf="mode === 'create'">
+              <label>Version Tag</label>
+              <input [(ngModel)]="schema.version" placeholder="e.g., v1.0, beta, stable" [ngModelOptions]="{standalone: true}">
+              <small class="field-help">Version tag can only be set during creation and cannot be changed later.</small>
+            </div>
 
             <hr class="section-divider">
 
@@ -1270,6 +1275,13 @@ import { MatInput } from '@angular/material/input';
         font-size: 0.8rem;
         color: #aaa;
     }
+    
+    .field-help {
+      color: #666;
+      font-size: 0.85rem;
+      margin-top: 0.25rem;
+      font-style: italic;
+    }
   `]
 })
 export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
@@ -1280,7 +1292,7 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
 
   form: FormGroup;
   fieldForm: FormGroup;
-  schema: any = { name: '', description: '', fields: [] };
+  schema: any = { name: '', description: '', fields: [], version: '' };
   isLoading = false;
   isReadOnly = false;
   isEditMode = false;
@@ -1503,7 +1515,7 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       case 'create':
         this.title = 'Create New Template';
         this.submitButtonText = 'Save Template';
-        this.schema = { name: '', description: '', fields: [] };
+        this.schema = { name: '', description: '', fields: [], version: '' };
         this.buildForm();
         break;
       case 'edit':
