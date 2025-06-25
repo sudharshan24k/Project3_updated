@@ -200,6 +200,19 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
     });
   }
 
+// duplicateAndEdit(submissionName: string) {
+//   if (!this.templateName) return;
+
+//   this.schemaService.duplicateSubmissionByName(this.templateName, submissionName).subscribe(response => {
+//     const newSubmissionName = response && response.submission_name ? response.submission_name : submissionName;
+//     // Emit event to parent to open the form filler with prefilled data
+//     this.duplicateEdit.emit({
+//       template: this.templateName!,
+//       submissionName: newSubmissionName
+//     });
+//   });
+// }
+
   deleteSubmission(submissionName: string) {
     if (!this.templateName) return;
     if (confirm('Are you sure you want to delete this submission?')) {

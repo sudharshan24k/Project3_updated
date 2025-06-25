@@ -38,7 +38,7 @@ import { MatInput } from '@angular/material/input';
           <p class="form-subtitle" *ngIf="schema.description">{{ schema.description }}</p>
         </div>
         <div class="header-actions">
-           <button *ngIf="isEditMode" type="submit" [disabled]="!isFormValid()" mat-raised-button>
+           <button *ngIf="isEditMode" type="submit" [disabled]="!isFormValid()" mat-raised-button (click)="onSubmit()">
              <mat-icon>save</mat-icon> {{ submitButtonText }}
            </button>
            <button *ngIf="!isEditMode && mode !== 'preview'" type="submit" [disabled]="form.invalid" mat-raised-button>
@@ -327,8 +327,7 @@ import { MatInput } from '@angular/material/input';
                   <h6 class="section-heading"><mat-icon>list</mat-icon> Dropdown Options</h6>
                   <div formArrayName="options">
                      <div *ngFor="let option of options.controls; let i = index" [formGroupName]="i" class="option-item">
-                      <input formControlName="label" placeholder="Option Label">
-                      <input formControlName="value" placeholder="Option Value">
+                      <input formControlName="label" placeholder="Option Text" (input)="syncOptionLabelValue(i)">
                       <button type="button" class="action-delete" (click)="removeOption(i)" mat-icon-button matTooltip="Remove Option">
                         <mat-icon>remove_circle_outline</mat-icon>
                       </button>
@@ -345,8 +344,7 @@ import { MatInput } from '@angular/material/input';
                   <h6 class="section-heading"><mat-icon>list</mat-icon> MCQ Options</h6>
                   <div formArrayName="options">
                      <div *ngFor="let option of options.controls; let i = index" [formGroupName]="i" class="option-item">
-                      <input formControlName="label" placeholder="Option Label">
-                      <input formControlName="value" placeholder="Option Value">
+                      <input formControlName="label" placeholder="Option Text" (input)="syncOptionLabelValue(i)">
                       <button type="button" class="action-delete" (click)="removeOption(i)" mat-icon-button matTooltip="Remove Option">
                         <mat-icon>remove_circle_outline</mat-icon>
                       </button>
@@ -361,7 +359,7 @@ import { MatInput } from '@angular/material/input';
                 <!-- Key-Value Pairs Section -->
                 <div *ngIf="fieldForm.get('type')?.value === 'keyvalue'" class="form-field span-2">
                   <label>Default Keys (comma separated)</label>
-                  <input [(ngModel)]="fieldForm.value.initialKeys" placeholder="e.g. key1, key2, key3" [ngModelOptions]="{standalone: true}">
+                  <input formControlName="initialKeys" placeholder="e.g. key1, key2, key3">
                 </div>
 
                 <!-- Conditional Logic Section -->
@@ -1431,7 +1429,8 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       defaultValue: [null],
       editable: [true],
       regex: [''],
-      options: this.fb.array([])
+      options: this.fb.array([]),
+      initialKeys: ['']
     });
     this.fieldForm.get('type')?.valueChanges.subscribe(type => {
       if (type === 'dropdown') {
@@ -1702,6 +1701,22 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
     if (field.type === 'dropdown' && field.options) {
       field.options.forEach((opt: any) => this.options.push(this.fb.group(opt)));
     }
+      // Fix for keyvalue: show default keys as comma-separated string
+    if (field.type === 'keyvalue' && field.initialKeys) {
+      console.log('Initial keys:', field.initialKeys);
+      const keysString = Array.isArray(field.initialKeys)
+        ? field.initialKeys.join(',')
+        : field.initialKeys;
+      this.fieldForm.patchValue({ initialKeys: keysString });
+    }
+    if (field.options && Array.isArray(field.options)) {
+    field.options.forEach((opt: any) => {
+      this.options.push(this.fb.group({
+        label: [opt.label, Validators.required],
+        value: [opt.value, Validators.required]
+      }));
+    });
+  }
     // Sync conditional logic fields
 
     this.visibleIfKey = field.visibleIf?.key || null;
