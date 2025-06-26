@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
 
 export interface TemplateSchema {
   name: string;
@@ -20,6 +20,7 @@ export interface TemplateInfo {
   author?: string;
   team_name: string;
   version_tag?: string;
+  audit_pipeline?: string;
 }
 
 export interface TemplateVersion {
@@ -157,5 +158,16 @@ export class SchemaService {
   // Add downloadSubmissionByName using templateName and submissionName
   downloadSubmissionByName(templateName: string, submissionName: string): Observable<Submission> {
     return this.http.get<Submission>(`${this.apiUrl}/submissions/${templateName}/by-name/${submissionName}`);
+  }
+
+  sendSubmissionByEmail(templateName: string, submissionName: string, email: string): Observable<any> {
+    const payload = {
+      template_name: templateName,
+      submission_name: submissionName,
+      email: email,
+    };
+    // This will be replaced with a real API call
+    console.log('Sending email with payload:', payload);
+    return of({ success: true, message: 'Email sent successfully (mocked).' });
   }
 }

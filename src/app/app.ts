@@ -10,7 +10,7 @@ import { CommonModule } from '@angular/common';
   imports: [CommonModule, RouterOutlet, MatIconModule, MatButtonModule],
   template: `
     <header class="app-header">
-      <h1>Dynamic Form Builder</h1>
+      <h1>Config File Generator</h1>
       
       <div class="header-right">
 <button

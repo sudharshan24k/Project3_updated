@@ -19,8 +19,9 @@ import { MatDialog } from '@angular/material/dialog';
 import { VersionDialogComponent, VersionDialogData } from '../version-dialog.component';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { MatAutocompleteModule, MatAutocomplete, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
-import { Observable, startWith, map } from 'rxjs';
+import { Observable, startWith, map, takeUntil } from 'rxjs';
 import { MatInput } from '@angular/material/input';
+import { Subject } from 'rxjs';
 
 @Component({
   selector: 'app-dynamic-form',
@@ -168,10 +169,26 @@ import { MatInput } from '@angular/material/input';
             </div>
             <div class="form-field" *ngIf="mode === 'create'">
               <label>Team Name</label>
-              <mat-select [(ngModel)]="schema.team_name" [ngModelOptions]="{standalone: true}" required placeholder="Select team">
-                <mat-option *ngFor="let team of teamNames" [value]="team">{{ team }}</mat-option>
-              </mat-select>
-              <small class="field-help">Team name is required and cannot be changed later.</small>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Select or enter team</mat-label>
+                <input type="text"
+                       placeholder="Select or enter team"
+                       aria-label="Team Name"
+                       matInput
+                       [formControl]="teamNameCtrl"
+                       [matAutocomplete]="autoTeam">
+                <mat-autocomplete #autoTeam="matAutocomplete">
+                  <mat-option *ngFor="let team of filteredTeamNames$ | async" [value]="team">
+                    {{team}}
+                  </mat-option>
+                </mat-autocomplete>
+              </mat-form-field>
+              <small class="field-help">Select an existing team or type a new one. Team name is required and cannot be changed later.</small>
+            </div>
+            <div class="form-field" *ngIf="mode === 'create'">
+              <label>Audit Pipeline</label>
+              <input [(ngModel)]="schema.audit_pipeline" placeholder="Enter audit pipeline name" [ngModelOptions]="{standalone: true}" required>
+              <small class="field-help">This field is mandatory.</small>
             </div>
             <div class="form-field" *ngIf="mode === 'create'">
               <label>Version Tag</label>
@@ -1306,7 +1323,7 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
 
   form: FormGroup;
   fieldForm: FormGroup;
-  schema: any = { name: '', description: '', fields: [], version: '' };
+  schema: any = { name: '', description: '', fields: [], version: '', team_name: '', audit_pipeline: '' };
   isLoading = false;
   isReadOnly = false;
   isEditMode = false;
@@ -1347,6 +1364,10 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
   @ViewChild('templateInput') templateInput!: ElementRef<HTMLInputElement>;
 
   teamNames: string[] = ['Framework Team', 'PID Team'];
+  teamNameCtrl = new FormControl('');
+  filteredTeamNames$: Observable<string[]>;
+
+  private destroy$ = new Subject<void>();
 
   // --- Add for dynamic conditional logic ---
   get visibleFields() {
@@ -1455,6 +1476,19 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       startWith(''),
       map(value => this._filterTemplates(value))
     );
+
+    this.filteredTeamNames$ = this.teamNameCtrl.valueChanges.pipe(
+      startWith(''),
+      map(value => this._filterTeamNames(value || '')),
+    );
+
+    this.teamNameCtrl.valueChanges.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(value => {
+      if (this.schema) {
+        this.schema.team_name = value;
+      }
+    });
   }
 
   ngOnInit() {
@@ -1535,7 +1569,8 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
     if (this.mode === 'create') {
       this.title = 'Create New Template';
       this.submitButtonText = 'Save Template';
-      this.schema = { name: '', description: '', fields: [], version: '' };
+      this.schema = { name: '', description: '', fields: [], version: '', team_name: '', audit_pipeline: '' };
+      this.teamNameCtrl.setValue(this.schema.team_name || '', { emitEvent: false });
       this.buildForm();
     } else if (this.templateName) {
       if (this.prefillSubmissionName) {
@@ -2060,5 +2095,10 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       validators.push(Validators.pattern(field.regex));
     }
     return validators;
+  }
+
+  private _filterTeamNames(value: string): string[] {
+    const filterValue = value.toLowerCase();
+    return this.teamNames.filter(team => team.toLowerCase().includes(filterValue));
   }
 }

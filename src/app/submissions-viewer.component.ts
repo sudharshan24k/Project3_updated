@@ -9,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { ResponseNameDialogComponent } from './response-name-dialog.component';
+import { EmailDialogComponent } from './email-dialog.component';
 
 @Component({
   selector: 'app-submissions-viewer',
@@ -202,5 +203,27 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
         }
       });
     }
+  }
+
+  sendSubmissionByEmail(submissionName: string): void {
+    const dialogRef = this.dialog.open(EmailDialogComponent, {
+      width: '400px',
+      data: { submissionName }
+    });
+
+    dialogRef.afterClosed().subscribe(email => {
+      if (email && this.templateName) {
+        this.schemaService.sendSubmissionByEmail(this.templateName, submissionName, email).subscribe({
+          next: () => {
+            // Can use success animation service here if you want
+            alert('Submission sent successfully!');
+          },
+          error: (err: any) => {
+            console.error('Failed to send submission:', err);
+            alert('Failed to send submission. See console for details.');
+          }
+        });
+      }
+    });
   }
 }

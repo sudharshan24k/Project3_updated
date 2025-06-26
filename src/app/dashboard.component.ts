@@ -148,6 +148,10 @@ import { TemplateHistoryComponent } from './template-history/template-history.co
                               <mat-icon>group</mat-icon>
                               <span>{{ version.team_name }}</span>
                             </div>
+                            <div class="template-meta" *ngIf="version.audit_pipeline">
+                              <mat-icon>assignment</mat-icon>
+                              <span>{{ version.audit_pipeline }}</span>
+                            </div>
                             <div class="template-meta" *ngIf="version.version_tag">
                               <mat-icon>sell</mat-icon>
                               <span>{{ version.version_tag }}</span>
@@ -210,7 +214,8 @@ import { TemplateHistoryComponent } from './template-history/template-history.co
                   <div class="list-cell">Template Name</div>
                   <div class="list-cell">Author</div>
                   <div class="list-cell">Team</div>
-                  <div class="list-cell">Version</div>
+                  <div class="list-cell">FW_Version</div>
+                  <div class="list-cell">Audit Pipeline</div>
                   <div class="list-cell">Date Created</div>
                   <div class="list-cell actions-header">Actions</div>
                 </div>
@@ -224,6 +229,7 @@ import { TemplateHistoryComponent } from './template-history/template-history.co
                         <span class="version-tag" *ngIf="version.version_tag">{{ version.version_tag }}</span>
                         <span *ngIf="!version.version_tag">-</span>
                     </div>
+                    <div class="list-cell">{{ version.audit_pipeline || '-' }}</div>
                     <div class="list-cell date-cell">{{ version.created_at ? (version.created_at | date:'mediumDate') : '-' }}</div>
                     <div class="list-cell actions-cell">
                       <button mat-icon-button (click)="useTemplate(version.name)" matTooltip="Fill Out Form">
@@ -285,6 +291,13 @@ import { TemplateHistoryComponent } from './template-history/template-history.co
           </button>
         </header>
         <app-template-history [templateName]="selectedTemplate"></app-template-history>
+      </div>
+
+      <div class="dashboard-footer">
+        <button mat-stroked-button (click)="navigateToHelpdesk()">
+          <mat-icon>help_outline</mat-icon>
+          <span>Helpdesk</span>
+        </button>
       </div>
     </div>
   `,
@@ -786,51 +799,58 @@ import { TemplateHistoryComponent } from './template-history/template-history.co
     .list-view-table {
       display: flex;
       flex-direction: column;
-      padding: 0.5rem 1rem 1.5rem 1rem;
     }
 
     .list-view-header, .list-view-row {
       display: grid;
+      grid-template-columns: 3fr 1fr 1.5fr 1fr 1.5fr 1.5fr minmax(150px, auto);
+      gap: 1rem;
       align-items: center;
-      grid-template-columns: 2.5fr 1.5fr 1.5fr 1.2fr 1.7fr 1.7fr;
-      /* Template Name, Author, Team, Version, Date Created, Actions */
-      gap: 1.5rem;
-      padding: 0.75rem 1.5rem;
       border-bottom: 1px solid var(--border-color);
+      padding: 0.5rem 1rem;
     }
 
     .list-view-header {
       font-weight: 600;
-      color: var(--text-muted-color);
-      font-size: 0.95rem;
+      color: var(--text-secondary-color);
+      font-size: 0.9em;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      padding-bottom: 1rem;
-    }
-
-    .list-view-row {
-      background: var(--surface-color);
-      transition: background-color 0.2s, box-shadow 0.2s, transform 0.2s;
-      border-radius: 8px;
     }
 
     .list-view-row:hover {
-      background-color: var(--primary-color-lightest);
-      box-shadow: 0 2px 8px var(--shadow-color-light);
-      transform: translateY(-2px);
-    }
-
-    .list-view-row:last-child {
-      border-bottom: none;
+      background-color: var(--surface-hover-color);
     }
 
     .list-cell {
-      padding: 0.85rem 1.1rem;
-      font-size: 1.08rem;
-      color: var(--text-color);
+      padding: 0.5rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    .list-cell.name-cell .clickable-schema {
+    /* Center-align specific columns as requested */
+    .list-cell:nth-child(2),
+    .list-cell:nth-child(3),
+    .list-cell:nth-child(4),
+    .list-cell:nth-child(5),
+    .list-cell:nth-child(6) {
+      text-align: center;
+    }
+
+    .list-cell.actions-cell, .list-cell.actions-header {
+      overflow: visible;
+      white-space: normal;
+      display: flex;
+      justify-content: center; /* Center align actions */
+      gap: 0.25rem;
+    }
+
+    .actions-header {
+      justify-content: center;
+      display: flex;
+    }
+
+    .clickable-schema {
       font-weight: 600;
       color: var(--text-color);
     }
@@ -849,16 +869,6 @@ import { TemplateHistoryComponent } from './template-history/template-history.co
         color: var(--on-secondary-color);
     }
 
-    .list-cell.actions-cell, .list-cell.actions-header {
-      text-align: right;
-      justify-content: center;
-      display: flex;
-    }
-    .list-cell.actions-cell {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
     .team-search-bar {
       display: flex;
       align-items: center;
@@ -871,6 +881,13 @@ import { TemplateHistoryComponent } from './template-history/template-history.co
       border: 1px solid var(--border-color, #ccc);
       font-size: 1rem;
       background: var(--surface-color);
+    }
+    .dashboard-footer {
+      display: flex;
+      justify-content: center;
+      padding: 2rem 0;
+      border-top: 1px solid var(--border-color);
+      margin-top: 2rem;
     }
   `]
 })
@@ -1220,10 +1237,14 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   }
 
   deleteTemplate(template: string) {
-    if (confirm(`Are you sure you want to delete the template '${template}'?`)) {
+    if (confirm(`Are you sure you want to delete ${template}? This will delete all versions and submissions.`)) {
       this.schemaService.deleteTemplate(template).subscribe(() => {
         this.loadTemplates();
       });
     }
+  }
+
+  navigateToHelpdesk() {
+    this.router.navigate(['/helpdesk']);
   }
 }

@@ -41,6 +41,9 @@
                     <button mat-icon-button (click)="duplicateAndEdit(sub.submission_name || '')" matTooltip="Duplicate & Edit">
                       <mat-icon>content_copy</mat-icon>
                     </button>
+                    <button mat-icon-button (click)="sendSubmissionByEmail(sub.submission_name || '')" matTooltip="Send by Email">
+                      <mat-icon>email</mat-icon>
+                    </button>
                     <button mat-icon-button (click)="deleteSubmission(sub.submission_name || '')" matTooltip="Delete Version" class="delete-btn">
                       <mat-icon>delete</mat-icon>
                     </button>
