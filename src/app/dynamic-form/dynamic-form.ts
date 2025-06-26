@@ -1976,6 +1976,8 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
             this.schema.description = tmpl.schema.description || '';
             this.isImporting = true;
             this.isLoading = false;
+            this.buildForm(); // Rebuild the form after importing
+            this.cdr.detectChanges(); // Force UI update if needed
           });
       }
   }

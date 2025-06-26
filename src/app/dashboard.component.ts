@@ -86,6 +86,13 @@ import { TemplateHistoryComponent } from './template-history/template-history.co
             [(ngModel)]="filterVersionTag"
             (input)="applyFilters()"
           >
+          <input
+            type="text"
+            class="filter-input"
+            placeholder="Audit pipeline contains..."
+            [(ngModel)]="filterAuditPipeline"
+            (input)="applyFilters()"
+          >
           <div class="date-range-filter">
             <div class="date-input-group">
               <input #startDateInput type="date" class="filter-input" [(ngModel)]="filterStartDate" (change)="applyFilters()">
@@ -803,7 +810,7 @@ import { TemplateHistoryComponent } from './template-history/template-history.co
 
     .list-view-header, .list-view-row {
       display: grid;
-      grid-template-columns: 3fr 1fr 1.5fr 1fr 1.5fr 1.5fr minmax(150px, auto);
+      grid-template-columns: 1.2fr 1fr 1fr 1fr 1.5fr 1.5fr minmax(150px, auto);
       gap: 1rem;
       align-items: center;
       border-bottom: 1px solid var(--border-color);
@@ -816,7 +823,9 @@ import { TemplateHistoryComponent } from './template-history/template-history.co
       font-size: 0.9em;
       text-transform: uppercase;
     }
-
+    .list-view-header .list-cell {
+      text-align: left !important;
+    }
     .list-view-row:hover {
       background-color: var(--surface-hover-color);
     }
@@ -913,6 +922,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   filterStartDate: string = '';
   filterEndDate: string = '';
   filterVersionTag: string = '';
+  filterAuditPipeline: string = '';
   tabWindowStart = 0;
   tabWindowSize = 6;
   isLoading = false;
@@ -942,7 +952,8 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       filterAuthor: this.filterAuthor,
       filterStartDate: this.filterStartDate,
       filterEndDate: this.filterEndDate,
-      filterVersionTag: this.filterVersionTag
+      filterVersionTag: this.filterVersionTag,
+      filterAuditPipeline: this.filterAuditPipeline
     }));
     sessionStorage.setItem('dashboardDisplayMode', this.displayMode);
     sessionStorage.setItem('dashboardTabWindowStart', this.tabWindowStart.toString());
@@ -966,6 +977,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       this.filterStartDate = advObj.filterStartDate;
       this.filterEndDate = advObj.filterEndDate;
       this.filterVersionTag = advObj.filterVersionTag;
+      this.filterAuditPipeline = advObj.filterAuditPipeline;
     }
     const mode = sessionStorage.getItem('dashboardDisplayMode');
     if (mode) this.displayMode = mode as any;
@@ -1046,6 +1058,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     this.filterStartDate = '';
     this.filterEndDate = '';
     this.filterVersionTag = '';
+    this.filterAuditPipeline = '';
     sessionStorage.removeItem('dashboardSearch');
     sessionStorage.removeItem('dashboardAdvanced');
     this.applyFilters();
@@ -1057,6 +1070,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     this.filterStartDate = '';
     this.filterEndDate = '';
     this.filterVersionTag = '';
+    this.filterAuditPipeline = '';
     sessionStorage.clear();
     this.applyFilters();
   }
@@ -1110,6 +1124,10 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       if (this.filterVersionTag.trim()) {
         const versionTag = this.filterVersionTag.trim().toLowerCase();
         filtered = filtered.filter(t => (t.version_tag || '').toLowerCase().includes(versionTag));
+      }
+      if (this.filterAuditPipeline.trim()) {
+        const auditPipeline = this.filterAuditPipeline.trim().toLowerCase();
+        filtered = filtered.filter(t => (t.audit_pipeline || '').toLowerCase().includes(auditPipeline));
       }
       if (this.filterStartDate) {
         filtered = filtered.filter(t => {
