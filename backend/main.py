@@ -507,7 +507,7 @@ async def delete_submission_by_name(template_name: str, submission_name: str):
 
 # --- New: Get submission by submission_name ---
 @app.get("/submissions/by-name/{submission_name}", response_description="Get a submission by submission_name")
-async def get_submission_by_name(submission_name: str):
+async def get_submission_by_name_global(submission_name: str):
     submission = await submission_collection.find_one({"submission_name": submission_name})
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found.")
@@ -526,7 +526,7 @@ async def get_submission_by_name(submission_name: str):
 
 # --- New: Download submission by submission_name ---
 @app.get("/submissions/by-name/{submission_name}/download", response_description="Download a submission by submission_name")
-async def download_submission_by_name(submission_name: str):
+async def download_submission_by_name_global(submission_name: str):
     submission = await submission_collection.find_one({"submission_name": submission_name})
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found.")
@@ -534,7 +534,7 @@ async def download_submission_by_name(submission_name: str):
 
 # --- New: Duplicate submission by submission_name ---
 @app.post("/submissions/by-name/{submission_name}/duplicate", response_description="Duplicate a submission by submission_name")
-async def duplicate_submission_by_name(submission_name: str):
+async def duplicate_submission_by_name_global(submission_name: str):
     original = await submission_collection.find_one({"submission_name": submission_name})
     if not original:
         raise HTTPException(status_code=404, detail="Submission not found.")
@@ -567,7 +567,7 @@ async def duplicate_submission_by_name(submission_name: str):
 
 # --- New: Delete submission by submission_name ---
 @app.delete("/submissions/by-name/{submission_name}", response_description="Delete a submission by submission_name")
-async def delete_submission_by_name(submission_name: str):
+async def delete_submission_by_name_global(submission_name: str):
     submission = await submission_collection.find_one({"submission_name": submission_name})
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found.")

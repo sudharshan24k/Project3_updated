@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -132,14 +132,21 @@ box-shadow: 0 4px 20px var(--shadow-color-dark);
     }
   `],
 })
-export class App {
+export class App implements OnDestroy {
   isDarkTheme = false;
   currentDateTime = new Date();
+  private intervalId: any;
 
   constructor() {
-    setInterval(() => {
+    this.intervalId = setInterval(() => {
       this.currentDateTime = new Date();
     }, 1000);
+  }
+
+  ngOnDestroy() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+    }
   }
 
   toggleTheme() {
