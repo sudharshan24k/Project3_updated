@@ -10,11 +10,13 @@ import { Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { ResponseNameDialogComponent } from './response-name-dialog.component';
 import { EmailDialogComponent } from './email-dialog.component';
+import { AnimatedPopupComponent } from './animated-popup.component';
+import { InteractiveDialogComponent } from './interactive-dialog.component';
 
 @Component({
   selector: 'app-submissions-viewer',
   standalone: true,
-  imports: [CommonModule, FormsModule, DiffViewerComponent, MatIconModule, MatTooltipModule, MatButtonModule],
+  imports: [CommonModule, FormsModule, DiffViewerComponent, MatIconModule, MatTooltipModule, MatButtonModule, AnimatedPopupComponent],
   templateUrl: './submissions-viewer.component.html',
   styleUrls: ['./submissions-viewer.component.scss'],
 })
@@ -34,6 +36,10 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
   newSchema: any[] = [];
   @Output() duplicateEdit = new EventEmitter<{ template: string, submissionName: string }>();
   newResponseContent: string = '';
+
+  popupMessage: string = '';
+  popupType: 'success' | 'error' | 'airplane' = 'success';
+  popupVisible = false;
 
   constructor(private schemaService: SchemaService, private router: Router, private dialog: MatDialog) {}
 
@@ -92,7 +98,17 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
     for (const key in data) {
       if (Object.prototype.hasOwnProperty.call(data, key)) {
         const value = data[key];
-        confContent += `  ${key} = "${value}"\n`;
+        // Handle keyvalue type: array of {key, value} objects
+        if (Array.isArray(value) && value.length && value[0] && typeof value[0] === 'object' && 'key' in value[0] && 'value' in value[0]) {
+          // Convert to object {k1: v1, k2: v2, ...}
+          const obj: any = {};
+          value.forEach((pair: any) => {
+            if (pair.key !== undefined) obj[pair.key] = pair.value !== undefined ? pair.value : '';
+          });
+          confContent += `  ${key} = ${JSON.stringify(obj)}\n`;
+        } else {
+          confContent += `  ${key} = "${value}"\n`;
+        }
       }
     }
     return confContent;
@@ -190,21 +206,31 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
     });
   }
 
-  deleteSubmission(submissionName: string) {
+  // Replace confirm in deleteSubmission
+  async deleteSubmission(submissionName: string) {
     if (!this.templateName) return;
-    if (confirm('Are you sure you want to delete this submission?')) {
+    const dialogRef = this.dialog.open(InteractiveDialogComponent, {
+      width: '350px',
+      data: {
+        title: 'Delete Submission',
+        message: 'Are you sure you want to delete this submission?',
+        type: 'confirm'
+      }
+    });
+    const result = await dialogRef.afterClosed().toPromise();
+    if (result) {
       this.schemaService.deleteSubmissionByName(this.templateName, submissionName).subscribe(() => {
         this.loadSubmissions();
         if (this.selectedSubmissionName === submissionName) {
           this.selectedSubmissionName = null;
           this.selectedSubmission = null;
-          this.selectedSubmissionData = null;
-          this.formattedSubmissionData = null;
         }
+        this.showPopup('Submission deleted successfully!', 'success');
       });
     }
   }
 
+  // Replace alert in sendSubmissionByEmail
   sendSubmissionByEmail(submissionName: string): void {
     const dialogRef = this.dialog.open(EmailDialogComponent, {
       width: '400px',
@@ -215,15 +241,26 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
       if (email && this.templateName) {
         this.schemaService.sendSubmissionByEmail(this.templateName, submissionName, email).subscribe({
           next: () => {
-            // Can use success animation service here if you want
-            alert('Submission sent successfully!');
+            this.showPopup('Submission sent successfully!', 'airplane');
           },
           error: (err: any) => {
             console.error('Failed to send submission:', err);
-            alert('Failed to send submission. See console for details.');
+            this.showPopup('Failed to send submission. See console for details.', 'error');
           }
         });
       }
     });
+  }
+
+  showPopup(message: string, type: 'success' | 'error' | 'airplane' = 'success') {
+    this.popupMessage = message;
+    this.popupType = type;
+    this.popupVisible = true;
+    setTimeout(() => {
+      this.popupVisible = false;
+      if (type === 'airplane') {
+        window.location.reload(); // Refresh for important event
+      }
+    }, 1800);
   }
 }

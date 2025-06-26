@@ -22,11 +22,12 @@ import { MatAutocompleteModule, MatAutocomplete, MatAutocompleteSelectedEvent } 
 import { Observable, startWith, map, takeUntil } from 'rxjs';
 import { MatInput } from '@angular/material/input';
 import { Subject } from 'rxjs';
+import { AnimatedPopupComponent } from '../animated-popup.component';
 
 @Component({
   selector: 'app-dynamic-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatSelectModule, MatCheckboxModule, MatCardModule, NgIf, NgFor, MatIconModule, MatTooltipModule, MatRadioModule, MatSlideToggleModule, DragDropModule, MatAutocompleteModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatSelectModule, MatCheckboxModule, MatCardModule, NgIf, NgFor, MatIconModule, MatTooltipModule, MatRadioModule, MatSlideToggleModule, DragDropModule, MatAutocompleteModule, AnimatedPopupComponent],
   template: `
     <div class="dynamic-form-container">
       <header class="page-header">
@@ -67,17 +68,37 @@ import { Subject } from 'rxjs';
                    [ngClass]="{'no-line': field.type === 'mcq_multiple' || field.type === 'boolean'}">
                 <ng-container [ngSwitch]="field.type">
                   <input *ngSwitchCase="'text'" matInput [formControlName]="field.key" [placeholder]="field.placeholder || 'Enter ' + field.label" [readonly]="isReadOnly || !field.editable" class="input-vertical modern-placeholder" />
+                  <div *ngIf="form.get(field.key)?.invalid && (form.get(field.key)?.touched || form.get(field.key)?.dirty)" class="error-message">
+                    <span *ngIf="form.get(field.key)?.errors?.['required']">This field is required.</span>
+                    <span *ngIf="form.get(field.key)?.errors?.['pattern']">Invalid format.</span>
+                  </div>
                   <input *ngSwitchCase="'number'" matInput type="number" [formControlName]="field.key" [placeholder]="field.placeholder || 'Enter ' + field.label" [readonly]="isReadOnly || !field.editable" class="input-vertical modern-placeholder" />
+                  <div *ngIf="form.get(field.key)?.invalid && (form.get(field.key)?.touched || form.get(field.key)?.dirty) && field.type === 'number'" class="error-message">
+                    <span *ngIf="form.get(field.key)?.errors?.['required']">This field is required.</span>
+                  </div>
                   <input *ngSwitchCase="'email'" matInput type="email" [formControlName]="field.key" [placeholder]="field.placeholder || 'Enter ' + field.label" [readonly]="isReadOnly || !field.editable" class="input-vertical modern-placeholder" />
+                  <div *ngIf="form.get(field.key)?.invalid && (form.get(field.key)?.touched || form.get(field.key)?.dirty) && field.type === 'email'" class="error-message">
+                    <span *ngIf="form.get(field.key)?.errors?.['required']">This field is required.</span>
+                    <span *ngIf="form.get(field.key)?.errors?.['email']">Invalid email address.</span>
+                  </div>
                   <input *ngSwitchCase="'timestamp'" matInput type="datetime-local" [formControlName]="field.key" [readonly]="isReadOnly || !field.editable" class="input-vertical modern-placeholder" />
+                  <div *ngIf="form.get(field.key)?.invalid && (form.get(field.key)?.touched || form.get(field.key)?.dirty) && field.type === 'timestamp'" class="error-message">
+                    <span *ngIf="form.get(field.key)?.errors?.['required']">This field is required.</span>
+                  </div>
                   <mat-select *ngSwitchCase="'dropdown'" [formControlName]="field.key" [disabled]="isReadOnly || !field.editable" [placeholder]="field.placeholder || ''" class="input-vertical">
                     <mat-option *ngFor="let opt of field.options" [value]="opt.value">{{ opt.label }}</mat-option>
                   </mat-select>
+                  <div *ngIf="form.get(field.key)?.invalid && (form.get(field.key)?.touched || form.get(field.key)?.dirty) && field.type === 'dropdown'" class="error-message">
+                    <span *ngIf="form.get(field.key)?.errors?.['required']">This field is required.</span>
+                  </div>
                   <mat-radio-group *ngSwitchCase="'mcq_single'" [formControlName]="field.key" [disabled]="isReadOnly || !field.editable" class="input-vertical mcq-options-vertical">
                     <div *ngFor="let opt of field.options">
                       <mat-radio-button [value]="opt.value">{{ opt.label }}</mat-radio-button>
                     </div>
                   </mat-radio-group>
+                  <div *ngIf="form.get(field.key)?.invalid && (form.get(field.key)?.touched || form.get(field.key)?.dirty) && field.type === 'mcq_single'" class="error-message">
+                    <span *ngIf="form.get(field.key)?.errors?.['required']">This field is required.</span>
+                  </div>
                   <div *ngSwitchCase="'mcq_multiple'" class="mcq-multi-options input-vertical mcq-options-vertical">
                     <!-- Each option on a separate line -->
                     <div *ngFor="let opt of field.options" style="width: 100%;">
@@ -97,10 +118,16 @@ import { Subject } from 'rxjs';
       <mat-form-field appearance="fill" style="flex:1;">
         <mat-label>Key</mat-label>
         <input matInput formControlName="key">
+        <div *ngIf="group.get('key')?.invalid && (group.get('key')?.touched || group.get('key')?.dirty)" class="error-message">
+          <span *ngIf="group.get('key')?.errors?.['required']">Key is required.</span>
+        </div>
       </mat-form-field>
       <mat-form-field appearance="fill" style="flex:1;">
         <mat-label>Value</mat-label>
         <input matInput formControlName="value">
+        <div *ngIf="group.get('value')?.invalid && (group.get('value')?.touched || group.get('value')?.dirty)" class="error-message">
+          <span *ngIf="group.get('value')?.errors?.['required']">Value is required.</span>
+        </div>
       </mat-form-field>
       <button mat-icon-button color="warn" type="button" (click)="removeKeyValuePair(field.key, i)">
         <span class="material-icons">delete</span>
@@ -206,43 +233,256 @@ import { Subject } from 'rxjs';
             </div>
             
             <div class="field-list" cdkDropList (cdkDropListDropped)="dropField($event)">
-              <div *ngFor="let field of schema.fields; let i = index" class="field-item" cdkDrag>
-                <div class="drag-handle" cdkDragHandle matTooltip="Drag to reorder">
-                  <mat-icon>drag_indicator</mat-icon>
+              <ng-container *ngFor="let field of schema.fields; let i = index">
+                <div class="field-item" cdkDrag>
+                  <div class="drag-handle" cdkDragHandle matTooltip="Drag to reorder">
+                    <mat-icon>drag_indicator</mat-icon>
+                  </div>
+                  <div>
+                    <strong class="field-label">{{ field.label }}</strong>
+                    <span class="field-meta">{{ field.key }} &middot; {{ field.type }}</span>
+                  </div>
+                  <div class="field-actions">
+                    <button (click)="editField(i)" mat-icon-button matTooltip="Edit Field">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button class="action-duplicate" (click)="duplicateField(i)" mat-icon-button matTooltip="Duplicate Field">
+                      <mat-icon>content_copy</mat-icon>
+                    </button>
+                    <button class="action-delete" (click)="removeField(i)" mat-icon-button matTooltip="Remove Field">
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <strong class="field-label">{{ field.label }}</strong>
-                  <span class="field-meta">{{ field.key }} &middot; {{ field.type }}</span>
+                <!-- Render the field editor directly below the field being edited -->
+                <div *ngIf="isFieldEditorVisible && currentFieldIndex === i" class="field-editor-form card">
+                  <h5 class="field-editor-title">Edit Field</h5>
+                  <form [formGroup]="fieldForm" class="field-form-grid">
+                    <!-- Basic Info Section -->
+                    <div class="section-heading span-2"><mat-icon>info</mat-icon> Basic Info</div>
+                    <div class="form-field span-2">
+                      <label>Field Label <span class="required-asterisk">*</span></label>
+                      <input formControlName="label" placeholder="Visible label (e.g., 'First Name')" />
+                    </div>
+                    <div class="form-field">
+                      <label>Field Key <span class="required-asterisk">*</span></label>
+                      <input formControlName="key" placeholder="unique_key" [readonly]="currentFieldIndex !== null">
+                      <div *ngIf="fieldForm.get('key')?.invalid && fieldForm.get('key')?.touched" class="error-message">Key is required and must be alphanumeric/underscore.</div>
+                    </div>
+                    <div class="form-field">
+                      <label>Field Type</label>
+                      <div class="type-select-group">
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'text'">text_fields</mat-icon>
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'number'">pin</mat-icon>
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'email'">email</mat-icon>
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'boolean'">toggle_on</mat-icon>
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'dropdown'">arrow_drop_down_circle</mat-icon>
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'mcq_single'">radio_button_checked</mat-icon>
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'mcq_multiple'">check_box</mat-icon>
+                        <select formControlName="type">
+                          <option value="text">Text</option>
+                          <option value="number">Number</option>
+                          <option value="email">Email</option>
+                          <option value="boolean">Boolean</option>
+                          <option value="dropdown">Dropdown</option>
+                          <option value="mcq_single">MCQ (Single Select)</option>
+                          <option value="mcq_multiple">MCQ (Multiple Select)</option>
+                          <option value="keyvalue">Key-Value</option> <!-- Added keyvalue type -->
+                        </select>
+                      </div>
+                    </div>
+
+                    <!-- Field Settings Section -->
+                    <div class="section-heading span-2"><mat-icon>tune</mat-icon> Field Settings</div>
+                    <div class="form-field span-2">
+                      <label>Placeholder / Help Text</label>
+                      <input formControlName="placeholder" placeholder="Help text inside the input or for checkbox" />
+                    </div>
+                    <div class="form-field">
+                      <label>Default Value</label>
+                      <!-- For dropdown and mcq_single -->
+                      <ng-container *ngIf="fieldForm.get('type')?.value === 'dropdown' || fieldForm.get('type')?.value === 'mcq_single'">
+                        <select formControlName="defaultValue">
+                          <option *ngFor="let opt of options.controls" [value]="opt.value.value">{{ opt.value.label }}</option>
+                        </select>
+                      </ng-container>
+                      <!-- For mcq_multiple -->
+                      <ng-container *ngIf="fieldForm.get('type')?.value === 'mcq_multiple'">
+                        <div *ngFor="let opt of options.controls">
+                          <input type="checkbox"
+                                [value]="opt.value.value"
+                                (change)="onDefaultMultiChange($event, opt.value.value)"
+                                [checked]="fieldForm.value.defaultValue?.includes(opt.value.value)">
+                          {{ opt.value.label }}
+                        </div>
+                      </ng-container>
+                      <!-- For boolean -->
+                      <ng-container *ngIf="fieldForm.get('type')?.value === 'boolean'">
+                        <select formControlName="defaultValue">
+                          <option [ngValue]="true">True</option>
+                          <option [ngValue]="false">False</option>
+                        </select>
+                      </ng-container>
+                      <!-- For keyvalue: hide defaultValue input -->
+                      <ng-container *ngIf="fieldForm.get('type')?.value === 'keyvalue'">
+                        <!-- No default value input for keyvalue -->
+                      </ng-container>
+                      <!-- For other types -->
+                      <ng-container *ngIf="fieldForm.get('type')?.value !== 'dropdown' && fieldForm.get('type')?.value !== 'mcq_single' && fieldForm.get('type')?.value !== 'mcq_multiple' && fieldForm.get('type')?.value !== 'boolean' && fieldForm.get('type')?.value !== 'keyvalue'">
+                        <input formControlName="defaultValue" placeholder="Optional default value">
+                      </ng-container>
+                    </div>
+                    <div class="form-field" *ngIf="fieldForm.get('type')?.value === 'text'">
+                      <label>Validation Regex <mat-icon matTooltip="Pattern the input must match (e.g., ^[a-zA-Z]+$)">help_outline</mat-icon></label>
+                      <div class="input-with-button">
+                        <input formControlName="regex" placeholder="e.g., ^[a-zA-Z]+$">
+                        <button type="button" mat-icon-button (click)="regexHelperVisible = !regexHelperVisible" matTooltip="Show Regex Helper">
+                          <mat-icon>auto_fix_high</mat-icon>
+                        </button>
+                      </div>
+                      <div *ngIf="regexHelperVisible" class="regex-helper-dropdown card">
+                        <div style="font-weight: 600; margin-bottom: 0.5rem;">Regex Helper</div>
+                        <div *ngFor="let opt of regexOptions" class="regex-option">
+                          <button type="button" (click)="fieldForm.get('regex')?.setValue(opt.value); regexHelperVisible = false;">
+                            {{ opt.label }}
+                            <span>{{ opt.value }}</span>
+                          </button>
+                        </div>
+                        <button type="button" (click)="regexHelperVisible = false" class="close-regex-btn">Close</button>
+                      </div>
+                    </div>
+                    
+                    <div class="checkbox-group span-2">
+                      <div class="checkbox-wrapper">
+                        <input type="checkbox" formControlName="required" id="field-required"> 
+                        <label for="field-required">Required Field <mat-icon matTooltip="User must fill this field">help_outline</mat-icon></label>
+                      </div>
+                      <div class="checkbox-wrapper">
+                        <input type="checkbox" formControlName="editable" id="field-editable">
+                        <label for="field-editable">User Editable <mat-icon matTooltip="If unchecked, field is visible but not editable">help_outline</mat-icon></label>
+                      </div>
+                    </div>
+
+                    <!-- Dropdown Options Section -->
+                    <div *ngIf="fieldForm.get('type')?.value === 'dropdown'" class="options-editor span-2">
+                      <h6 class="section-heading"><mat-icon>list</mat-icon> Dropdown Options</h6>
+                      <div formArrayName="options">
+                         <div *ngFor="let option of options.controls; let i = index" [formGroupName]="i" class="option-item">
+                          <input formControlName="label" placeholder="Option Text" (input)="syncOptionLabelValue(i)">
+                          <button type="button" class="action-delete" (click)="removeOption(i)" mat-icon-button matTooltip="Remove Option">
+                            <mat-icon>remove_circle_outline</mat-icon>
+                          </button>
+                        </div>
+                        <div *ngIf="options.length === 0" class="no-options-message">No options added yet.</div>
+                      </div>
+                      <button type="button" class="add-option-btn" (click)="addOption()">
+                         <mat-icon>add</mat-icon> Add Option
+                      </button>
+                    </div>
+
+                    <!-- MCQ Options Section -->
+                    <div *ngIf="fieldForm.get('type')?.value === 'mcq_single' || fieldForm.get('type')?.value === 'mcq_multiple'" class="options-editor span-2">
+                      <h6 class="section-heading"><mat-icon>list</mat-icon> MCQ Options</h6>
+                      <div formArrayName="options">
+                         <div *ngFor="let option of options.controls; let i = index" [formGroupName]="i" class="option-item">
+                          <input formControlName="label" placeholder="Option Text" (input)="syncOptionLabelValue(i)">
+                          <button type="button" class="action-delete" (click)="removeOption(i)" mat-icon-button matTooltip="Remove Option">
+                            <mat-icon>remove_circle_outline</mat-icon>
+                          </button>
+                        </div>
+                        <div *ngIf="options.length === 0" class="no-options-message">No options added yet.</div>
+                      </div>
+                      <button type="button" class="add-option-btn" (click)="addOption()">
+                         <mat-icon>add</mat-icon> Add Option
+                      </button>
+                    </div>
+
+                    <!-- Key-Value Pairs Section -->
+                    <div *ngIf="fieldForm.get('type')?.value === 'keyvalue'" class="form-field span-2">
+                      <label>Default Keys (comma separated)</label>
+                      <input formControlName="initialKeys" placeholder="e.g. key1, key2, key3">
+                    </div>
+
+                    <!-- Conditional Logic Section -->
+                    <div class="section-heading span-2"><mat-icon>visibility</mat-icon> Conditional Logic</div>
+                    <div class="form-field span-2">
+                      <label>Visible If (Show this field only if another field has a specific value)</label>
+                      <div class="conditional-logic-row">
+                        <select [(ngModel)]="visibleIfKey" [ngModelOptions]="{standalone: true}">
+                          <option [ngValue]="null">-- Select Field --</option>
+                          <option *ngFor="let f of schema.fields" [ngValue]="f.key" [disabled]="f.key === fieldForm.value.key">{{ f.label }}</option>
+                        </select>
+                        <ng-container *ngIf="visibleIfKey">
+                          <ng-container [ngSwitch]="getFieldType(visibleIfKey)">
+                            <select *ngSwitchCase="'dropdown'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                              <option *ngFor="let opt of getFieldOptions(visibleIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
+                            </select>
+                            <select *ngSwitchCase="'mcq_single'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                              <option *ngFor="let opt of getFieldOptions(visibleIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
+                            </select>
+                            <div *ngSwitchCase="'mcq_multiple'" style="flex:1; display:flex; flex-wrap:wrap; gap:0.5rem;">
+                              <label *ngFor="let opt of getFieldOptions(visibleIfKey)">
+                                <input type="checkbox" [value]="opt.value" (change)="onMultiCondChange($event, 'visible')" [checked]="isArray(visibleIfValue) && visibleIfValue.includes(opt.value)"> {{ opt.label }}
+                              </label>
+                            </div>
+                            <select *ngSwitchCase="'boolean'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                              <option [ngValue]="true">True</option>
+                              <option [ngValue]="false">False</option>
+                            </select>
+                            <input *ngSwitchDefault [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value" style="flex:1;">
+                          </ng-container>
+                        </ng-container>
+                      </div>
+                    </div>
+                    <div class="form-field span-2">
+                      <label>Mandatory If (Make this field required only if another field has a specific value)</label>
+                      <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <select [(ngModel)]="mandatoryIfKey" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                          <option [ngValue]="null">-- Select Field --</option>
+                          <option *ngFor="let f of schema.fields" [ngValue]="f.key" [disabled]="f.key === fieldForm.value.key">{{ f.label }}</option>
+                        </select>
+                        <ng-container *ngIf="mandatoryIfKey">
+                          <ng-container [ngSwitch]="getFieldType(mandatoryIfKey)">
+                            <select *ngSwitchCase="'dropdown'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                              <option *ngFor="let opt of getFieldOptions(mandatoryIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
+                            </select>
+                            <select *ngSwitchCase="'mcq_single'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                              <option *ngFor="let opt of getFieldOptions(mandatoryIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
+                            </select>
+                            <div *ngSwitchCase="'mcq_multiple'" style="flex:1; display:flex; flex-wrap:wrap; gap:0.5rem;">
+                              <label *ngFor="let opt of getFieldOptions(mandatoryIfKey)">
+                                <input type="checkbox" [value]="opt.value" (change)="onMultiCondChange($event, 'mandatory')" [checked]="isArray(mandatoryIfValue) && mandatoryIfValue.includes(opt.value)"> {{ opt.label }}
+                              </label>
+                            </div>
+                            <select *ngSwitchCase="'boolean'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                              <option [ngValue]="true">True</option>
+                              <option [ngValue]="false">False</option>
+                            </select>
+                            <input *ngSwitchDefault [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value" style="flex:1;">
+                          </ng-container>
+                        </ng-container>
+                      </div>
+                    </div>
+
+                    <!-- Save/Cancel Actions -->
+                    <div class="field-editor-actions span-2">
+                      <button type="button" (click)="isFieldEditorVisible = false" class="secondary">Cancel</button>
+                      <button type="button" (click)="saveField()" [disabled]="fieldForm.invalid" mat-raised-button color="primary">
+                        <mat-icon>save</mat-icon> Save Field
+                      </button>
+                    </div>
+                  </form>
                 </div>
-                <div class="field-actions">
-                  <button (click)="editField(i)" mat-icon-button matTooltip="Edit Field">
-                    <mat-icon>edit</mat-icon>
-                  </button>
-                  <button class="action-duplicate" (click)="duplicateField(i)" mat-icon-button matTooltip="Duplicate Field">
-                    <mat-icon>content_copy</mat-icon>
-                  </button>
-                  <button class="action-delete" (click)="removeField(i)" mat-icon-button matTooltip="Remove Field">
-                    <mat-icon>delete_outline</mat-icon>
-                  </button>
-                </div>
-              </div>
-               <p *ngIf="schema.fields.length === 0" class="no-fields-message">No fields added yet.</p>
+              </ng-container>
+              <p *ngIf="schema.fields.length === 0" class="no-fields-message">No fields added yet.</p>
             </div>
 
-            <div *ngIf="!isFieldEditorVisible" style="display: flex; justify-content: center; margin-top: 1rem;">
-              <button class="add-field-btn" (click)="showAddFieldEditor()">
-                <mat-icon>add</mat-icon> Add Field
-              </button>
-            </div>
-
-            <!-- Add/Edit Field Form -->
-            <div *ngIf="isFieldEditorVisible" class="field-editor-form card">
-              <h5 class="field-editor-title">{{ currentFieldIndex === null ? 'Add New Field' : 'Edit Field' }}</h5>
-              
+            <!-- Only show add field editor at the end if adding a new field -->
+            <div *ngIf="isFieldEditorVisible && currentFieldIndex === null" class="field-editor-form card">
+              <h5 class="field-editor-title">Add New Field</h5>
               <form [formGroup]="fieldForm" class="field-form-grid">
                 <!-- Basic Info Section -->
                 <div class="section-heading span-2"><mat-icon>info</mat-icon> Basic Info</div>
-
                 <div class="form-field span-2">
                   <label>Field Label <span class="required-asterisk">*</span></label>
                   <input formControlName="label" placeholder="Visible label (e.g., 'First Name')" />
@@ -500,6 +740,14 @@ import { Subject } from 'rxjs';
           </div>
         </div>
       </main>
+      <!-- Animated popup notification -->
+      <app-animated-popup
+        *ngIf="popupVisible"
+        [message]="popupMessage"
+        [type]="popupType"
+        [visible]="popupVisible"
+        (closed)="popupVisible = false"
+      ></app-animated-popup>
     </div>
   `,
   styles: [`
@@ -1148,6 +1396,7 @@ import { Subject } from 'rxjs';
       box-shadow: 0 2px 8px #4285f433;
       border-left: 6px solid #174ea6;
     }
+
     .form-panel .vertical-field:not(:first-child) {
       margin-top: 1rem;
     }
@@ -1838,10 +2087,12 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
         fields: this.schema.fields,
         author: this.schema.author,
         team_name: this.schema.team_name,
-        version: this.schema.version
+        version: this.schema.version,
+        audit_pipeline: this.schema.audit_pipeline // <-- add this line
       };
       this.schemaService.createTemplate(template).subscribe(() => {
-        this.closeForm();
+        this.showPopup('Template created successfully!', 'success');
+        setTimeout(() => this.closeForm(), 1800);
       });
     } else if (this.mode === 'edit') {
       const dialogRef = this.dialog.open(VersionDialogComponent, {
@@ -1854,33 +2105,24 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
         if (!description) return;
         if (action === 'update') {
           this.schemaService.updateTemplate(this.schema.name, this.schema, description).subscribe(() => {
-            this.closeForm();
+            this.showPopup('Template updated successfully!', 'success');
+            setTimeout(() => this.closeForm(), 1800);
           });
         } else if (action === 'newVersion') {
           this.schemaService.createNewVersion(this.schema.name, this.schema, description).subscribe(() => {
-            this.closeForm();
+            this.showPopup('New version created successfully!', 'success');
+            setTimeout(() => this.closeForm(), 1800);
           });
         }
       });
     } else if (this.mode === 'use') {
       if (!this.templateName) return;
-      if (this.prefillSubmissionName) {
-        // Only duplicate on submit
-        this.schemaService.duplicateSubmissionByName(this.templateName, this.prefillSubmissionName).subscribe(response => {
-          // After duplication, update the new submission with the edited data
-          const newSubmissionName = response && response.submission_name ? response.submission_name : this.prefillSubmissionName;
-          this.schemaService.getSubmissionByName(this.templateName!, newSubmissionName).subscribe(sub => {
-            // Patch the new submission with the edited data
-            // (Assuming backend allows updating submission by name, otherwise just submit as new)
-            // If not supported, just submit as a new submission
-            this.schemaService.submitForm(this.templateName!, this.form.getRawValue()).subscribe(() => this.closeForm());
-          });
-        });
-      } else {
-        this.schemaService.submitForm(this.templateName, this.form.getRawValue()).subscribe(() => this.closeForm());
-      }
+      // Always submit as new, even if prefillSubmissionName is set (duplicate is just for prefill)
+      this.schemaService.submitForm(this.templateName, this.form.getRawValue()).subscribe(() => {
+        this.showPopup('Form response submitted!', 'airplane');
+        setTimeout(() => this.closeForm(), 1800);
+      });
     }
-    
   }
 
   isFormValid(): boolean {
@@ -2102,5 +2344,18 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
   private _filterTeamNames(value: string): string[] {
     const filterValue = value.toLowerCase();
     return this.teamNames.filter(team => team.toLowerCase().includes(filterValue));
+  }
+
+  // --- Animated popup state ---
+  popupMessage: string = '';
+  popupType: 'success' | 'error' | 'airplane' = 'success';
+  popupVisible = false;
+  showPopup(message: string, type: 'success' | 'error' | 'airplane' = 'success') {
+    this.popupMessage = message;
+    this.popupType = type;
+    this.popupVisible = true;
+    setTimeout(() => {
+      this.popupVisible = false;
+    }, 1800);
   }
 }

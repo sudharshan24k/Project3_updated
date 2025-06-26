@@ -7,11 +7,15 @@ import { MatIconModule } from '@angular/material/icon';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { AnimatedPopupComponent } from './animated-popup.component';
+import { InteractiveDialogComponent } from './interactive-dialog.component';
 
 @Component({
   selector: 'app-helpdesk',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, ReactiveFormsModule, MatFormFieldModule, MatInputModule],
+  imports: [
+    CommonModule, MatCardModule, MatButtonModule, MatIconModule, ReactiveFormsModule, MatFormFieldModule, MatInputModule, AnimatedPopupComponent
+  ],
   template: `
     <div class="helpdesk-container">
       <div class="page-header">
@@ -56,6 +60,13 @@ import { MatInputModule } from '@angular/material/input';
               Submit Issue
             </button>
           </form>
+
+          <app-animated-popup
+            *ngIf="popupVisible"
+            [message]="popupMessage"
+            [type]="popupType"
+            (close)="popupVisible = false"
+          ></app-animated-popup>
         </mat-card-content>
       </mat-card>
     </div>
@@ -82,6 +93,9 @@ import { MatInputModule } from '@angular/material/input';
 })
 export class HelpdeskComponent {
   issueForm: FormGroup;
+  popupMessage: string = '';
+  popupType: 'success' | 'error' | 'airplane' = 'success';
+  popupVisible = false;
 
   constructor(private router: Router, private fb: FormBuilder) {
     this.issueForm = this.fb.group({
@@ -99,8 +113,17 @@ export class HelpdeskComponent {
     if (this.issueForm.valid) {
       console.log('Submitting issue:', this.issueForm.value);
       // TODO: Implement email sending logic here
-      alert('Issue submitted successfully! (Check console for data)');
+      this.showPopup('Issue submitted successfully! (Check console for data)', 'success');
       this.issueForm.reset();
     }
   }
-} 
+
+  showPopup(message: string, type: 'success' | 'error' | 'airplane' = 'success') {
+    this.popupMessage = message;
+    this.popupType = type;
+    this.popupVisible = true;
+    setTimeout(() => {
+      this.popupVisible = false;
+    }, 1800);
+  }
+}

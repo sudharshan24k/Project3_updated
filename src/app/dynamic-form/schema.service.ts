@@ -70,7 +70,8 @@ export class SchemaService {
         name: template.name,
         schema: {
             description: template.description,
-            fields: template.fields
+            fields: template.fields,
+            audit_pipeline: template.audit_pipeline // <-- add this line
         },
         author: template.author,
         team_name: template.team_name,

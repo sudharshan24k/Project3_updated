@@ -65,10 +65,6 @@ async def create_template(template: TemplateModel = Body(...)):
     encoded_template["updated_at"] = datetime.datetime.utcnow()
     # Ensure author is present
     encoded_template["author"] = template.author if hasattr(template, 'author') else None
-    # Store team_name (required)
-    encoded_template["team_name"] = template.team_name if hasattr(template, 'team_name') else None
-    # Store version_tag if provided (can only be set during creation)
-    encoded_template["version_tag"] = template.version_tag if hasattr(template, 'version_tag') else None
     new_template = await template_collection.insert_one(encoded_template)
     
     # Also create the first version in history
@@ -76,8 +72,7 @@ async def create_template(template: TemplateModel = Body(...)):
         template_name=versioned_name,
         version=1,
         schema=template.schema,
-        change_log="Initial version.",
-        author=template.author
+        change_log="Initial version."
     )
     version_data_dict = jsonable_encoder(version_data)
     version_data_dict.pop('_id', None)
@@ -98,9 +93,7 @@ async def list_templates():
             "name": t.get("name"),
             "description": description,
             "created_at": t.get("created_at"),
-            "author": t.get("author", None),
-            "team_name": t.get("team_name", None),
-            "version_tag": t.get("version_tag", None)
+            "author": t.get("author", None)
         })
     return serialize_mongo(result)
 
@@ -135,8 +128,7 @@ async def edit_template(name: str, req: UpdateTemplateRequest = Body(...)):
             version=1,
             schema=req.schema,
             change_log=req.change_log or "Initial version.",
-            created_at=new_template["created_at"],
-            author=existing_template.get("author")
+            created_at=new_template["created_at"]
         )
         version_data_dict = jsonable_encoder(version_data)
         version_data_dict.pop('_id', None)
@@ -149,8 +141,7 @@ async def edit_template(name: str, req: UpdateTemplateRequest = Body(...)):
         version=existing_template.get("version", 1),
         schema=existing_template.get("schema"),
         change_log=req.change_log,
-        created_at=existing_template.get("updated_at"),
-        author=existing_template.get("author")
+        created_at=existing_template.get("updated_at")
     )
     version_data_dict = jsonable_encoder(version_data)
     version_data_dict.pop('_id', None)
@@ -207,8 +198,7 @@ async def duplicate_template(name: str):
         template_name=new_name,
         version=1,
         schema=new_template_data.get("schema"),
-        change_log="Duplicated from " + name,
-        author=original_template.get("author")
+        change_log="Duplicated from " + name
     )
     version_data_dict = jsonable_encoder(version_data)
     version_data_dict.pop('_id', None)
@@ -242,12 +232,9 @@ async def rollback_template(name: str, version: int):
         version=current_version_num,
         schema=current_template.get("schema"),
         change_log=f"Pre-rollback save of version {current_version_num}.",
-        created_at=current_template.get("updated_at"),
-        author=current_template.get("author")
+        created_at=current_template.get("updated_at")
     )
-    version_data_dict = jsonable_encoder(version_data)
-    version_data_dict.pop('_id', None)
-    await template_version_collection.insert_one(version_data_dict)
+    await template_version_collection.insert_one(jsonable_encoder(version_data))
 
     # Restore the old version
     new_version_num = current_version_num + 1
@@ -264,8 +251,6 @@ async def rollback_template(name: str, version: int):
         version=new_version_num,
         schema=template_to_restore.get("schema"),
         change_log=f"Rolled back to version {version}.",
-        created_at=datetime.datetime.utcnow(),
-        author=current_template.get("author")
     )
     rollback_log_entry_dict = jsonable_encoder(rollback_log_entry)
     rollback_log_entry_dict.pop('_id', None)
@@ -307,8 +292,7 @@ async def create_new_version(name: str, req: UpdateTemplateRequest = Body(...)):
         version=new_version,
         schema=req.schema,
         change_log=req.change_log or "Initial version.",
-        created_at=new_template["created_at"],
-        author=current_template.get("author")
+        created_at=new_template["created_at"]
     )
     version_data_dict = jsonable_encoder(version_data)
     version_data_dict.pop('_id', None)
@@ -507,7 +491,7 @@ async def delete_submission_by_name(template_name: str, submission_name: str):
 
 # --- New: Get submission by submission_name ---
 @app.get("/submissions/by-name/{submission_name}", response_description="Get a submission by submission_name")
-async def get_submission_by_name_global(submission_name: str):
+async def get_submission_by_name(submission_name: str):
     submission = await submission_collection.find_one({"submission_name": submission_name})
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found.")
@@ -526,7 +510,7 @@ async def get_submission_by_name_global(submission_name: str):
 
 # --- New: Download submission by submission_name ---
 @app.get("/submissions/by-name/{submission_name}/download", response_description="Download a submission by submission_name")
-async def download_submission_by_name_global(submission_name: str):
+async def download_submission_by_name(submission_name: str):
     submission = await submission_collection.find_one({"submission_name": submission_name})
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found.")
@@ -534,7 +518,7 @@ async def download_submission_by_name_global(submission_name: str):
 
 # --- New: Duplicate submission by submission_name ---
 @app.post("/submissions/by-name/{submission_name}/duplicate", response_description="Duplicate a submission by submission_name")
-async def duplicate_submission_by_name_global(submission_name: str):
+async def duplicate_submission_by_name(submission_name: str):
     original = await submission_collection.find_one({"submission_name": submission_name})
     if not original:
         raise HTTPException(status_code=404, detail="Submission not found.")
@@ -567,7 +551,7 @@ async def duplicate_submission_by_name_global(submission_name: str):
 
 # --- New: Delete submission by submission_name ---
 @app.delete("/submissions/by-name/{submission_name}", response_description="Delete a submission by submission_name")
-async def delete_submission_by_name_global(submission_name: str):
+async def delete_submission_by_name(submission_name: str):
     submission = await submission_collection.find_one({"submission_name": submission_name})
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found.")

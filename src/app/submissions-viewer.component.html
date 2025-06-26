@@ -97,4 +97,11 @@
           </div>
         </div>
       </main>
-    </div> 
+
+      <app-animated-popup
+        *ngIf="popupVisible"
+        [message]="popupMessage"
+        [type]="popupType"
+        (closed)="popupVisible = false"
+      ></app-animated-popup>
+    </div>

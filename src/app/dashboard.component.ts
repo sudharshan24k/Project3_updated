@@ -11,11 +11,14 @@ import { DynamicForm } from './dynamic-form/dynamic-form';
 import { SchemaService, TemplateInfo } from './dynamic-form/schema.service';
 import { SubmissionsViewerComponent } from './submissions-viewer.component';
 import { TemplateHistoryComponent } from './template-history/template-history.component';
+import { AnimatedPopupComponent } from './animated-popup.component';
+import { InteractiveDialogComponent } from './interactive-dialog.component';
+import { MatDialog } from '@angular/material/dialog';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, NgIf, NgFor, DynamicForm, SubmissionsViewerComponent, MatIconModule, MatTooltipModule, MatButtonModule, FormsModule, MatTabsModule, MatExpansionModule, TemplateHistoryComponent],
+  imports: [CommonModule, NgIf, NgFor, DynamicForm, SubmissionsViewerComponent, MatIconModule, MatTooltipModule, MatButtonModule, FormsModule, MatTabsModule, MatExpansionModule, TemplateHistoryComponent, AnimatedPopupComponent],
   template: `
     <div class="container">
       <div *ngIf="mode === 'list'">
@@ -306,6 +309,14 @@ import { TemplateHistoryComponent } from './template-history/template-history.co
           <span>Helpdesk</span>
         </button>
       </div>
+
+      <!-- Popup for success/error messages -->
+      <app-animated-popup
+        *ngIf="popupVisible"
+        [message]="popupMessage"
+        [type]="popupType"
+        (closed)="popupVisible = false"
+      ></app-animated-popup>
     </div>
   `,
   styles: [`
@@ -898,6 +909,65 @@ import { TemplateHistoryComponent } from './template-history/template-history.co
       border-top: 1px solid var(--border-color);
       margin-top: 2rem;
     }
+
+    /* Styles for animated popup */
+    .animated-popup {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      padding: 1rem 1.5rem;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      animation: slideIn 0.4s ease-out, fadeOut 0.4s ease-out 1.6s forwards;
+    }
+    .animated-popup.success {
+      background-color: rgba(76, 175, 80, 0.1);
+      border: 1px solid rgba(76, 175, 80, 0.3);
+    }
+    .animated-popup.error {
+      background-color: rgba(244, 67, 54, 0.1);
+      border: 1px solid rgba(244, 67, 54, 0.3);
+    }
+    .animated-popup.airplane {
+      background-color: rgba(33, 150, 243, 0.1);
+      border: 1px solid rgba(33, 150, 243, 0.3);
+    }
+    .popup-content {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .popup-icon {
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+    .popup-message {
+      font-size: 1rem;
+      color: var(--text-color);
+    }
+
+    @keyframes slideIn {
+      0% {
+        transform: translateY(-10px);
+        opacity: 0;
+      }
+      100% {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+    @keyframes fadeOut {
+      0% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+      }
+    }
   `]
 })
 export class DashboardComponent implements OnInit, AfterViewInit {
@@ -931,7 +1001,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   }
   selectedTabIndexInWindow = 0;
 
-  constructor(private schemaService: SchemaService, private router: Router) {}
+  constructor(private schemaService: SchemaService, private router: Router, private dialog: MatDialog) {}
 
   ngOnInit() {
     this.restoreDashboardState();
@@ -1254,12 +1324,34 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     this.applyFilters();
   }
 
-  deleteTemplate(template: string) {
-    if (confirm(`Are you sure you want to delete ${template}? This will delete all versions and submissions.`)) {
+  async deleteTemplate(template: string) {
+    const dialogRef = this.dialog.open(InteractiveDialogComponent, {
+      width: '700px',
+      data: {
+        title: 'Delete Template',
+        message: `Are you sure you want to delete ${template}? This will delete all versions and submissions.`,
+        type: 'confirm'
+      }
+    });
+    const result = await dialogRef.afterClosed().toPromise();
+    if (result) {
       this.schemaService.deleteTemplate(template).subscribe(() => {
         this.loadTemplates();
+        this.showPopup('Template deleted successfully!', 'success');
       });
     }
+  }
+  popupMessage: string = '';
+  popupType: 'success' | 'error' | 'airplane' = 'success';
+  popupVisible = false;
+  showPopup(message: string, type: 'success' | 'error' | 'airplane' = 'success') {
+    this.popupMessage = message;
+    this.popupType = type;
+    this.popupVisible = true;
+    setTimeout(() => {
+      this.popupVisible = false;
+      window.location.reload();
+    }, 1800);
   }
 
   navigateToHelpdesk() {

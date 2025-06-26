@@ -1,1 +1,7 @@
-<p>template-history works!</p> 
+<p>template-history works!</p>
+<app-animated-popup
+  *ngIf="popupVisible"
+  [message]="popupMessage"
+  [type]="popupType"
+  (closed)="popupVisible = false"
+></app-animated-popup>

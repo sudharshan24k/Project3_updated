@@ -6,11 +6,14 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatButtonModule } from '@angular/material/button';
 import { Location } from '@angular/common';
 import { DiffViewerComponent } from '../diff-viewer.component';
+import { MatDialog } from '@angular/material/dialog';
+import { AnimatedPopupComponent } from '../animated-popup.component';
+import { InteractiveDialogComponent } from '../interactive-dialog.component';
 
 @Component({
   selector: 'app-template-history',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatTooltipModule, MatButtonModule, DiffViewerComponent],
+  imports: [CommonModule, MatIconModule, MatTooltipModule, MatButtonModule, DiffViewerComponent, AnimatedPopupComponent],
   template: `
     <div class="container">
       <header class="page-header">
@@ -74,6 +77,8 @@ import { DiffViewerComponent } from '../diff-viewer.component';
           <app-diff-viewer [oldSchema]="oldSchema" [newSchema]="newSchema"></app-diff-viewer>
         </div>
       </div>
+
+      <app-animated-popup *ngIf="popupVisible" [type]="popupType" [message]="popupMessage"></app-animated-popup>
     </div>
   `,
   styles: [
@@ -139,7 +144,8 @@ export class TemplateHistoryComponent implements OnInit {
 
   constructor(
     private schemaService: SchemaService,
-    private location: Location
+    private location: Location,
+    private dialog: MatDialog
   ) { }
 
   ngOnInit(): void {
@@ -190,20 +196,40 @@ export class TemplateHistoryComponent implements OnInit {
     this.location.back();
   }
 
-  onRollback(update: TemplateVersion) {
+  async onRollback(update: TemplateVersion) {
     if (!this.templateName || !update.version) return;
-    if (!confirm(`Are you sure you want to rollback to version ${update.version}? This will overwrite the current template.`)) return;
+    const dialogRef = this.dialog.open(InteractiveDialogComponent, {
+      width: '350px',
+      data: {
+        title: 'Rollback Template',
+        message: `Are you sure you want to rollback to version ${update.version}? This will overwrite the current template.`,
+        type: 'confirm'
+      }
+    });
+    const result = await dialogRef.afterClosed().toPromise();
+    if (!result) return;
     this.isRollingBack = true;
     this.schemaService.rollbackTemplate(this.templateName, update.version).subscribe({
       next: () => {
         this.isRollingBack = false;
         this.loadHistory();
-        alert('Rollback successful!');
+        this.showPopup('Rollback successful!', 'success');
       },
       error: (err) => {
         this.isRollingBack = false;
-        alert('Rollback failed: ' + (err?.error?.detail || err.message || err));
+        this.showPopup('Rollback failed. See console for details.', 'error');
       }
     });
   }
-} 
+  popupMessage: string = '';
+  popupType: 'success' | 'error' | 'airplane' = 'success';
+  popupVisible = false;
+  showPopup(message: string, type: 'success' | 'error' | 'airplane' = 'success') {
+    this.popupMessage = message;
+    this.popupType = type;
+    this.popupVisible = true;
+    setTimeout(() => {
+      this.popupVisible = false;
+    }, 1800);
+  }
+}
