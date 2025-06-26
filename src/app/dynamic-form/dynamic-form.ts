@@ -43,7 +43,7 @@ import { AnimatedPopupComponent } from '../animated-popup.component';
            <button *ngIf="isEditMode" type="submit" [disabled]="!isFormValid()" mat-raised-button (click)="onSubmit()">
              <mat-icon>save</mat-icon> {{ submitButtonText }}
            </button>
-           <button *ngIf="!isEditMode && mode !== 'preview'" type="submit" [disabled]="form.invalid" mat-raised-button>
+           <button *ngIf="!isEditMode && mode !== 'preview'" type="submit" [disabled]="form.invalid" mat-raised-button (click)="onSubmit()">
              <mat-icon>send</mat-icon> {{ submitButtonText }}
            </button>
         </div>
@@ -697,6 +697,17 @@ import { AnimatedPopupComponent } from '../animated-popup.component';
               </form>
             </div>
           </div>
+          
+              
+              <div class="bottom-add-field-btn-container">
+                <button class="add-field-btn" (click)="showAddFieldEditor()" *ngIf="!isFieldEditorVisible">
+                  <mat-icon>add</mat-icon> Add Field
+                </button>
+              </div>
+            
+
+
+
         </div>
 
         <!-- Preview Mode: Show Field Conditions Panel -->
@@ -1561,6 +1572,12 @@ import { AnimatedPopupComponent } from '../animated-popup.component';
       margin-top: 0.25rem;
       font-style: italic;
     }
+
+    .bottom-add-field-btn-container {
+      display: flex;
+      justify-content: center;
+      margin: 16px 0; 
+    }
   `]
 })
 export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
@@ -1684,8 +1701,11 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
             expected = expected.toLowerCase() === 'true';
           }
         }
-        
-        
+      
+        // handle null, undefined, or empty string as valid for required fields
+      if (expected === null || expected === undefined || expected === '') {
+        return controllingValue === null || controllingValue === undefined || controllingValue === '';
+      }
         
         if (Array.isArray(expected)) {
           return expected.some((v: any) => controllingValue == v);
@@ -1756,7 +1776,6 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
     });
     // --- Fix for boolean visibleIf glitch: subscribe to all boolean fields and trigger change detection ---
     this.form?.valueChanges?.subscribe(() => {
-      // This will trigger Angular change detection and update visibleFields
       this.cdr.markForCheck();
       this.cdr.detectChanges();
     });
@@ -1764,6 +1783,12 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
     // Ensure setupComponent is called immediately if templateName is already available
     if (this.templateName) {
       this.setupComponent();
+    }
+
+    if (this.form) {
+      this.form.valueChanges.subscribe(() => {
+        this.form.markAllAsTouched();
+      });
     }
   }
   
@@ -2106,12 +2131,14 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
         if (action === 'update') {
           this.schemaService.updateTemplate(this.schema.name, this.schema, description).subscribe(() => {
             this.showPopup('Template updated successfully!', 'success');
-            setTimeout(() => this.closeForm(), 1800);
+            // setTimeout(() => this.closeForm(), 1800);
+            // window.location.reload(); // Reload to show updated templates
           });
         } else if (action === 'newVersion') {
           this.schemaService.createNewVersion(this.schema.name, this.schema, description).subscribe(() => {
             this.showPopup('New version created successfully!', 'success');
-            setTimeout(() => this.closeForm(), 1800);
+            // setTimeout(() => this.closeForm(), 1800);
+            // window.location.reload(); // Reload to show new version list
           });
         }
       });
@@ -2350,12 +2377,15 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
   popupMessage: string = '';
   popupType: 'success' | 'error' | 'airplane' = 'success';
   popupVisible = false;
-  showPopup(message: string, type: 'success' | 'error' | 'airplane' = 'success') {
+
+  showPopup(message: string, type: 'success' | 'error' | 'airplane' = 'success', timeout: number = 1800){
     this.popupMessage = message;
     this.popupType = type;
     this.popupVisible = true;
     setTimeout(() => {
       this.popupVisible = false;
-    }, 1800);
+      window.location.reload(); 
+      // Reload the page after showing the popup
+    }, timeout);
   }
 }

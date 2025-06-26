@@ -315,6 +315,7 @@ import { MatDialog } from '@angular/material/dialog';
         *ngIf="popupVisible"
         [message]="popupMessage"
         [type]="popupType"
+        [visible]="popupVisible"
         (closed)="popupVisible = false"
       ></app-animated-popup>
     </div>
@@ -1336,23 +1337,29 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     const result = await dialogRef.afterClosed().toPromise();
     if (result) {
       this.schemaService.deleteTemplate(template).subscribe(() => {
-        this.loadTemplates();
-        this.showPopup('Template deleted successfully!', 'success');
+        // this.loadTemplates(); 
+        
+        this.showPopup('Template deleted successfully!', 'success',1800);
+        
       });
     }
   }
   popupMessage: string = '';
   popupType: 'success' | 'error' | 'airplane' = 'success';
   popupVisible = false;
-  showPopup(message: string, type: 'success' | 'error' | 'airplane' = 'success') {
+
+  // added timeout parameter to allow custom timeout
+  showPopup(message: string, type: 'success' | 'error' | 'airplane' = 'success', timeout: number = 1800){
     this.popupMessage = message;
     this.popupType = type;
     this.popupVisible = true;
     setTimeout(() => {
       this.popupVisible = false;
       window.location.reload();
-    }, 1800);
+    }, timeout);
   }
+
+
 
   navigateToHelpdesk() {
     this.router.navigate(['/helpdesk']);
