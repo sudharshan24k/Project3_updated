@@ -7,7 +7,7 @@ class TemplateVersionModel(BaseModel):
     id: Optional[Any] = Field(alias="_id", default=None)
     template_name: str = Field(...)
     version: int = Field(...)
-    schema: Optional[Dict[str, Any]] = Field(default=None)
+    schema: Optional[Dict[str, Any]] = Field(default_factory=dict)
     change_log: Optional[str] = Field(default="Initial version.")
     created_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
 
@@ -21,10 +21,10 @@ class TemplateModel(BaseModel):
     id: Optional[Any] = Field(alias="_id", default=None)
     name: str = Field(...)
     version: int = Field(default=1)
-    schema: Optional[Dict[str, Any]] = Field(default=None)
-    author: Optional[str] = Field(default=None)
-    team_name: Optional[str] = Field(default=None)
-    version_tag: Optional[str] = Field(default=None)
+    schema: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    author: Optional[str] = Field(default="")
+    team_name: Optional[str] = Field(default="")
+    version_tag: Optional[str] = Field(default="")
     created_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
     updated_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
 
@@ -97,4 +97,4 @@ class SubmissionModel(BaseModel):
                 "responses": []
             }
         },
-    ) 
+    )
