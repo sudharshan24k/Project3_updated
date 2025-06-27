@@ -194,7 +194,7 @@ import { AnimatedPopupComponent } from '../animated-popup.component';
               <label>Author Name</label>
               <input [(ngModel)]="schema.author" placeholder="Author of this template" [ngModelOptions]="{standalone: true}">
             </div>
-            <div class="form-field" *ngIf="mode === 'create'">
+            <div class="form-field">
               <label>Team Name</label>
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Select or enter team</mat-label>
@@ -210,14 +210,14 @@ import { AnimatedPopupComponent } from '../animated-popup.component';
                   </mat-option>
                 </mat-autocomplete>
               </mat-form-field>
-              <small class="field-help">Select an existing team or type a new one. Team name is required and cannot be changed later.</small>
+              <small class="field-help">Select an existing team or type a new one. Team name is required.</small>
             </div>
-            <div class="form-field" *ngIf="mode === 'create'">
+            <div class="form-field">
               <label>Audit Pipeline</label>
               <input [(ngModel)]="schema.audit_pipeline" placeholder="Enter audit pipeline name" [ngModelOptions]="{standalone: true}" required>
               <small class="field-help">This field is mandatory.</small>
             </div>
-            <div class="form-field" *ngIf="mode === 'create'">
+            <div class="form-field">
               <label>Version Tag</label>
               <input [(ngModel)]="schema.version" placeholder="e.g., v1.0, beta, stable" [ngModelOptions]="{standalone: true}">
               <small class="field-help">Version tag can only be set during creation and cannot be changed later.</small>
