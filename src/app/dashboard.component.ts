@@ -219,7 +219,7 @@ import { MatDialog } from '@angular/material/dialog';
                 </mat-panel-title>
               </mat-expansion-panel-header>
               
-              <div class="list-view-table" *ngIf="groupedTemplates[baseName]?.length">
+              <div class="list-view-table" *ngIf="groupedTemplates[baseName]?.length" >
                 <div class="list-view-header">
                   <div class="list-cell">Template Name</div>
                   <div class="list-cell">Author</div>
@@ -247,9 +247,6 @@ import { MatDialog } from '@angular/material/dialog';
                       </button>
                       <button mat-icon-button (click)="editTemplate(version)" matTooltip="Edit Schema">
                         <mat-icon fontIcon="edit" class="action-icon"></mat-icon>
-                      </button>
-                      <button mat-icon-button (click)="previewTemplate(version.name)" matTooltip="Preview Form">
-                        <mat-icon fontIcon="visibility" class="action-icon"></mat-icon>
                       </button>
                       <button mat-icon-button (click)="viewSubmissions(version.name)" matTooltip="View Submissions">
                         <mat-icon fontIcon="list_alt" class="action-icon"></mat-icon>
@@ -816,92 +813,79 @@ import { MatDialog } from '@angular/material/dialog';
     }
 
     .list-view-table {
-      display: flex;
-      flex-direction: column;
+      display: table;
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
     }
 
     .list-view-header, .list-view-row {
-      display: grid;
-      grid-template-columns: 1.2fr 1fr 1fr 1fr 1.5fr 1.5fr minmax(150px, auto);
-      gap: 1rem;
-      align-items: center;
-      border-bottom: 1px solid var(--border-color);
-      padding: 0.5rem 1rem;
+      display: table-row;
+      background: none;
+      border-radius: 0;
+      padding: 0;
+      gap: 0;
+      align-items: unset;
     }
 
     .list-view-header {
       font-weight: 600;
-      color: var(--text-secondary-color);
+      color: var(--text-muted-color);
       font-size: 0.9em;
       text-transform: uppercase;
-    }
-    .list-view-header .list-cell {
-      text-align: left !important;
-    }
-    .list-view-row:hover {
-      background-color: var(--surface-hover-color);
+      background: var(--background-color, #F0F8FC);
+      border-radius: 0.5rem 0.5rem 0 0;
+      border-bottom: 2px solid var(--border-color, #C2D6E5);
+      margin-bottom: 0;
     }
 
-    .list-cell {
-      padding: 0.5rem;
+    .list-view-header .list-cell,
+    .list-view-row .list-cell {
+      display: table-cell;
+      padding: 0.5rem 1rem;
+      vertical-align: middle;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      border-bottom: 1px solid var(--border-color, #C2D6E5);
     }
 
-    /* Center-align specific columns as requested */
-    .list-cell:nth-child(2),
-    .list-cell:nth-child(3),
-    .list-cell:nth-child(4),
-    .list-cell:nth-child(5),
-    .list-cell:nth-child(6) {
-      text-align: center;
-    }
-
-    .list-cell.actions-cell, .list-cell.actions-header {
-      overflow: visible;
-      white-space: normal;
-      display: flex;
-      justify-content: center; /* Center align actions */
-      gap: 0.25rem;
-    }
-
-    .actions-header {
-      justify-content: center;
-      display: flex;
-    }
-
-    .clickable-schema {
+    .list-view-header .list-cell {
+      text-align: center !important;
+      background: var(--background-color, #F0F8FC);
       font-weight: 600;
-      color: var(--text-color);
+      border-bottom: 2px solid var(--border-color, #C2D6E5);
     }
 
-    .list-cell.date-cell {
-      font-size: 0.95rem;
+    .list-view-row .list-cell {
+      background: var(--surface-color, #fff);
+      text-align: center;
+      transition: background 0.18s, color 0.18s;
+      color: var(--text-color, #1E2F3C);
     }
 
-    .version-tag {
-        display: inline-block;
-        padding: 0.2rem 0.6rem;
-        border-radius: 1rem;
-        font-size: 0.85rem;
-        font-weight: 600;
-        background-color: var(--secondary-color);
-        color: var(--on-secondary-color);
+    .dark-theme .list-view-row .list-cell {
+      background: var(--surface-color, #1A2A36);
+      color: var(--text-color, #DDE9F2);
     }
 
-    .team-search-bar {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
+    .list-view-row .list-cell .version-tag {
+      /* version tag color is already handled, but ensure text color in dark mode */
+      color: var(--on-secondary-color, #1E2F3C);
     }
-    .team-dropdown {
-      min-width: 160px;
-      padding: 0.5rem 1rem;
-      border-radius: 0.5rem;
-      border: 1px solid var(--border-color, #ccc);
-      font-size: 1rem;
-      background: var(--surface-color);
+
+    .dark-theme .list-view-row .list-cell .version-tag {
+      color: var(--text-color, #DDE9F2);
+      background: var(--secondary-color, #3B78A6);
+    }
+
+    .list-view-row:hover .list-cell {
+      background-color: var(--surface-hover-color, #f5fafd);
+    }
+
+    .dark-theme .list-view-row:hover .list-cell {
+      background-color: var(--background-color, #101C26);
+      color: var(--text-color, #DDE9F2);
     }
     .dashboard-footer {
       display: flex;

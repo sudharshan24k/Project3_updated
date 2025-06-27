@@ -30,13 +30,76 @@ export interface VersionDialogData {
     </mat-dialog-actions>
   `,
   styles: [`
+    :host {
+      --primary: var(--primary-color, #6aaadf);
+      --accent: var(--accent-color, #5B9DD9);
+      --surface: var(--surface-color, #fff);
+      --text: var(--text-color, #1E2F3C);
+      --shadow: var(--shadow-color-light, rgba(0,0,0,0.05));
+      --border: var(--border-color, #C2D6E5);
+    }
     .full-width { width: 100%; }
-    .action-group { display: flex; gap: 1rem; margin: 1.5rem 0 0.5rem 0; }
-    textarea { min-width: 300px; }
+    .action-group {
+      display: flex;
+      gap: 1rem;
+      margin: 1.5rem 0 0.5rem 0;
+    }
+    textarea {
+      min-width: 300px;
+    }
     .action-group button {
-      color: #fff !important;
+      min-width: 160px;
+      border-radius: 0.6rem;
       font-weight: 600;
       letter-spacing: 0.01em;
+      box-shadow: 0 2px 8px var(--shadow);
+      transition: 
+        background 0.18s, 
+        color 0.18s, 
+        box-shadow 0.18s, 
+        border-color 0.18s;
+      outline: none;
+    }
+    .action-group button[color="primary"] {
+      background: var(--primary);
+      color: #fff !important;
+      border: 1.5px solid var(--primary);
+    }
+    .action-group button[color="primary"]:hover,
+    .action-group button[color="primary"]:focus {
+      background: var(--accent);
+      border-color: var(--accent);
+      box-shadow: 0 4px 16px var(--shadow-color-dark, rgba(0,0,0,0.15));
+    }
+    .action-group button[color="accent"] {
+      background: var(--surface);
+      color: var(--accent) !important;
+      border: 1.5px solid var(--accent);
+    }
+    .action-group button[color="accent"]:hover,
+    .action-group button[color="accent"]:focus {
+      background: var(--accent);
+      color: #fff !important;
+      box-shadow: 0 4px 16px var(--shadow-color-dark, rgba(0,0,0,0.15));
+    }
+    .action-group button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+      background: var(--border);
+      color: var(--text-muted-color, #6A88A0) !important;
+      border-color: var(--border);
+    }
+    mat-dialog-actions button[mat-button] {
+      color: var(--text-muted-color, #6A88A0);
+      font-weight: 500;
+      border-radius: 0.5rem;
+      transition: background 0.18s;
+    }
+    mat-dialog-actions button[mat-button]:hover,
+    mat-dialog-actions button[mat-button]:focus {
+      background: var(--secondary-color, #C7E3F8);
+      color: var(--primary);
     }
   `],
   standalone: true,

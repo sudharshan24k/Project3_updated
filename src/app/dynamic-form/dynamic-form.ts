@@ -333,7 +333,8 @@ import { AnimatedPopupComponent } from '../animated-popup.component';
                       </ng-container>
                     </div>
                     <div class="form-field" *ngIf="fieldForm.get('type')?.value === 'text'">
-                      <label>Validation Regex <mat-icon matTooltip="Pattern the input must match (e.g., ^[a-zA-Z]+$)">help_outline</mat-icon></label>
+                      
+                    <label>Validation Regex <mat-icon matTooltip="Pattern the input must match (e.g., ^[a-zA-Z]+$)">help_outline</mat-icon></label>
                       <div class="input-with-button">
                         <input formControlName="regex" placeholder="e.g., ^[a-zA-Z]+$">
                         <button type="button" mat-icon-button (click)="regexHelperVisible = !regexHelperVisible" matTooltip="Show Regex Helper">
