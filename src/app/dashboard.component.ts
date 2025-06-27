@@ -143,7 +143,7 @@ import { MatDialog } from '@angular/material/dialog';
                       <div class="template-title-group">
                         <mat-icon class="template-icon">description</mat-icon>
                         <div>
-                          <h3>{{ version.name }}</h3>
+                          <h3>{{ version.name }}</h3> 
                           <p class="template-desc" *ngIf="version.description">{{ version.description }}</p>
                           <div class="template-meta-container">
                             <div class="template-meta" *ngIf="version.created_at">
@@ -382,13 +382,21 @@ import { MatDialog } from '@angular/material/dialog';
     }
     .template-title-group {
         display: flex;
-        align-items: flex-start;
-        gap: 1rem;
+        align-items: center; /* Changed from flex-start to center for vertical alignment */
+        gap: 1.7rem;
+        margin-bottom: 1.2rem;
+        min-height: 3.5rem; /* Ensure enough height for large icon */
     }
     .template-icon {
-        font-size: 2.2rem;
+        font-size: 3.2rem;
+        margin-top: 0; /* Remove margin-top to avoid cutting off icon */
+        margin-left: 0.2rem;
         color: var(--primary-color);
-        margin-top: 0.1rem;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        height: 3.2rem; /* Ensure icon is not cut off */
+        width: 3.2rem;
     }
     .template-desc {
         color: var(--text-muted-color);
@@ -530,16 +538,18 @@ import { MatDialog } from '@angular/material/dialog';
     .schema-tabs { margin-top: 2rem; }
     .version-cards { display: flex; flex-wrap: wrap; gap: 2rem; margin-top: 2rem; }
     .version-card { 
-      min-width: 340px; 
-      max-width: 400px; 
-      flex: 1 1 340px; 
-      padding: 1.5rem; 
-      border-radius: 1.25rem; 
-      box-shadow: 0 2px 8px var(--shadow-color-light); 
-      background: var(--surface-color); 
-      display: flex; 
-      flex-direction: column; 
-      justify-content: space-between; 
+      min-width: 400px;
+      
+      max-width: 480px;
+      flex: 1 1 400px;
+      padding: 2.2rem;
+      border-radius: 1.25rem;
+  
+      box-shadow: 0 2px 8px var(--shadow-color-light);
+      background: var(--surface-color);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
     }
     .version-card .actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; }
     .base-name { font-size: 1.2rem; margin-left: 0.5rem; color: var(--text-color); }
@@ -579,6 +589,11 @@ import { MatDialog } from '@angular/material/dialog';
       font-size: 1rem;
       background: var(--surface-color);
       box-sizing: border-box;
+    }
+
+    .dark-theme select.team-dropdown,
+    .dark-theme select.team-dropdown option {
+      color: rgb(255, 255, 255);
     }
     .main-search-input {
       flex: 1 1 0%;
@@ -869,24 +884,9 @@ import { MatDialog } from '@angular/material/dialog';
       color: var(--text-color, #DDE9F2);
     }
 
-    .list-view-row .list-cell .version-tag {
-      /* version tag color is already handled, but ensure text color in dark mode */
-      color: var(--on-secondary-color, #1E2F3C);
-    }
+   
 
-    .dark-theme .list-view-row .list-cell .version-tag {
-      color: var(--text-color, #DDE9F2);
-      background: var(--secondary-color, #3B78A6);
-    }
-
-    .list-view-row:hover .list-cell {
-      background-color: var(--surface-hover-color, #f5fafd);
-    }
-
-    .dark-theme .list-view-row:hover .list-cell {
-      background-color: var(--background-color, #101C26);
-      color: var(--text-color, #DDE9F2);
-    }
+  
     .dashboard-footer {
       display: flex;
       justify-content: center;
@@ -934,6 +934,40 @@ import { MatDialog } from '@angular/material/dialog';
       font-size: 1rem;
       color: var(--text-color);
     }
+      .list-cell.actions-cell button {
+  transition: background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.18s;
+  box-shadow: none;
+  gap: 0.5rem; 
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  font-size: 1.5rem;
+    display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+}
+.list-cell.actions-cell button:hover:not(.action-delete) {
+  background:rgb(85, 176, 89) !important; /* Green 600 */
+  color: rgb(0, 0, 0) !important;
+  box-shadow: 0 2px 8px rgba(67,160,71,0.18);
+  transform: scale(1.13);
+}
+.list-cell.actions-cell button:hover:not(.action-delete) .mat-icon {
+  color: rgb(0, 0, 0) !important;
+}
+.list-cell.actions-cell button.action-delete:hover {
+  background:rgb(173, 74, 74) !important; /* Red 600 */
+  color:rgb(0, 0, 0) !important;
+  box-shadow: 0 2px 8px rgba(229,57,53,0.18);
+  transform: scale(1.13);
+}
+.list-cell.actions-cell button.action-delete:hover .mat-icon {
+  color: rgb(0, 0, 0) !important;
+}
 
     @keyframes slideIn {
       0% {
@@ -953,6 +987,38 @@ import { MatDialog } from '@angular/material/dialog';
         opacity: 0;
       }
     }
+    .version-card .template-title-group {
+  display: flex;
+  align-items: center; /* Changed from flex-start to center for vertical alignment */
+  gap: 1.7rem;
+  margin-bottom: 1.2rem;
+  min-height: 3.5rem; /* Ensure enough height for large icon */
+}
+.version-card .template-icon {
+  font-size: 3.2rem;
+  margin-top: 0; /* Remove margin-top to avoid cutting off icon */
+  margin-left: 0.2rem;
+  color: var(--primary-color);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  height: 3.2rem; /* Ensure icon is not cut off */
+  width: 3.2rem;
+}
+.version-card h3 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+.version-card .template-desc {
+  color: var(--text-muted-color);
+  font-size: 1.13rem;
+  margin: 0.18rem 0 0.18rem 0;
+}
+.version-card .template-meta {
+  font-size: 1.05rem;
+  gap: 0.7rem;
+}
   `]
 })
 export class DashboardComponent implements OnInit, AfterViewInit {
