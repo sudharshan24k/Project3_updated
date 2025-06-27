@@ -23,6 +23,8 @@ class TemplateModel(BaseModel):
     version: int = Field(default=1)
     schema: Optional[Dict[str, Any]] = Field(default=None)
     author: Optional[str] = Field(default=None)
+    team_name: Optional[str] = Field(default=None)
+    version_tag: Optional[str] = Field(default=None)
     created_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
     updated_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
 
@@ -34,11 +36,14 @@ class TemplateModel(BaseModel):
             "example": {
                 "name": "My Form Template",
                 "author": "John Doe",
+                "team_name": "Framework Team",
+                "version_tag": "v1.0",
                 "schema": {
                     "description": "A sample form schema.",
                     "fields": [
                         {"key": "name", "label": "Name", "type": "text", "required": True}
-                    ]
+                    ],
+                    "audit_pipeline": "standard"
                 }
             }
         },

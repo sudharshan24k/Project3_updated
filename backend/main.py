@@ -63,8 +63,10 @@ async def create_template(template: TemplateModel = Body(...)):
     encoded_template["version"] = 1
     encoded_template["created_at"] = datetime.datetime.utcnow()
     encoded_template["updated_at"] = datetime.datetime.utcnow()
-    # Ensure author is present
+    # Ensure author, team_name, and version_tag are present
     encoded_template["author"] = template.author if hasattr(template, 'author') else None
+    encoded_template["team_name"] = template.team_name if hasattr(template, 'team_name') else None
+    encoded_template["version_tag"] = template.version_tag if hasattr(template, 'version_tag') else None
     new_template = await template_collection.insert_one(encoded_template)
     
     # Also create the first version in history
@@ -89,11 +91,15 @@ async def list_templates():
     for t in templates:
         schema = t.get("schema", {})
         description = schema.get("description", "") if isinstance(schema, dict) else ""
+        audit_pipeline = schema.get("audit_pipeline", "") if isinstance(schema, dict) else ""
         result.append({
             "name": t.get("name"),
             "description": description,
             "created_at": t.get("created_at"),
-            "author": t.get("author", None)
+            "author": t.get("author", None),
+            "team_name": t.get("team_name", None),
+            "version_tag": t.get("version_tag", None),
+            "audit_pipeline": audit_pipeline
         })
     return serialize_mongo(result)
 
@@ -119,7 +125,9 @@ async def edit_template(name: str, req: UpdateTemplateRequest = Body(...)):
             "schema": req.schema,
             "version": 1,
             "created_at": datetime.datetime.utcnow(),
-            "updated_at": datetime.datetime.utcnow()
+            "updated_at": datetime.datetime.utcnow(),
+            "team_name": req.schema.get("team_name") if isinstance(req.schema, dict) else None,
+            "version_tag": req.schema.get("version_tag") if isinstance(req.schema, dict) else None
         }
         await template_collection.insert_one(new_template)
         # Also create first version in history
