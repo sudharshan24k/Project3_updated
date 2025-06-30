@@ -1,6 +1,10 @@
 <div class="dynamic-form-container">
       <header class="page-header">
-        <button (click)="closeForm()" class="back-button">
+        <button *ngIf="mode === 'create'" (click)="goToLaunchpad()" class="back-button">
+          <mat-icon>arrow_back</mat-icon>
+          <span>Back to Launchpad</span>
+        </button>
+        <button (click)="closeForm()" class="back-button" *ngIf="mode !== 'create'">
           <mat-icon>arrow_back</mat-icon>
           <span>Back to Templates</span>
         </button>

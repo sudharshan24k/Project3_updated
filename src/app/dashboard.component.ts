@@ -22,6 +22,10 @@ import { MatDialog } from '@angular/material/dialog';
   imports: [CommonModule, NgIf, NgFor, DynamicForm, SubmissionsViewerComponent, MatIconModule, MatTooltipModule, MatButtonModule, FormsModule, MatTabsModule, MatExpansionModule, TemplateHistoryComponent, AnimatedPopupComponent, MatListModule],
   template: `
     <div class="container">
+      <button mat-stroked-button color="primary" (click)="goToLaunchpad()" style="margin-bottom: 1rem;">
+        <mat-icon>arrow_back</mat-icon>
+        Back to Launchpad
+      </button>
       <div *ngIf="mode === 'list'">
         <header class="dashboard-header">
           <div>
@@ -1410,9 +1414,11 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     }, timeout);
   }
 
-
-
   navigateToHelpdesk() {
     this.router.navigate(['/helpdesk']);
+  }
+
+  goToLaunchpad() {
+    this.router.navigate(['/']);
   }
 }

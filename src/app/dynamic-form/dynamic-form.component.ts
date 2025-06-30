@@ -212,19 +212,28 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
   }
 
   ngOnInit() {
-    if (this.mode === 'create') {
-      this.schemaService.listTemplates().subscribe(templates => {
-        this.importTemplates = templates;
-      });
-    }
-    this.route.paramMap.subscribe(params => {
-      const versionParam = params.get('version');
-      this.submissionVersion = versionParam ? +versionParam : null;
-      this.route.queryParamMap.subscribe(qp => {
-        this.isDuplicatedEdit = qp.get('duplicated') === 'true';
-        this.setupComponent();
+    this.route.data.subscribe(data => {
+      this.mode = data['mode'] || this.mode; // Set mode from route data first
+
+      // Now, proceed with the original logic, which will use the correct mode
+      if (this.mode === 'create') {
+        this.schemaService.listTemplates().subscribe(templates => {
+          this.importTemplates = templates;
+        });
+      }
+
+      this.route.paramMap.subscribe(params => {
+        const versionParam = params.get('version');
+        this.submissionVersion = versionParam ? +versionParam : null;
+        this.templateName = params.get('templateName') || this.templateName;
+
+        this.route.queryParamMap.subscribe(qp => {
+          this.isDuplicatedEdit = qp.get('duplicated') === 'true';
+          this.setupComponent();
+        });
       });
     });
+
     // --- Fix for boolean visibleIf glitch: subscribe to all boolean fields and trigger change detection ---
     this.form?.valueChanges?.subscribe(() => {
       this.cdr.markForCheck();
@@ -838,5 +847,9 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       window.location.reload(); 
       // Reload the page after showing the popup
     }, timeout);
+  }
+
+  goToLaunchpad() {
+    this.router.navigate(['/']);
   }
 }

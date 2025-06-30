@@ -1,0 +1,17 @@
+<div class="app-dashboard-container">
+  <div class="header">
+    <button mat-icon-button (click)="goToLaunchpad()" class="back-button">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <h1>Application Team Dashboard</h1>
+    <p>Actions for the Application Team.</p>
+  </div>
+
+  <mat-card class="action-card" (click)="navigateToCreateTemplate()">
+    <mat-card-content>
+      <mat-icon class="card-icon">add_circle_outline</mat-icon>
+      <h2>Create New Template</h2>
+      <p>Proceed to the form editor to build a new template.</p>
+    </mat-card-content>
+  </mat-card>
+</div> 
