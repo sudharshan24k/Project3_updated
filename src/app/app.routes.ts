@@ -1,5 +1,5 @@
 import { DashboardComponent } from './dashboard.component';
-import { DynamicForm } from './dynamic-form/dynamic-form';
+import { DynamicForm } from './dynamic-form/dynamic-form.component';
 import { Routes } from '@angular/router';
 import { TemplateHistoryComponent } from './template-history/template-history.component';
 import { HelpdeskComponent } from './helpdesk.component';

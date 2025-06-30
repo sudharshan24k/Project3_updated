@@ -7,7 +7,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
-import { DynamicForm } from './dynamic-form/dynamic-form';
+import { MatListModule } from '@angular/material/list';
+import { DynamicForm } from './dynamic-form/dynamic-form.component';
 import { SchemaService, TemplateInfo } from './dynamic-form/schema.service';
 import { SubmissionsViewerComponent } from './submissions-viewer.component';
 import { TemplateHistoryComponent } from './template-history/template-history.component';
@@ -18,7 +19,7 @@ import { MatDialog } from '@angular/material/dialog';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, NgIf, NgFor, DynamicForm, SubmissionsViewerComponent, MatIconModule, MatTooltipModule, MatButtonModule, FormsModule, MatTabsModule, MatExpansionModule, TemplateHistoryComponent, AnimatedPopupComponent],
+  imports: [CommonModule, NgIf, NgFor, DynamicForm, SubmissionsViewerComponent, MatIconModule, MatTooltipModule, MatButtonModule, FormsModule, MatTabsModule, MatExpansionModule, TemplateHistoryComponent, AnimatedPopupComponent, MatListModule],
   template: `
     <div class="container">
       <div *ngIf="mode === 'list'">
