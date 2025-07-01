@@ -12,6 +12,7 @@ import { ResponseNameDialogComponent } from './response-name-dialog.component';
 import { EmailDialogComponent } from './email-dialog.component';
 import { AnimatedPopupComponent } from './animated-popup.component';
 import { InteractiveDialogComponent } from './interactive-dialog.component';
+import JSZip from 'jszip';
 
 @Component({
   selector: 'app-submissions-viewer',
@@ -40,6 +41,10 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
   popupMessage: string = '';
   popupType: 'success' | 'error' | 'airplane' = 'success';
   popupVisible = false;
+
+  environments = ['PROD', 'DEV', 'COB'];
+  selectedEnv = 'PROD';
+  envFormattedSubmissionData: { [env: string]: string } = {};
 
   constructor(private schemaService: SchemaService, private router: Router, private dialog: MatDialog) {}
 
@@ -85,30 +90,78 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
     if (!this.templateName) return;
     this.selectedSubmissionName = submissionName;
     this.diffResult = null;
+    this.selectedEnv = 'PROD'; // Default to PROD tab
     this.schemaService.getSubmissionByName(this.templateName, submissionName).subscribe(sub => {
+      console.log('Backend submission response:', sub); // DEBUG
       this.selectedSubmission = sub;
       this.selectedSubmissionData = sub.data;
-      this.formattedSubmissionData = this.formatAsConf(sub.data);
+      // Generate config for all environments
+      this.envFormattedSubmissionData = {};
+      // Fix: always pass the correct data object
+      const confData = sub.data?.data || sub.data;
+      for (const env of this.environments) {
+        this.envFormattedSubmissionData[env] = this.formatAsConfEnv(confData, env);
+      }
+      this.formattedSubmissionData = this.envFormattedSubmissionData[this.selectedEnv];
     });
   }
 
-  private formatAsConf(data: any): string {
+  onEnvTabChange(env: string) {
+    this.selectedEnv = env;
+    this.formattedSubmissionData = this.envFormattedSubmissionData[env];
+  }
+
+  // Helper: Generate config for a specific environment
+  private formatAsConfEnv(data: any, env: string): string {
+    console.log('formatAsConfEnv input data:', data, 'env:', env); // DEBUG
     if (!data) return '';
     let confContent = '';
     for (const key in data) {
       if (Object.prototype.hasOwnProperty.call(data, key)) {
         const value = data[key];
-        // Handle keyvalue type: array of {key, value} objects
-        if (Array.isArray(value) && value.length && value[0] && typeof value[0] === 'object' && 'key' in value[0] && 'value' in value[0]) {
-          // Convert to object {k1: v1, k2: v2, ...}
+        // Environment-specific field (object with PROD/DEV/COB keys)
+        if (
+          value && typeof value === 'object' &&
+          (value.PROD !== undefined || value.DEV !== undefined || value.COB !== undefined)
+        ) {
+          const envVal = value[env];
+          if (Array.isArray(envVal) && envVal.length && envVal[0] && typeof envVal[0] === 'object' && 'key' in envVal[0] && 'value' in envVal[0]) {
+            // keyvalue type for env-specific
+            const obj: any = {};
+            envVal.forEach((pair: any) => {
+              if (pair.key !== undefined) obj[pair.key] = pair.value !== undefined ? pair.value : '';
+            });
+            confContent += `${key}=${JSON.stringify(obj)}\n`;
+          } else if (Array.isArray(envVal) && envVal.length === 0) {
+            confContent += `${key}={}\n`;
+          } else if (envVal === undefined || envVal === null) {
+            confContent += `${key}=""\n`;
+          } else {
+            confContent += `${key}="${envVal}"\n`;
+          }
+        }
+        // Common keyvalue type (array of {key,value})
+        else if (
+          Array.isArray(value) &&
+          value.length &&
+          value[0] &&
+          typeof value[0] === 'object' &&
+          'key' in value[0] &&
+          'value' in value[0]
+        ) {
           const obj: any = {};
           value.forEach((pair: any) => {
             if (pair.key !== undefined) obj[pair.key] = pair.value !== undefined ? pair.value : '';
           });
-          confContent += `  ${key} = ${JSON.stringify(obj)}\n`;
-        } else {
-          confContent += `  ${key} = "${value}"\n`;
+          confContent += `${key}=${JSON.stringify(obj)}\n`;
+        } else if (Array.isArray(value) && value.length === 0) {
+          confContent += `${key}={}\n`;
         }
+        // Primitive value
+        else if (typeof value !== 'object' || value === null) {
+          confContent += `${key}="${value ?? ''}"\n`;
+        }
+        // All other objects (not keyvalue, not env-specific): skip
       }
     }
     return confContent;
@@ -132,32 +185,38 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
     });
   }
 
+  // Download all configs for all environments as a single zip file
   async downloadSubmission(submissionName: string) {
     if (!this.templateName) return;
     this.schemaService.downloadSubmissionByName(this.templateName, submissionName).subscribe(async (submission: any) => {
-      const confContent = this.formatAsConf(submission.data);
-      const blob = new Blob([confContent], { type: 'text/plain;charset=utf-8' });
-      const fileName = `${submissionName}.conf`;
-
+      const confData = submission.data?.data || submission.data;
+      const zip = new JSZip();
+      for (const env of this.environments) {
+        const confContent = this.formatAsConfEnv(confData, env);
+        const fileName = `${submissionName}_${env}.conf`;
+        zip.file(fileName, confContent);
+      }
+      const content = await zip.generateAsync({ type: 'blob' });
+      const zipFileName = `${submissionName}_configs.zip`;
       if ('showSaveFilePicker' in window && typeof (window as any).showSaveFilePicker === 'function') {
         try {
           const handle = await (window as any).showSaveFilePicker({
-            suggestedName: fileName,
-            types: [{ description: 'Config files', accept: { 'text/plain': ['.conf'] } }],
+            suggestedName: zipFileName,
+            types: [{ description: 'Zip files', accept: { 'application/zip': ['.zip'] } }],
           });
           const writable = await handle.createWritable();
-          await writable.write(blob);
+          await writable.write(content);
           await writable.close();
         } catch (err) {
           if ((err as DOMException).name !== 'AbortError') {
-            console.error('Could not save file:', err);
+            console.error('Could not save zip file:', err);
           }
         }
       } else {
-        const url = window.URL.createObjectURL(blob);
+        const url = window.URL.createObjectURL(content);
         const a = document.createElement('a');
         a.href = url;
-        a.download = fileName;
+        a.download = zipFileName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

@@ -6,7 +6,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { MatListModule } from '@angular/material/list';
 import { DynamicForm } from './dynamic-form/dynamic-form.component';
 import { SchemaService, TemplateInfo } from './dynamic-form/schema.service';
@@ -27,15 +27,17 @@ import { MatDialog } from '@angular/material/dialog';
         Back to Launchpad
       </button>
       <div *ngIf="mode === 'list'">
-        <header class="dashboard-header">
-          <div>
-            <h1>Form Templates</h1>
-            <p class="subtitle">Create, manage, and use your form templates.</p>
+        <header class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <div style="text-align: center; flex: 1;">
+            <h1 *ngIf="!isFrameworkTeam">Configuration files</h1>
+            <h1 *ngIf="isFrameworkTeam">Create New Framework & Edit Existing Template</h1>
+            <p class="subtitle" *ngIf="!isFrameworkTeam">Use and Fill out your Configuration files.</p>
+            <p class="subtitle" *ngIf="isFrameworkTeam">Manage, edit, and create templates for the framework team.</p>
           </div>
-          <div class="header-actions">
-            <button (click)="showCreateTemplate()" mat-raised-button>
-              <mat-icon>add</mat-icon>
-              <span>Create New Template</span>
+          <div *ngIf="isFrameworkTeam">
+            <button mat-raised-button color="primary" class="big-create-btn" (click)="showCreateTemplate()">
+              <mat-icon style="font-size: 2.5rem;">add</mat-icon>
+              <span style="font-size: 1.3rem; font-weight: 600; margin-left: 0.5rem;">Create New Template</span>
             </button>
           </div>
         </header>
@@ -175,23 +177,28 @@ import { MatDialog } from '@angular/material/dialog';
                         </div>
                       </div>
                       <div class="actions">
-                        <button mat-icon-button (click)="useTemplate(version.name)" matTooltip="Fill Out Form">
-                          <mat-icon fontIcon="dynamic_form" class="action-icon"></mat-icon>
-                        </button>
-                        <button mat-icon-button (click)="editTemplate(version)" matTooltip="Edit Schema">
-                          <mat-icon fontIcon="edit" class="action-icon"></mat-icon>
-                        </button>
-                        <button mat-icon-button (click)="previewTemplate(version.name)" matTooltip="Preview Form">
+                        <!-- Application team: view, fill, submissions -->
+                        <button mat-icon-button (click)="previewTemplate(version.name)" matTooltip="Preview Form" *ngIf="!isFrameworkTeam">
                           <mat-icon fontIcon="visibility" class="action-icon"></mat-icon>
                         </button>
-                        <button mat-icon-button (click)="viewSubmissions(version.name)" matTooltip="View Submissions">
+                        <button mat-icon-button (click)="useTemplate(version.name)" matTooltip="Fill Out Form" *ngIf="!isFrameworkTeam">
+                          <mat-icon fontIcon="dynamic_form" class="action-icon"></mat-icon>
+                        </button>
+                        <button mat-icon-button (click)="viewSubmissions(version.name)" matTooltip="View Submissions" *ngIf="!isFrameworkTeam">
                           <mat-icon fontIcon="list_alt" class="action-icon"></mat-icon>
                         </button>
-                        <button mat-icon-button (click)="viewHistory(version.name)" matTooltip="View History">
+                        <!-- Framework team: edit, history, view, delete -->
+                        <button mat-icon-button (click)="editTemplate(version)" matTooltip="Edit Template" *ngIf="isFrameworkTeam">
+                          <mat-icon fontIcon="edit" class="action-icon"></mat-icon>
+                        </button>
+                        <button mat-icon-button (click)="viewHistory(version.name)" matTooltip="View History" *ngIf="isFrameworkTeam">
                           <mat-icon fontIcon="history" class="action-icon"></mat-icon>
                         </button>
-                        <button mat-icon-button class="action-delete" (click)="deleteTemplate(version.name)" matTooltip="Delete Template">
-                          <mat-icon fontIcon="delete_outline" class="action-icon"></mat-icon>
+                        <button mat-icon-button (click)="previewTemplate(version.name)" matTooltip="Preview Form" *ngIf="isFrameworkTeam">
+                          <mat-icon fontIcon="visibility" class="action-icon"></mat-icon>
+                        </button>
+                        <button mat-icon-button (click)="deleteTemplate(version.name)" matTooltip="Delete Template" *ngIf="isFrameworkTeam">
+                          <mat-icon fontIcon="delete" class="action-icon action-delete"></mat-icon>
                         </button>
                       </div>
                     </div>
@@ -247,20 +254,28 @@ import { MatDialog } from '@angular/material/dialog';
                     <div class="list-cell">{{ version.audit_pipeline || '-' }}</div>
                     <div class="list-cell date-cell">{{ version.created_at ? (version.created_at | date:'mediumDate') : '-' }}</div>
                     <div class="list-cell actions-cell">
-                      <button mat-icon-button (click)="useTemplate(version.name)" matTooltip="Fill Out Form">
+                      <!-- Application team: view, fill, submissions -->
+                      <button mat-icon-button (click)="previewTemplate(version.name)" matTooltip="Preview Form" *ngIf="!isFrameworkTeam">
+                        <mat-icon fontIcon="visibility" class="action-icon"></mat-icon>
+                      </button>
+                      <button mat-icon-button (click)="useTemplate(version.name)" matTooltip="Fill Out Form" *ngIf="!isFrameworkTeam">
                         <mat-icon fontIcon="dynamic_form" class="action-icon"></mat-icon>
                       </button>
-                      <button mat-icon-button (click)="editTemplate(version)" matTooltip="Edit Schema">
-                        <mat-icon fontIcon="edit" class="action-icon"></mat-icon>
-                      </button>
-                      <button mat-icon-button (click)="viewSubmissions(version.name)" matTooltip="View Submissions">
+                      <button mat-icon-button (click)="viewSubmissions(version.name)" matTooltip="View Submissions" *ngIf="!isFrameworkTeam">
                         <mat-icon fontIcon="list_alt" class="action-icon"></mat-icon>
                       </button>
-                      <button mat-icon-button (click)="viewHistory(version.name)" matTooltip="View History">
+                      <!-- Framework team: edit, history, view, delete -->
+                      <button mat-icon-button (click)="editTemplate(version)" matTooltip="Edit Template" *ngIf="isFrameworkTeam">
+                        <mat-icon fontIcon="edit" class="action-icon"></mat-icon>
+                      </button>
+                      <button mat-icon-button (click)="viewHistory(version.name)" matTooltip="View History" *ngIf="isFrameworkTeam">
                         <mat-icon fontIcon="history" class="action-icon"></mat-icon>
                       </button>
-                      <button mat-icon-button class="action-delete" (click)="deleteTemplate(version.name)" matTooltip="Delete Template">
-                        <mat-icon fontIcon="delete_outline" class="action-icon"></mat-icon>
+                      <button mat-icon-button (click)="previewTemplate(version.name)" matTooltip="Preview Form" *ngIf="isFrameworkTeam">
+                        <mat-icon fontIcon="visibility" class="action-icon"></mat-icon>
+                      </button>
+                      <button mat-icon-button (click)="deleteTemplate(version.name)" matTooltip="Delete Template" *ngIf="isFrameworkTeam">
+                        <mat-icon fontIcon="delete" class="action-icon action-delete"></mat-icon>
                       </button>
                     </div>
                 </div>
@@ -302,7 +317,7 @@ import { MatDialog } from '@angular/material/dialog';
             <span>Back to Templates</span>
           </button>
         </header>
-        <app-template-history [templateName]="selectedTemplate"></app-template-history>
+        <app-template-history></app-template-history>
       </div>
 
       <div class="dashboard-footer">
@@ -888,10 +903,6 @@ import { MatDialog } from '@angular/material/dialog';
       background: var(--surface-color, #1A2A36);
       color: var(--text-color, #DDE9F2);
     }
-
-   
-
-  
     .dashboard-footer {
       display: flex;
       justify-content: center;
@@ -1024,6 +1035,85 @@ import { MatDialog } from '@angular/material/dialog';
   font-size: 1.05rem;
   gap: 0.7rem;
 }
+.big-create-btn {
+  min-width: 220px;
+  min-height: 80px;
+  width: 260px;
+  height: 80px;
+  border-radius: 1.2rem;
+  font-size: 1.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px var(--shadow-color-light);
+  margin-left: 1.5rem;
+  margin-top: 0.5rem;
+  padding: 0;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3d1e6 100%);
+  position: relative;
+  overflow: hidden;
+  transition: background 0.22s, box-shadow 0.18s;
+}
+.big-create-btn mat-icon {
+  display: none;
+}
+.big-create-btn span {
+  color: #111;
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+  z-index: 2;
+  position: relative;
+  transition: color 0.18s, transform 0.32s cubic-bezier(.4,2,.6,1), opacity 0.22s;
+  opacity: 1;
+  transform: translateY(0);
+  display: inline-block;
+}
+.big-create-btn::after {
+  content: '+';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.7);
+  font-size: 2.5rem;
+  color: #1976d2;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+  transition: font-size 0.22s, opacity 0.22s, color 0.22s;
+}
+.big-create-btn:hover, .big-create-btn:focus {
+  background: linear-gradient(135deg, #e3f0ff 0%, #b0c4de 100%);
+  outline: none;
+}
+.big-create-btn:hover span, .big-create-btn:focus span {
+  opacity: 0;
+  transform: translateY(40px);
+  pointer-events: none;
+}
+.big-create-btn:hover::after, .big-create-btn:focus::after {
+  font-size: 5.5rem;
+  opacity: 1;
+  color: #1976d2;
+}
+
+/* Dark mode styles */
+.dark-theme .big-create-btn {
+  background: linear-gradient(135deg, #232b36 0%, #2d3a4a 100%);
+  box-shadow: 0 4px 24px #0a1922;
+}
+.dark-theme .big-create-btn span {
+  color: #fff;
+}
+.dark-theme .big-create-btn::after {
+  color: #90caf9;
+}
+.dark-theme .big-create-btn:hover, .dark-theme .big-create-btn:focus {
+  background: linear-gradient(135deg, #1a2330 0%, #22304a 100%);
+}
+.dark-theme .big-create-btn:hover::after, .dark-theme .big-create-btn:focus::after {
+  color: #90caf9;
+}
   `]
 })
 export class DashboardComponent implements OnInit, AfterViewInit {
@@ -1056,10 +1146,15 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     return this.baseNames.slice(this.tabWindowStart, this.tabWindowStart + this.tabWindowSize);
   }
   selectedTabIndexInWindow = 0;
+  buttonHover = false;
+  isFrameworkTeam = false; // <-- Add this line
 
-  constructor(private schemaService: SchemaService, private router: Router, private dialog: MatDialog) {}
+  constructor(private schemaService: SchemaService, private router: Router, private dialog: MatDialog, private route: ActivatedRoute) {}
 
   ngOnInit() {
+    this.route.queryParams.subscribe(params => {
+      this.isFrameworkTeam = params['team'] === 'framework';
+    });
     this.restoreDashboardState();
     this.loadTemplates();
   }
@@ -1420,5 +1515,9 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   goToLaunchpad() {
     this.router.navigate(['/']);
+  }
+
+  goToFilledByMe() {
+    this.router.navigate(['/filled-by-me']);
   }
 }

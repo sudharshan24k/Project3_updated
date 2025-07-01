@@ -16,10 +16,10 @@ export class LaunchpadComponent {
   constructor(private router: Router) {}
 
   navigateToDashboard() {
-    this.router.navigate(['/dashboard']);
+    this.router.navigate(['/dashboard'], { queryParams: { team: 'application' } });
   }
 
   navigateToCreateTemplate() {
-    this.router.navigate(['/app-dashboard'], { skipLocationChange: true });
+    this.router.navigate(['/dashboard'], { queryParams: { team: 'framework' } });
   }
-} 
+}
