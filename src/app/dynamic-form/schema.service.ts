@@ -114,8 +114,8 @@ export class SchemaService {
   }
 
   // Submission endpoints
-  submitForm(templateName: string, data: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/submissions/${templateName}`, data);
+  submitForm(templateName: string, submission: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/submissions/${templateName}`, submission);
   }
 
   listSubmissions(templateName: string): Observable<Submission[]> {
@@ -170,5 +170,12 @@ export class SchemaService {
     // This will be replaced with a real API call
     console.log('Sending email with payload:', payload);
     return of({ success: true, message: 'Email sent successfully (mocked).' });
+  }
+
+  /**
+   * Search submissions by filler name
+   */
+  searchSubmissionsByFiller(fillerName: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/submissions/search-by-filler?fillerName=${encodeURIComponent(fillerName)}`);
   }
 }

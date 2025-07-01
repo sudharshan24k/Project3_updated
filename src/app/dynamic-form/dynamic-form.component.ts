@@ -1,5 +1,5 @@
 import { Component, OnInit, Input, Output, EventEmitter, OnChanges, SimpleChanges, ChangeDetectorRef, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ValidatorFn, ReactiveFormsModule, FormArray, FormControl } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ValidatorFn, ReactiveFormsModule, FormArray, FormControl, AbstractControl } from '@angular/forms';
 import { CommonModule, NgIf, NgFor } from '@angular/common';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -23,6 +23,7 @@ import { Observable, startWith, map, takeUntil } from 'rxjs';
 import { MatInput } from '@angular/material/input';
 import { Subject } from 'rxjs';
 import { AnimatedPopupComponent } from '../animated-popup.component';
+import { FillerNameDialogComponent } from './filler-name-dialog.component';
 
 @Component({
   selector: 'app-dynamic-form',
@@ -165,8 +166,15 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
         }
       });
     }
-    return !!field.required;
+    return field.required === true;
   }
+
+  isFieldEditable(field: any): boolean {
+    return field.editable === true;
+  }
+
+  // Add form controls for top-level required fields
+  topLevelForm: FormGroup;
 
   constructor(private fb: FormBuilder, private route: ActivatedRoute, private router: Router, private schemaService: SchemaService, private cdr: ChangeDetectorRef, private dialog: MatDialog) {
     this.form = this.fb.group({});
@@ -180,7 +188,15 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       editable: [true],
       regex: [''],
       options: this.fb.array([]),
-      initialKeys: ['']
+      initialKeys: [''],
+      environmentSpecific: [false] // <-- Add this line
+    });
+    // Add top-level form for required fields
+    this.topLevelForm = this.fb.group({
+      author: ['', Validators.required],
+      team_name: ['', Validators.required],
+      audit_pipeline: ['', Validators.required],
+      version_tag: ['', Validators.required]
     });
     this.fieldForm.get('type')?.valueChanges.subscribe(type => {
       if (type === 'dropdown') {
@@ -212,19 +228,28 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
   }
 
   ngOnInit() {
-    if (this.mode === 'create') {
-      this.schemaService.listTemplates().subscribe(templates => {
-        this.importTemplates = templates;
-      });
-    }
-    this.route.paramMap.subscribe(params => {
-      const versionParam = params.get('version');
-      this.submissionVersion = versionParam ? +versionParam : null;
-      this.route.queryParamMap.subscribe(qp => {
-        this.isDuplicatedEdit = qp.get('duplicated') === 'true';
-        this.setupComponent();
+    this.route.data.subscribe(data => {
+      this.mode = data['mode'] || this.mode; // Set mode from route data first
+
+      // Now, proceed with the original logic, which will use the correct mode
+      if (this.mode === 'create') {
+        this.schemaService.listTemplates().subscribe(templates => {
+          this.importTemplates = templates;
+        });
+      }
+
+      this.route.paramMap.subscribe(params => {
+        const versionParam = params.get('version');
+        this.submissionVersion = versionParam ? +versionParam : null;
+        this.templateName = params.get('templateName') || this.templateName;
+
+        this.route.queryParamMap.subscribe(qp => {
+          this.isDuplicatedEdit = qp.get('duplicated') === 'true';
+          this.setupComponent();
+        });
       });
     });
+
     // --- Fix for boolean visibleIf glitch: subscribe to all boolean fields and trigger change detection ---
     this.form?.valueChanges?.subscribe(() => {
       this.cdr.markForCheck();
@@ -318,6 +343,28 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
         this.submitButtonText = 'Submit';
       }
     }
+    // Map 'mandatory' to 'required' for all fields in schema and normalize required/editable
+    if (this.schema && Array.isArray(this.schema.fields)) {
+      this.schema.fields.forEach((field: any) => {
+        if (field.mandatory !== undefined && field.required === undefined) {
+          field.required = field.mandatory;
+        }
+        field.required = (field.required === true || field.required === 'true');
+        field.editable = (field.editable === true || field.editable === 'true');
+      });
+    }
+  }
+
+  // Utility to normalize required/editable fields to booleans (robust)
+  normalizeFieldBooleans(schema: any) {
+    if (!schema || !Array.isArray(schema.fields)) return;
+    schema.fields.forEach((field: any) => {
+      if (field.mandatory !== undefined && field.required === undefined) {
+        field.required = field.mandatory;
+      }
+      field.required = (field.required === true || field.required === 'true');
+      field.editable = (field.editable === true || field.editable === 'true');
+    });
   }
 
   loadTemplate() {
@@ -325,8 +372,19 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
     this.isLoading = true;
     this.schemaService.getTemplate(this.templateName).subscribe({
       next: (data) => {
+        if (this.mode === 'use') {
+          console.log('API response:', data);
+        }
         this.schema = data.schema;
         this.schema.name = data.name; // ensure name is populated
+        // Copy top-level fields to schema for UI binding
+        this.schema.author = data.author;
+        this.schema.team_name = data.team_name;
+        this.schema.version = data.version_tag;
+        this.normalizeFieldBooleans(this.schema);
+        if (this.mode === 'use') {
+          console.log('Normalized fields:', this.schema.fields);
+        }
         this.buildForm();
         this.isLoading = false;
         // Set button text for edit/use modes if not already set
@@ -351,6 +409,7 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
     this.schemaService.getTemplate(this.templateName).subscribe(data => {
       this.schema = data.schema;
       this.schema.name = data.name;
+      this.normalizeFieldBooleans(this.schema);
       this.schemaService.getSubmission(this.templateName!, this.submissionVersion!).subscribe(sub => {
         this.buildForm();
         this.form.patchValue(sub.data);
@@ -371,6 +430,7 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
     this.schemaService.getTemplate(currentTemplateName).subscribe(schema => {
       this.schema = schema.schema;
       this.schema.name = schema.name; // Keep the original template name
+      this.normalizeFieldBooleans(this.schema);
       this.title = `Editing Submission for: ${currentTemplateName}`;
       this.submitButtonText = 'Submit as New';
 
@@ -400,11 +460,51 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
   buildForm() {
     const controls: { [key: string]: any } = {};
     this.schema.fields.forEach((field: any) => {
-      const validators = this.getValidators(field);
-      if (field.type === 'mcq_multiple') {
-        controls[field.key] = this.fb.array(field.defaultValue || [], validators);
+      const validators: ValidatorFn[] = [];
+      if (field.required === true) {
+        validators.push(Validators.required);
+      }
+      if (field.regex) {
+        validators.push(Validators.pattern(field.regex));
+      }
+      let defaultValue = field.defaultValue;
+      if (defaultValue === undefined || defaultValue === null || defaultValue === 'None') {
+        defaultValue = '';
+      }
+      if (field.environmentSpecific) {
+        // For environment-specific, create a FormGroup with PROD, DEV, COB for all types
+        if (field.type === 'keyvalue') {
+          const makeArray = () => {
+            let initialPairs: any[] = [];
+            if (Array.isArray(field.initialKeys)) {
+              initialPairs = field.initialKeys.map((k: string) => ({ key: k, value: '' }));
+            }
+            return this.fb.array(
+              initialPairs.map((pair: {key: string, value: string}) => this.fb.group(pair)),
+              validators
+            );
+          };
+          controls[field.key] = this.fb.group({
+            PROD: makeArray(),
+            DEV: makeArray(),
+            COB: makeArray(),
+          });
+        } else if (field.type === 'mcq_multiple') {
+          controls[field.key] = this.fb.group({
+            PROD: this.fb.array(defaultValue && defaultValue.PROD ? defaultValue.PROD : [], validators),
+            DEV: this.fb.array(defaultValue && defaultValue.DEV ? defaultValue.DEV : [], validators),
+            COB: this.fb.array(defaultValue && defaultValue.COB ? defaultValue.COB : [], validators),
+          });
+        } else {
+          controls[field.key] = this.fb.group({
+            PROD: [defaultValue && defaultValue.PROD ? defaultValue.PROD : '', validators],
+            DEV: [defaultValue && defaultValue.DEV ? defaultValue.DEV : '', validators],
+            COB: [defaultValue && defaultValue.COB ? defaultValue.COB : '', validators],
+          });
+        }
+      } else if (field.type === 'mcq_multiple') {
+        controls[field.key] = this.fb.array(defaultValue || [], validators);
       } else if (field.type === 'keyvalue') {
-        // Initialize FormArray with default keys as {key, value} objects
         let initialPairs = [];
         if (Array.isArray(field.initialKeys)) {
           initialPairs = field.initialKeys.map((k: string) => ({ key: k, value: '' }));
@@ -414,22 +514,18 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
           validators
         );
       } else {
-        controls[field.key] = [field.defaultValue || null, validators];
+        controls[field.key] = [defaultValue, validators];
       }
     });
     this.form = this.fb.group(controls);
-
-    // Listen for changes to update required validators dynamically
     this.form.valueChanges.subscribe(() => {
       this.updateDynamicValidators();
-      // Force change detection for visibility in response mode
       if (this.mode === 'use') {
         void this.visibleFields;
         this.cdr.markForCheck();
         this.cdr.detectChanges();
       }
     });
-    // --- Subscribe to all boolean fields for visibility glitch fix ---
     this.schema.fields.forEach((field: any) => {
       if (field.type === 'boolean') {
         const control = this.form.get(field.key);
@@ -470,7 +566,8 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       placeholder: '',
       regex: '',
       options: [],
-      initialKeys: '' // Add initialKeys for keyvalue
+      initialKeys: '', // Add initialKeys for keyvalue
+      environmentSpecific: false // <-- Add this line
     });
     this.options.clear();
     this.isFieldEditorVisible = true;
@@ -482,35 +579,33 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
 
   editField(index: number) {
     this.currentFieldIndex = index;
-    const field = this.schema.fields[index];
-    this.fieldForm.patchValue(field);
+    const field = { ...this.schema.fields[index] };
+    // Always enable the key control for editing (remove disabling logic)
+    this.fieldForm.get('key')?.enable({ emitEvent: false });
+    this.fieldForm.patchValue({
+      ...field,
+      required: field.required ?? false,
+      editable: field.editable ?? false,
+      environmentSpecific: field.environmentSpecific ?? false // Ensure checkbox is set
+    });
     this.options.clear();
-    if (field.type === 'dropdown' && field.options) {
+    if ((field.type === 'dropdown' || field.type === 'mcq_single' || field.type === 'mcq_multiple') && field.options) {
       field.options.forEach((opt: any) => this.options.push(this.fb.group(opt)));
     }
-      // Fix for keyvalue: show default keys as comma-separated string
+    // Fix for keyvalue: show default keys as comma-separated string
     if (field.type === 'keyvalue' && field.initialKeys) {
-      console.log('Initial keys:', field.initialKeys);
       const keysString = Array.isArray(field.initialKeys)
         ? field.initialKeys.join(',')
         : field.initialKeys;
       this.fieldForm.patchValue({ initialKeys: keysString });
     }
-    if (field.options && Array.isArray(field.options)) {
-    field.options.forEach((opt: any) => {
-      this.options.push(this.fb.group({
-        label: [opt.label, Validators.required],
-        value: [opt.value, Validators.required]
-      }));
-    });
-  }
     // Sync conditional logic fields
-
     this.visibleIfKey = field.visibleIf?.key || null;
     this.visibleIfValue = field.visibleIf?.value ?? null;
     this.mandatoryIfKey = field.mandatoryIf?.key || null;
     this.mandatoryIfValue = field.mandatoryIf?.value ?? null;
     this.isFieldEditorVisible = true;
+    setTimeout(() => { this.isDuplicatedEdit = false; }, 0);
   }
 
   removeField(index: number) {
@@ -523,6 +618,12 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       return;
     }
     const newField = this.fieldForm.value;
+    newField.environmentSpecific = this.fieldForm.get('environmentSpecific')?.value === true;
+    // Prevent 'data' as a field key
+    if (newField.key && newField.key.trim().toLowerCase() === 'data') {
+      alert("'data' is a reserved key and cannot be used as a field name. Please choose another key.");
+      return;
+    }
     // Attach conditional logic fields
     const visibleIfVal = this.visibleIfKey ? (this.visibleIfValue !== null && this.visibleIfValue !== undefined ? this.visibleIfValue : '') : null;
     newField.visibleIf = this.visibleIfKey ? { key: this.visibleIfKey, value: visibleIfVal } : null;
@@ -546,17 +647,12 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
     this.cdr.detectChanges();
   }
 
-  onSubmit() {
-    // Update initialKeys for keyvalue fields from form values BEFORE saving
-    this.schema.fields.forEach((field: any) => {
-      if (field.type === 'keyvalue') {
-        const arr = this.form.get(field.key) as FormArray;
-        if (arr && arr.controls) {
-          field.initialKeys = arr.controls.map(ctrl => ctrl.value.key).filter((k: string) => k && k.trim() !== '');
-        }
-      }
-    });
+  async onSubmit() {
     if (this.mode === 'create') {
+      if (!this.isFormValid()) {
+        this.showPopup('Please fill all required fields.', 'error');
+        return;
+      }
       const template = {
         name: this.schema.name,
         description: this.schema.description,
@@ -564,7 +660,7 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
         author: this.schema.author,
         team_name: this.schema.team_name,
         version: this.schema.version,
-        audit_pipeline: this.schema.audit_pipeline // <-- add this line
+        audit_pipeline: this.schema.audit_pipeline
       };
       this.schemaService.createTemplate(template).subscribe(() => {
         this.showPopup('Template created successfully!', 'success');
@@ -595,8 +691,18 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       });
     } else if (this.mode === 'use') {
       if (!this.templateName) return;
-      // Always submit as new, even if prefillSubmissionName is set (duplicate is just for prefill)
-      this.schemaService.submitForm(this.templateName, this.form.getRawValue()).subscribe(() => {
+      // Prompt for filler name
+      const dialogRef = this.dialog.open(FillerNameDialogComponent, {
+        width: '400px',
+        disableClose: true
+      });
+      const fillerName = await dialogRef.afterClosed().toPromise();
+      if (!fillerName) return; // Cancelled
+      // Submit form with fillerName as a top-level field
+      this.schemaService.submitForm(this.templateName, {
+        fillerName,
+        data: this.form.getRawValue()
+      }).subscribe(() => {
         this.showPopup('Form response submitted!', 'airplane');
         setTimeout(() => this.closeForm(), 1800);
       });
@@ -604,8 +710,16 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
   }
 
   isFormValid(): boolean {
-      // We only care about the template's structure.
-      return this.schema.name && this.schema.fields.length > 0;
+    // Only check top-level required fields for template creation
+    return !!(
+      this.schema.name &&
+      this.schema.description &&
+      this.schema.author &&
+      this.schema.team_name &&
+      this.schema.audit_pipeline &&
+      this.schema.version &&
+      Array.isArray(this.schema.fields) && this.schema.fields.length > 0
+    );
   }
 
   closeForm() {
@@ -688,18 +802,19 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
   }
 
   onImportTemplateChange(templateName: string | null) {
-      if (templateName) {
-          this.isLoading = true;
-          this.selectedImportTemplate = templateName;
-          this.schemaService.getTemplate(String(templateName)).subscribe(tmpl => {
-            this.schema.fields = JSON.parse(JSON.stringify(tmpl.schema.fields));
-            this.schema.description = tmpl.schema.description || '';
-            this.isImporting = true;
-            this.isLoading = false;
-            this.buildForm(); // Rebuild the form after importing
-            this.cdr.detectChanges(); // Force UI update if needed
-          });
-      }
+    if (templateName) {
+      this.isLoading = true;
+      this.selectedImportTemplate = templateName;
+      this.schemaService.getTemplate(String(templateName)).subscribe(tmpl => {
+        this.schema.fields = JSON.parse(JSON.stringify(tmpl.schema.fields));
+        this.schema.description = tmpl.schema.description || '';
+        this.normalizeFieldBooleans(this.schema);
+        this.isImporting = true;
+        this.isLoading = false;
+        this.buildForm(); // Rebuild the form after importing
+        this.cdr.detectChanges(); // Force UI update if needed
+      });
+    }
   }
 
   clearImportedTemplate() {
@@ -780,6 +895,10 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
     // Insert the cloned field immediately after the original
     this.schema.fields.splice(index + 1, 0, clonedField);
     this.buildForm();
+    this.currentFieldIndex = index + 1;
+    this.isFieldEditorVisible = true;
+    this.isDuplicatedEdit = true;
+    this.editField(index + 1);
   }
 
   generateUniqueKey(baseKey: string): string {
@@ -838,5 +957,72 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       window.location.reload(); 
       // Reload the page after showing the popup
     }, timeout);
+  }
+
+  goToLaunchpad() {
+    this.router.navigate(['/']);
+  }
+
+  goToAppDashboard() {
+    this.router.navigate(['/app-dashboard']);
+  }
+
+  goBack() {
+    // Check if we should go back to Application Team Dashboard
+    const currentUrl = this.router.url;
+    if ((currentUrl.includes('/form/edit/') && this.mode === 'edit') || 
+        (currentUrl.includes('/form/preview/') && this.mode === 'preview') ||
+        (currentUrl.includes('/form/create') && this.mode === 'create')) {
+      // If editing, previewing, or creating a template, go back to Application Team Dashboard
+      this.goToAppDashboard();
+    } else {
+      // Default behavior - go to launchpad
+      this.goToLaunchpad();
+    }
+  }
+
+  asFormGroup(ctrl: AbstractControl | null): FormGroup {
+    return ctrl as FormGroup;
+  }
+
+  // --- Environment-specific helpers for MCQ multiple and keyvalue fields ---
+  onMCQMultiChangeEnv(envGroup: FormGroup, env: string, value: any, checked: boolean) {
+    const array = envGroup.get(env);
+    if (array instanceof FormArray) {
+      if (checked) {
+        array.push(new FormControl(value));
+      } else {
+        const idx = array.controls.findIndex((x: any) => x.value === value);
+        if (idx !== -1) array.removeAt(idx);
+      }
+    } else {
+      // If not FormArray, treat as array value
+      let arr = array?.value || [];
+      if (checked) {
+        arr = [...arr, value];
+      } else {
+        arr = arr.filter((v: any) => v !== value);
+      }
+      array?.setValue(arr);
+    }
+  }
+
+  getKeyValueArrayEnv(envGroup: FormGroup, env: string): FormArray | null {
+    const control = envGroup.get(env);
+    return control instanceof FormArray ? control : null;
+  }
+
+  addKeyValuePairEnv(envGroup: FormGroup, env: string) {
+    const control = envGroup.get(env);
+    if (control instanceof FormArray) {
+      control.push(this.fb.group({ key: '', value: '' }));
+    }
+  }
+
+  removeKeyValuePairEnv(envGroup: FormGroup, env: string, index: number) {
+    const control = envGroup.get(env);
+    if (control instanceof FormArray) {
+      control.removeAt(index);
+    }
   }
 }

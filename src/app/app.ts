@@ -1,5 +1,5 @@
 import { Component, OnDestroy } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { RouterOutlet, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { CommonModule } from '@angular/common';
@@ -9,7 +9,7 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [CommonModule, RouterOutlet, MatIconModule, MatButtonModule],
   template: `
-    <header class="app-header">
+    <header class="app-header" *ngIf="!isApplicationDashboard">
       <h1>Config File Generator</h1>
       
       <div class="header-right">
@@ -30,7 +30,7 @@ import { CommonModule } from '@angular/common';
         <span class="datetime">{{ currentDateTime | date:'medium' }}</span>
       </div>
     </header>
-    <main class="app-content">
+    <main class="app-content" [class.no-header]="isApplicationDashboard">
       <router-outlet />
     </main>
   `,
@@ -130,17 +130,27 @@ box-shadow: 0 4px 20px var(--shadow-color-dark);
       overflow-y: auto;
       padding-top: 4.5rem;
     }
+
+    .app-content.no-header {
+      padding-top: 0;
+    }
   `],
 })
-export class App implements OnDestroy {
+export class AppComponent implements OnDestroy {
   isDarkTheme = false;
   currentDateTime = new Date();
+  isApplicationDashboard = false;
   private intervalId: any;
 
-  constructor() {
+  constructor(private router: Router) {
     this.intervalId = setInterval(() => {
       this.currentDateTime = new Date();
     }, 1000);
+
+    // Subscribe to router events to detect Application Dashboard route
+    this.router.events.subscribe(() => {
+      this.isApplicationDashboard = this.router.url.includes('/app-dashboard');
+    });
   }
 
   ngOnDestroy() {

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Body, HTTPException, status, Request
+from fastapi import FastAPI, Body, HTTPException, status, Request, Query
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,8 +10,9 @@ import copy
 from passlib.context import CryptContext
 from pydantic import BaseModel
 import os
+from bson import ObjectId
 
-from database import template_collection, submission_collection, response_collection, template_version_collection
+from database import template_collection, submission_collection, response_collection, template_version_collection, app_team_template_collection, fillername_submission_collection
 from models import TemplateModel, SubmissionModel, ResponseModel, TemplateVersionModel
 
 app = FastAPI(title="Form Template & Submission API")
@@ -33,15 +34,26 @@ def verify_password(plain_password, hashed_password):
 def get_password_hash(password):
     return pwd_context.hash(password)
 
+def to_bool(val):
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, str):
+        return val.lower() == 'true'
+    if isinstance(val, int):
+        return val == 1
+    return False
+
+def normalize_field_booleans(schema):
+    return schema
+
 def serialize_mongo(obj):
-    """Recursively convert MongoDB BSON objects to JSON serializable formats."""
     if isinstance(obj, list):
         return [serialize_mongo(i) for i in obj]
     if isinstance(obj, dict):
         return {str(k): serialize_mongo(v) for k, v in obj.items()}
     if isinstance(obj, (datetime.datetime, datetime.date)):
         return obj.isoformat()
-    if hasattr(obj, '__str__'):
+    if isinstance(obj, ObjectId):
         return str(obj)
     return obj
 
@@ -67,13 +79,15 @@ async def create_template(template: TemplateModel = Body(...)):
     encoded_template["author"] = template.author if hasattr(template, 'author') else None
     encoded_template["team_name"] = template.team_name if hasattr(template, 'team_name') else None
     encoded_template["version_tag"] = template.version_tag if hasattr(template, 'version_tag') else None
+    # Normalize booleans in schema
+    encoded_template["schema"] = normalize_field_booleans(encoded_template.get("schema", {}))
     new_template = await template_collection.insert_one(encoded_template)
     
     # Also create the first version in history
     version_data = TemplateVersionModel(
         template_name=versioned_name,
         version=1,
-        schema=template.schema,
+        schema=encoded_template["schema"],
         change_log="Initial version."
     )
     version_data_dict = jsonable_encoder(version_data)
@@ -105,7 +119,8 @@ async def list_templates():
 
 @app.get("/templates/{name}", response_description="Get a single template")
 async def get_template(name: str):
-    if (template := await template_collection.find_one({"name": name})) is not None:
+    template = await template_collection.find_one({"name": name})
+    if template is not None:
         template.pop("lock_password", None)
         return serialize_mongo(template)
     raise HTTPException(status_code=404, detail=f"Template {name} not found")
@@ -122,7 +137,7 @@ async def edit_template(name: str, req: UpdateTemplateRequest = Body(...)):
         versioned_name = f"{name}_v1"
         new_template = {
             "name": versioned_name,
-            "schema": req.schema,
+            "schema": normalize_field_booleans(req.schema),
             "version": 1,
             "created_at": datetime.datetime.utcnow(),
             "updated_at": datetime.datetime.utcnow(),
@@ -134,7 +149,7 @@ async def edit_template(name: str, req: UpdateTemplateRequest = Body(...)):
         version_data = TemplateVersionModel(
             template_name=versioned_name,
             version=1,
-            schema=req.schema,
+            schema=new_template["schema"],
             change_log=req.change_log or "Initial version.",
             created_at=new_template["created_at"]
         )
@@ -156,7 +171,7 @@ async def edit_template(name: str, req: UpdateTemplateRequest = Body(...)):
     await template_version_collection.insert_one(version_data_dict)
     # Update the template in place (do not change name or version)
     update_data = {
-        "schema": req.schema,
+        "schema": normalize_field_booleans(req.schema),
         "updated_at": datetime.datetime.utcnow()
     }
     await template_collection.update_one({"_id": existing_template["_id"]}, {"$set": update_data})
@@ -247,7 +262,7 @@ async def rollback_template(name: str, version: int):
     # Restore the old version
     new_version_num = current_version_num + 1
     update_data = {
-        "schema": template_to_restore.get("schema"),
+        "schema": normalize_field_booleans(template_to_restore.get("schema")),
         "version": new_version_num,
         "updated_at": datetime.datetime.utcnow(),
     }
@@ -257,7 +272,7 @@ async def rollback_template(name: str, version: int):
     rollback_log_entry = TemplateVersionModel(
         template_name=name,
         version=new_version_num,
-        schema=template_to_restore.get("schema"),
+        schema=normalize_field_booleans(template_to_restore.get("schema")),
         change_log=f"Rolled back to version {version}.",
     )
     rollback_log_entry_dict = jsonable_encoder(rollback_log_entry)
@@ -288,7 +303,7 @@ async def create_new_version(name: str, req: UpdateTemplateRequest = Body(...)):
     versioned_name = f"{base_name}_v{new_version}"
     new_template = {
         "name": versioned_name,
-        "schema": req.schema,
+        "schema": normalize_field_booleans(req.schema),
         "version": new_version,
         "created_at": datetime.datetime.utcnow(),
         "updated_at": datetime.datetime.utcnow()
@@ -298,7 +313,7 @@ async def create_new_version(name: str, req: UpdateTemplateRequest = Body(...)):
     version_data = TemplateVersionModel(
         template_name=versioned_name,
         version=new_version,
-        schema=req.schema,
+        schema=new_template["schema"],
         change_log=req.change_log or "Initial version.",
         created_at=new_template["created_at"]
     )
@@ -313,25 +328,31 @@ async def submit_form(template_name: str, request: Request):
     if not await template_collection.find_one({"name": template_name}):
         raise HTTPException(status_code=404, detail="Template not found.")
     submission_data = await request.json()
+    filler_name = submission_data.pop("fillerName", None)
     _ = submission_data.pop("submission_name", None)
-    # Get the next version number
     last_submission = await submission_collection.find_one({"template_name": template_name}, sort=[("version", -1)])
     next_version = last_submission["version"] + 1 if last_submission else 1
-    # --- Generate submission_name ---
-    # Use full template_name + _{N} (incrementing per template_name)
     count = await submission_collection.count_documents({"template_name": template_name})
     submission_number = count + 1
     submission_name = f"{template_name}_{submission_number}"
-    # ---
     new_submission = {
         "template_name": template_name,
         "version": next_version,
+        "fillerName": filler_name,
         "data": submission_data,
         "created_at": datetime.datetime.utcnow(),
         "submission_name": submission_name
     }
     await submission_collection.insert_one(jsonable_encoder(new_submission))
-
+    # Insert into fillername_submission_collection if fillerName exists
+    if filler_name:
+        await fillername_submission_collection.insert_one({
+            "fillerName": filler_name,
+            "submission_name": submission_name,
+            "template_name": template_name,
+            "created_at": new_submission["created_at"],
+            "data": submission_data
+        })
     return {"message": f"Submission saved as version {next_version}.", "version": next_version, "submission_name": submission_name}
 
 @app.get("/submissions/{template_name}", response_description="List all submissions for a template")
@@ -574,3 +595,58 @@ async def delete_submission_by_name(submission_name: str):
     if os.path.exists(filepath):
         os.remove(filepath)
     return {"message": f"Submission '{submission_name}' deleted."}
+
+# --- Application Team Template Endpoints ---
+@app.post("/app-team-templates/", response_description="Add new app team template")
+async def create_app_team_template(template: dict = Body(...)):
+    template["created_at"] = datetime.datetime.utcnow()
+    template["updated_at"] = datetime.datetime.utcnow()
+    new_template = await app_team_template_collection.insert_one(template)
+    created_template = await app_team_template_collection.find_one({"_id": new_template.inserted_id})
+    return serialize_mongo(created_template)
+
+@app.get("/app-team-templates/", response_description="List all app team templates")
+async def list_app_team_templates():
+    templates = await app_team_template_collection.find().to_list(1000)
+    result = []
+    for t in templates:
+        result.append({
+            "name": t.get("name"),
+            "description": t.get("description", ""),
+            "created_at": t.get("created_at"),
+            "author": t.get("author", None),
+            "team_name": t.get("team_name", None),
+            "version_tag": t.get("version_tag", None),
+            "audit_pipeline": t.get("audit_pipeline", None)
+        })
+    return serialize_mongo(result)
+
+@app.get("/app-team-templates/{name}", response_description="Get a single app team template")
+async def get_app_team_template(name: str):
+    template = await app_team_template_collection.find_one({"name": name})
+    if template is not None:
+        return serialize_mongo(template)
+    raise HTTPException(status_code=404, detail=f"App Team Template {name} not found")
+
+@app.put("/app-team-templates/{name}", response_description="Update an app team template")
+async def update_app_team_template(name: str, template: dict = Body(...)):
+    template["updated_at"] = datetime.datetime.utcnow()
+    result = await app_team_template_collection.update_one({"name": name}, {"$set": template})
+    if result.modified_count == 1:
+        updated_template = await app_team_template_collection.find_one({"name": name})
+        return serialize_mongo(updated_template)
+    raise HTTPException(status_code=404, detail=f"App Team Template {name} not found")
+
+@app.delete("/app-team-templates/{name}", response_description="Delete an app team template")
+async def delete_app_team_template(name: str):
+    delete_result = await app_team_template_collection.delete_one({"name": name})
+    if delete_result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail=f"App Team Template {name} not found")
+    return JSONResponse(status_code=status.HTTP_200_OK, content={"message": f"App Team Template '{name}' deleted."})
+
+@app.get("/submissions/search-by-filler", response_description="Search submissions by filler name")
+async def search_submissions_by_filler(fillerName: str = Query(..., description="Filler name to search for")):
+    # Case-insensitive, partial match on the top-level 'fillerName' field
+    query = {"fillerName": {"$regex": fillerName, "$options": "i"}}
+    submissions = await submission_collection.find(query).to_list(1000)
+    return [serialize_mongo(sub) for sub in submissions]

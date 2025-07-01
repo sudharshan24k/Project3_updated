@@ -13,4 +13,12 @@ db = client.form_builder_db
 template_collection = db.get_collection("templates")
 submission_collection = db.get_collection("submissions")
 response_collection = db.get_collection("responses")
-template_version_collection = db.get_collection("template_versions") 
+template_version_collection = db.get_collection("template_versions")
+app_team_template_collection = db.get_collection("app_team_templates")
+fillername_submission_collection = db.get_collection("fillername_submissions")
+
+template_collection = db.get_collection("templates")
+submission_collection = db.get_collection("submissions")
+response_collection = db.get_collection("responses")
+template_version_collection = db.get_collection("template_versions")
+app_team_template_collection = db.get_collection("app_team_templates") 

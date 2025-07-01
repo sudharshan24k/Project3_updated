@@ -1,0 +1,28 @@
+<div class="launchpad-container">
+  <div class="launchpad-content">
+    <div class="header">
+      <mat-icon class="header-icon">launch</mat-icon>
+      <h1>Configuraton file creator and manager</h1>
+      <p>Your central hub for creating and managing form templates for all teams</p>
+    </div>
+
+    <div class="button-grid">
+      <mat-card class="action-card" (click)="navigateToDashboard()">
+        <mat-card-content>
+          <mat-icon class="card-icon">dashboard</mat-icon>
+          <h2>View Dashboard</h2>
+          <p>See all existing templates, view submissions, and manage versions.</p>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="action-card" (click)="navigateToCreateTemplate()">
+        <mat-card-content>
+          <mat-icon class="card-icon">add_circle_outline</mat-icon>
+          <h2>Master Template Management</h2>
+          <p class="note">NOTE: Only for FRAMEWORK TEAM</p>
+          <p>Design a new form from scratch using the powerful schema editor.</p>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div> 

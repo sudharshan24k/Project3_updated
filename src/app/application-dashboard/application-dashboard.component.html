@@ -1,0 +1,24 @@
+<div class="app-dashboard-container">
+  <header class="app-team-header">
+    <h1>Application Team Dashboard</h1>
+  </header>
+
+  <div class="dashboard-actions">
+    <button class="create-template-btn" (click)="navigateToCreateTemplate()">
+      <div class="btn-content">
+        <div class="icon-container">
+          <mat-icon>add_circle</mat-icon>
+        </div>
+        <div class="text-content">
+          <span class="btn-title">Create New Template</span>
+          <span class="btn-subtitle">Start building a new form template</span>
+        </div>
+        <div class="arrow-container">
+          <mat-icon>arrow_forward</mat-icon>
+        </div>
+      </div>
+    </button>
+  </div>
+
+  <app-application-dashboard-list (back)="goToLaunchpad()"></app-application-dashboard-list>
+</div> 

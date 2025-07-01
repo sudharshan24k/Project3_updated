@@ -75,6 +75,14 @@
               <h4>Submission Details</h4>
               <span>Version {{ selectedSubmissionName }}</span>
             </div>
+            <!-- Environment Tabs -->
+            <div class="env-tabs">
+              <button *ngFor="let env of environments"
+                      [class.active]="selectedEnv === env"
+                      (click)="onEnvTabChange(env)">
+                {{ env }}
+              </button>
+            </div>
             <pre>{{ formattedSubmissionData }}</pre>
           </div>
 
