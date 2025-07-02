@@ -228,6 +228,17 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
   }
 
   ngOnInit() {
+    // Read templateName and other info from navigation state if present
+    if (history.state && history.state.templateName) {
+      this.templateName = history.state.templateName;
+    }
+    if (history.state && history.state.submissionName) {
+      this.prefillSubmissionName = history.state.submissionName;
+    }
+    if (history.state && history.state.version) {
+      this.prefillVersion = history.state.version;
+    }
+
     this.route.data.subscribe(data => {
       this.mode = data['mode'] || this.mode; // Set mode from route data first
 
@@ -691,16 +702,8 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       });
     } else if (this.mode === 'use') {
       if (!this.templateName) return;
-      // Prompt for filler name
-      const dialogRef = this.dialog.open(FillerNameDialogComponent, {
-        width: '400px',
-        disableClose: true
-      });
-      const fillerName = await dialogRef.afterClosed().toPromise();
-      if (!fillerName) return; // Cancelled
-      // Submit form with fillerName as a top-level field
+      // Submit form without prompting for fillerName
       this.schemaService.submitForm(this.templateName, {
-        fillerName,
         data: this.form.getRawValue()
       }).subscribe(() => {
         this.showPopup('Form response submitted!', 'airplane');
@@ -723,9 +726,11 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
   }
 
   closeForm() {
-          this.formClose.emit();
+    this.formClose.emit();
+  }
 
-
+  goBack() {
+    this.closeForm();
   }
 
   get options() {
@@ -957,28 +962,6 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       window.location.reload(); 
       // Reload the page after showing the popup
     }, timeout);
-  }
-
-  goToLaunchpad() {
-    this.router.navigate(['/']);
-  }
-
-  goToAppDashboard() {
-    this.router.navigate(['/app-dashboard']);
-  }
-
-  goBack() {
-    // Check if we should go back to Application Team Dashboard
-    const currentUrl = this.router.url;
-    if ((currentUrl.includes('/form/edit/') && this.mode === 'edit') || 
-        (currentUrl.includes('/form/preview/') && this.mode === 'preview') ||
-        (currentUrl.includes('/form/create') && this.mode === 'create')) {
-      // If editing, previewing, or creating a template, go back to Application Team Dashboard
-      this.goToAppDashboard();
-    } else {
-      // Default behavior - go to launchpad
-      this.goToLaunchpad();
-    }
   }
 
   asFormGroup(ctrl: AbstractControl | null): FormGroup {

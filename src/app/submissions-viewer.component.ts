@@ -24,6 +24,7 @@ import JSZip from 'jszip';
 export class SubmissionsViewerComponent implements OnInit, OnChanges {
   @Input() templateName: string | null = null;
   @Output() viewTemplate = new EventEmitter<string>();
+  @Output() close = new EventEmitter<void>();
 
   isLoading = false;
   submissions: Submission[] = [];

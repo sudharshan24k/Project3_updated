@@ -1,13 +1,12 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SchemaService, TemplateVersion } from '../dynamic-form/schema.service';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatButtonModule } from '@angular/material/button';
 import { Location } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
-import { DiffViewerComponent } from '../diff-viewer.component';
 import { MatDialog } from '@angular/material/dialog';
+import { DiffViewerComponent } from '../diff-viewer.component';
 import { AnimatedPopupComponent } from '../animated-popup.component';
 import { InteractiveDialogComponent } from '../interactive-dialog.component';
 
@@ -154,7 +153,8 @@ import { InteractiveDialogComponent } from '../interactive-dialog.component';
   ]
 })
 export class TemplateHistoryComponent implements OnInit {
-  templateName: string | null = null;
+  @Input() templateName: string | null = null;
+  @Output() close = new EventEmitter<void>();
   history: TemplateVersion[] = [];
   isLoading = false;
   selectedUpdates = new Set<string>();
@@ -166,18 +166,13 @@ export class TemplateHistoryComponent implements OnInit {
   constructor(
     private schemaService: SchemaService,
     private location: Location,
-    private route: ActivatedRoute,
     private dialog: MatDialog
   ) { }
 
   ngOnInit(): void {
-    // Get template name from route parameter
-    this.route.params.subscribe(params => {
-      this.templateName = params['templateName'];
-      if (this.templateName) {
-        this.loadHistory();
-      }
-    });
+    if (this.templateName) {
+      this.loadHistory();
+    }
   }
 
   loadHistory() {
@@ -219,7 +214,7 @@ export class TemplateHistoryComponent implements OnInit {
   }
 
   goBack() {
-    this.location.back();
+    this.close.emit();
   }
 
   async onRollback(update: TemplateVersion) {

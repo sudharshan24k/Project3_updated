@@ -1,37 +1,38 @@
 import { Component, OnDestroy } from '@angular/core';
-import { RouterOutlet, Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { CommonModule } from '@angular/common';
+import { LaunchpadComponent } from './launchpad/launchpad.component';
+import { DashboardComponent } from './dashboard.component';
+import { DynamicForm } from './dynamic-form/dynamic-form.component';
+import { TemplateHistoryComponent } from './template-history/template-history.component';
+import { HelpdeskComponent } from './helpdesk.component';
+import { SubmissionsViewerComponent } from './submissions-viewer.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, MatIconModule, MatButtonModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule, LaunchpadComponent, DashboardComponent, DynamicForm, TemplateHistoryComponent, HelpdeskComponent, SubmissionsViewerComponent],
   template: `
-    <header class="app-header" *ngIf="!isApplicationDashboard">
-      <h1>Config File Generator</h1>
-      
+    <header class="app-header" *ngIf="currentView !== 'dashboard'">
+      <h1>Configuration File Generator</h1>
       <div class="header-right">
-<button
-  (click)="toggleTheme()"
-  mat-raised-button
-  color="accent"
-  class="theme-toggle-chip"
-  aria-label="Toggle Light/Dark Mode"
->
-  <mat-icon class="theme-icon">
-    {{ isDarkTheme ? 'dark_mode' : 'light_mode' }}
-  </mat-icon>
-  <span>{{ isDarkTheme ? 'Dark' : 'Light' }}</span>
-</button>
-
-
+        <button (click)="toggleTheme()" mat-raised-button color="accent" class="theme-toggle-chip" aria-label="Toggle Light/Dark Mode">
+          <mat-icon class="theme-icon">{{ isDarkTheme ? 'dark_mode' : 'light_mode' }}</mat-icon>
+          <span>{{ isDarkTheme ? 'Dark' : 'Light' }}</span>
+        </button>
         <span class="datetime">{{ currentDateTime | date:'medium' }}</span>
       </div>
     </header>
-    <main class="app-content" [class.no-header]="isApplicationDashboard">
-      <router-outlet />
+    <main class="app-content" [class.no-header]="currentView === 'dashboard'">
+      <ng-container [ngSwitch]="currentView">
+        <app-launchpad *ngSwitchCase="'launchpad'" (navigate)="onNavigate($event)"></app-launchpad>
+        <app-dashboard *ngSwitchCase="'dashboard'" [team]="dashboardTeam" (navigate)="onNavigate($event)" (back)="onBackNavigation()"></app-dashboard>
+        <app-dynamic-form *ngSwitchCase="'form'" [mode]="formMode" [templateName]="formTemplateName" (formClose)="onBackNavigation()"></app-dynamic-form>
+        <app-template-history *ngSwitchCase="'history'" [templateName]="formTemplateName" (close)="onBackNavigation()"></app-template-history>
+        <app-submissions-viewer *ngSwitchCase="'submissions'" [templateName]="formTemplateName" (close)="onBackNavigation()"></app-submissions-viewer>
+        <app-helpdesk *ngSwitchCase="'helpdesk'" (close)="onBackNavigation()"></app-helpdesk>
+      </ng-container>
     </main>
   `,
   styles: [`
@@ -139,18 +140,17 @@ box-shadow: 0 4px 20px var(--shadow-color-dark);
 export class AppComponent implements OnDestroy {
   isDarkTheme = false;
   currentDateTime = new Date();
-  isApplicationDashboard = false;
-  private intervalId: any;
+  intervalId: any;
+  currentView: 'launchpad' | 'dashboard' | 'form' | 'history' | 'submissions' | 'helpdesk' = 'launchpad';
+  previousView: 'launchpad' | 'dashboard' | 'form' | 'history' | 'submissions' | 'helpdesk' = 'launchpad';
+  dashboardTeam: 'application' | 'framework' = 'application';
+  formMode: 'create' | 'edit' | 'use' | 'preview' = 'use';
+  formTemplateName: string | null = null;
 
-  constructor(private router: Router) {
+  constructor() {
     this.intervalId = setInterval(() => {
       this.currentDateTime = new Date();
     }, 1000);
-
-    // Subscribe to router events to detect Application Dashboard route
-    this.router.events.subscribe(() => {
-      this.isApplicationDashboard = this.router.url.includes('/app-dashboard');
-    });
   }
 
   ngOnDestroy() {
@@ -162,6 +162,39 @@ export class AppComponent implements OnDestroy {
   toggleTheme() {
     this.isDarkTheme = !this.isDarkTheme;
     document.body.classList.toggle('dark-theme', this.isDarkTheme);
+  }
+
+  onNavigate(event: any) {
+    // Store the current view as previous before changing
+    this.previousView = this.currentView;
+    
+    // event can be a string (view) or an object { view, mode, templateName, team }
+    if (typeof event === 'string') {
+      this.currentView = event as any;
+      if (event === 'launchpad') {
+        this.formTemplateName = null;
+      }
+    } else if (typeof event === 'object') {
+      this.currentView = event.view;
+      if (event.mode) this.formMode = event.mode;
+      if (event.templateName) this.formTemplateName = event.templateName;
+      if (event.team) this.dashboardTeam = event.team;
+    }
+  }
+
+  // Smart back navigation - return to the correct dashboard based on where user came from
+  onBackNavigation() {
+    // If we're in a form, history, submissions, or helpdesk, go back to the dashboard we came from
+    if (this.currentView === 'form' || this.currentView === 'history' || this.currentView === 'submissions' || this.currentView === 'helpdesk') {
+      this.currentView = 'dashboard';
+      // Keep the dashboardTeam as is - we want to return to the same dashboard
+    } else if (this.currentView === 'dashboard') {
+      this.currentView = 'launchpad';
+      this.dashboardTeam = 'application'; // Reset to default
+    }
+    
+    // Clear form data when going back
+    this.formTemplateName = null;
   }
 }
 

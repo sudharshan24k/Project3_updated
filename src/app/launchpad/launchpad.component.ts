@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, Output, EventEmitter } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
@@ -13,13 +13,15 @@ import { MatIconModule } from '@angular/material/icon';
   styleUrls: ['./launchpad.component.scss']
 })
 export class LaunchpadComponent {
+  @Output() navigate = new EventEmitter<any>();
+
   constructor(private router: Router) {}
 
   navigateToDashboard() {
-    this.router.navigate(['/dashboard'], { queryParams: { team: 'application' } });
+    this.navigate.emit({ view: 'dashboard', team: 'application' });
   }
 
   navigateToCreateTemplate() {
-    this.router.navigate(['/dashboard'], { queryParams: { team: 'framework' } });
+    this.navigate.emit({ view: 'dashboard', team: 'framework' });
   }
 }

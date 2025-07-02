@@ -1,5 +1,4 @@
-import { Component } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -14,13 +13,14 @@ import { ApplicationDashboardListComponent } from './application-dashboard-list.
   styleUrls: ['./application-dashboard.component.scss']
 })
 export class ApplicationDashboardComponent {
-  constructor(private router: Router) {}
+  @Output() navigate = new EventEmitter<any>();
+  @Output() back = new EventEmitter<void>();
 
   navigateToCreateTemplate() {
-    this.router.navigate(['/form/create'], { skipLocationChange: true });
+    this.navigate.emit({ view: 'form', mode: 'create' });
   }
 
   goToLaunchpad() {
-    this.router.navigate(['/']);
+    this.back.emit();
   }
 } 

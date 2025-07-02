@@ -22,6 +22,16 @@
         </div>
       </header>
 
+      <!-- Template Indicator Tab -->
+      <div *ngIf="templateName && mode !== 'create'" class="template-indicator">
+        <div class="template-tab-v2 template-tab-horizontal">
+          <span class="template-label">You are currently filling:</span>
+          <mat-icon class="template-icon">description</mat-icon>
+          <span class="template-name">{{ templateName }}</span>
+          <span class="template-mode-badge" *ngIf="mode === 'preview'">Preview</span>
+        </div>
+      </div>
+
       <div *ngIf="isLoading" class="loading-spinner">Loading form...</div>
 
       <main class="form-grid" *ngIf="!isLoading">
@@ -636,7 +646,7 @@
                       <option value="dropdown">Dropdown</option>
                       <option value="mcq_single">MCQ (Single Select)</option>
                       <option value="mcq_multiple">MCQ (Multiple Select)</option>
-                      <option value="keyvalue">Key-Value</option> <!-- Added keyvalue type -->
+                      <option value="keyvalue">Key-Value</option>
                     </select>
                   </div>
                 </div>

@@ -25,6 +25,151 @@
 .header-actions button {
   display: flex; align-items: center; gap: 0.5rem;
 }
+
+/* Improved Template Indicator Tab */
+.template-indicator {
+  display: flex;
+  justify-content: center;
+  margin: 0 1rem 2rem 1rem;
+}
+
+.template-tab-v2 {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(23, 78, 166, 0.10);
+  padding: 1.2rem 2.2rem 1.4rem 2.2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 320px;
+  max-width: 90vw;
+}
+
+.template-label {
+  font-size: 1.08rem;
+  color: #5f6368;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.01em;
+}
+
+.template-main-row {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+}
+
+.template-icon {
+  font-size: 1.5rem;
+  color: var(--primary-color, #1a73e8);
+  opacity: 0.95;
+}
+
+.template-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #174ea6;
+  letter-spacing: 0.01em;
+  background: linear-gradient(90deg, #e3eafc 0%, #f3f6fa 100%);
+  padding: 0.18em 0.7em;
+  border-radius: 8px;
+  margin-right: 0.5rem;
+}
+
+.template-mode-badge {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(90deg, #1a73e8 60%, #4285f4 100%);
+  border-radius: 999px;
+  padding: 0.22em 1.1em;
+  margin-left: 0.5rem;
+  box-shadow: 0 2px 8px #1a73e81a;
+  letter-spacing: 0.01em;
+  display: inline-block;
+}
+
+/* Environment Specific Fields Styling */
+.env-specific-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+  margin-top: 0.5rem;
+}
+
+.env-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.env-field:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  border-color: #adb5bd;
+}
+
+.env-field label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.env-field label::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  opacity: 0.7;
+}
+
+.env-field input,
+.env-field mat-select,
+.env-field mat-radio-group,
+.env-field .mat-checkbox,
+.env-field mat-slide-toggle {
+  margin-top: 0.25rem;
+}
+
+.env-field input {
+  padding: 0.75rem;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease;
+}
+
+.env-field input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.1);
+  outline: none;
+}
+
+.env-field .mat-radio-button {
+  margin-bottom: 0.5rem;
+}
+
+.env-field .mat-checkbox {
+  margin-bottom: 0.5rem;
+}
+
+.env-field mat-slide-toggle {
+  margin-top: 0.5rem;
+}
 .datetime-display {
   font-size: 1rem;
   font-weight: 500;
@@ -812,4 +957,15 @@ button[mat-stroked-button] {
   display: flex;
   justify-content: center;
   margin: 16px 0; 
+}
+
+.template-tab-horizontal {
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 1.2rem !important;
+  padding: 1.2rem 2.2rem !important;
+}
+
+.template-tab-horizontal .template-label {
+  margin-bottom: 0 !important;
 } 

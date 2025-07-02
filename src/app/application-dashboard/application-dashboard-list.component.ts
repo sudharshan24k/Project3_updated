@@ -9,6 +9,7 @@ import { MatDialog, MatDialogModule, MAT_DIALOG_DATA } from '@angular/material/d
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SchemaService, TemplateInfo } from '../dynamic-form/schema.service';
+import { trigger, state, style, transition, animate } from '@angular/animations';
 
 @Component({
   selector: 'app-application-dashboard-list',
@@ -20,6 +21,14 @@ import { SchemaService, TemplateInfo } from '../dynamic-form/schema.service';
         <mat-icon>arrow_back</mat-icon>
         Back
       </button>
+      <div class="expand-collapse-controls">
+        <button mat-stroked-button color="primary" (click)="expandAll()" style="margin-right: 0.7rem;">
+          <mat-icon>unfold_more</mat-icon> Expand All
+        </button>
+        <button mat-stroked-button color="primary" (click)="collapseAll()">
+          <mat-icon>unfold_less</mat-icon> Collapse All
+        </button>
+      </div>
       <div *ngIf="loading" class="loading-spinner">
         <mat-icon class="spinning">refresh</mat-icon>
         <span>Loading templates...</span>
@@ -50,7 +59,7 @@ import { SchemaService, TemplateInfo } from '../dynamic-form/schema.service';
           </div>
           
           <div *ngFor="let baseName of Object.keys(groupedTemplates)" class="template-group">
-            <div class="group-header" (click)="toggleGroup(baseName)">
+            <div class="group-header" (click)="toggleGroup(baseName)" [class.expanded]="expandedGroups[baseName]">
               <div class="group-info">
                 <mat-icon class="expand-icon" [class.expanded]="expandedGroups[baseName]">expand_more</mat-icon>
                 <span class="group-name">{{ baseName }}</span>
@@ -69,7 +78,7 @@ import { SchemaService, TemplateInfo } from '../dynamic-form/schema.service';
               </div>
             </div>
             
-            <div class="group-content" *ngIf="expandedGroups[baseName]">
+            <div class="group-content" *ngIf="expandedGroups[baseName]" [@expandCollapse]>
               <div *ngFor="let template of groupedTemplates[baseName]" class="template-row">
                 <div class="col-name" [title]="template.name">
                   {{ template.name }}
@@ -103,7 +112,16 @@ import { SchemaService, TemplateInfo } from '../dynamic-form/schema.service';
       </div>
     </div>
   `,
-  styleUrls: ['./application-dashboard-list.component.scss']
+  styleUrls: ['./application-dashboard-list.component.scss'],
+  animations: [
+    trigger('expandCollapse', [
+      state('void', style({ height: '0', opacity: 0, padding: '0 2rem' })),
+      state('*', style({ height: '*', opacity: 1, padding: '1rem 2rem 1rem 4rem' })),
+      transition('void <=> *', [
+        animate('250ms cubic-bezier(.4,0,.2,1)')
+      ])
+    ])
+  ]
 })
 export class ApplicationDashboardListComponent implements OnInit {
   templates: TemplateInfo[] = [];
@@ -114,6 +132,7 @@ export class ApplicationDashboardListComponent implements OnInit {
   loading = true;
   error = '';
   @Output() back = new EventEmitter<void>();
+  @Output() navigate = new EventEmitter<any>();
   nameFilter: string = '';
   descFilter: string = '';
   authorFilter: string = '';
@@ -209,15 +228,15 @@ export class ApplicationDashboardListComponent implements OnInit {
   }
 
   editTemplate(template: TemplateInfo) {
-    this.router.navigate(['/form/edit', template.name]);
+    this.navigate.emit({ view: 'form', mode: 'edit', templateName: template.name });
   }
 
   previewTemplate(template: TemplateInfo) {
-    this.router.navigate(['/form/preview', template.name]);
+    this.navigate.emit({ view: 'form', mode: 'preview', templateName: template.name });
   }
 
   viewHistory(template: TemplateInfo) {
-    this.router.navigate(['/history', template.name]);
+    this.navigate.emit({ view: 'history', templateName: template.name });
   }
 
   deleteTemplate(template: TemplateInfo) {
@@ -241,6 +260,14 @@ export class ApplicationDashboardListComponent implements OnInit {
         });
       }
     });
+  }
+
+  expandAll() {
+    Object.keys(this.groupedTemplates).forEach(key => this.expandedGroups[key] = true);
+  }
+
+  collapseAll() {
+    Object.keys(this.groupedTemplates).forEach(key => this.expandedGroups[key] = false);
   }
 }
 

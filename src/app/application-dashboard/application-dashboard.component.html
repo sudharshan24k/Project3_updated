@@ -20,5 +20,5 @@
     </button>
   </div>
 
-  <app-application-dashboard-list (back)="goToLaunchpad()"></app-application-dashboard-list>
+  <app-application-dashboard-list (back)="back.emit()" (navigate)="navigate.emit($event)"></app-application-dashboard-list>
 </div> 

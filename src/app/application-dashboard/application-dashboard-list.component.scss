@@ -423,7 +423,7 @@
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   border-bottom: 1.5px solid #e2e8f0;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(.4,0,.2,1), box-shadow 0.3s cubic-bezier(.4,0,.2,1);
   position: relative;
   margin-top: 0.5rem;
 }
@@ -434,6 +434,13 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.10);
 }
 
+.group-header.expanded {
+  background: linear-gradient(135deg, #e0f2fe 0%, #f0fdfa 100%);
+  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.13);
+  border-left: 6px solid #3b82f6;
+  z-index: 2;
+}
+
 .group-info {
   display: flex;
   align-items: center;
@@ -442,13 +449,14 @@
 }
 
 .expand-icon {
-  transition: transform 0.3s ease;
+  transition: transform 0.3s cubic-bezier(.4,0,.2,1), color 0.3s;
   color: #3b82f6;
   font-size: 1.5rem;
 }
 
 .expand-icon.expanded {
-  transform: rotate(180deg);
+  transform: rotate(180deg) scale(1.2);
+  color: #059669;
 }
 
 .group-name {
@@ -509,7 +517,11 @@
 }
 
 .group-content {
-  background: #ffffff;
+  animation: fadeInExpand 0.25s cubic-bezier(.4,0,.2,1);
+  border-left: 6px solid #3b82f6;
+  margin-bottom: 0.5rem;
+  border-radius: 0 0 18px 18px;
+  box-shadow: 0 4px 24px rgba(59, 130, 246, 0.07);
 }
 
 .group-content .template-row {
@@ -545,4 +557,11 @@
   min-width: 48px;
   text-align: center;
   margin-right: 0.7rem;
+}
+
+.expand-collapse-controls {
+  display: flex;
+  gap: 0.7rem;
+  margin-bottom: 1.2rem;
+  margin-left: 2rem;
 } 

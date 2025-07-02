@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { Router } from '@angular/router';
@@ -92,6 +92,8 @@ import { InteractiveDialogComponent } from './interactive-dialog.component';
   `]
 })
 export class HelpdeskComponent {
+  @Output() close = new EventEmitter<void>();
+
   issueForm: FormGroup;
   popupMessage: string = '';
   popupType: 'success' | 'error' | 'airplane' = 'success';
@@ -106,7 +108,7 @@ export class HelpdeskComponent {
   }
 
   goBack() {
-    this.router.navigate(['/']);
+    this.close.emit();
   }
 
   submitIssue() {

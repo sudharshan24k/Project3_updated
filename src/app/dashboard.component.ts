@@ -1,5 +1,5 @@
 import { CommonModule, NgIf, NgFor } from '@angular/common';
-import { Component, OnInit, AfterViewInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit, Input, Output, EventEmitter } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatExpansionModule } from '@angular/material/expansion';
@@ -1117,6 +1117,10 @@ import { MatDialog } from '@angular/material/dialog';
   `]
 })
 export class DashboardComponent implements OnInit, AfterViewInit {
+  @Input() team: 'application' | 'framework' = 'application';
+  @Output() navigate = new EventEmitter<any>();
+  @Output() back = new EventEmitter<void>();
+  
   allTemplates: TemplateInfo[] = [];
   groupedTemplates: { [baseName: string]: TemplateInfo[] } = {};
   baseNames: string[] = [];
@@ -1147,16 +1151,14 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   }
   selectedTabIndexInWindow = 0;
   buttonHover = false;
-  isFrameworkTeam = false; // <-- Add this line
+  isFrameworkTeam = false;
 
   constructor(private schemaService: SchemaService, private router: Router, private dialog: MatDialog, private route: ActivatedRoute) {}
 
   ngOnInit() {
-    this.route.queryParams.subscribe(params => {
-      this.isFrameworkTeam = params['team'] === 'framework';
-    });
-    this.restoreDashboardState();
+    this.isFrameworkTeam = this.team === 'framework';
     this.loadTemplates();
+    this.restoreDashboardState();
   }
 
   ngAfterViewInit() {
@@ -1236,40 +1238,22 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   // --- Save state before navigation ---
   useTemplate(template: string) {
-    this.saveDashboardState();
-    this.selectedTemplate = template;
-    this.mode = 'use';
-    this.modeHistory.push('use');
+    this.navigate.emit({ view: 'form', mode: 'use', templateName: template });
   }
   editTemplate(template: TemplateInfo) {
-    this.saveDashboardState();
-    this.selectedTemplate = template.name;
-    this.mode = 'edit';
-    this.modeHistory.push('edit');
+    this.navigate.emit({ view: 'form', mode: 'edit', templateName: template.name });
   }
   previewTemplate(template: string) {
-    this.saveDashboardState();
-    this.selectedTemplate = template;
-    this.mode = 'preview';
-    this.modeHistory.push('preview');
+    this.navigate.emit({ view: 'form', mode: 'preview', templateName: template });
   }
   viewSubmissions(template: string) {
-    this.saveDashboardState();
-    this.selectedTemplate = template;
-    this.mode = 'submissions';
-    this.modeHistory.push('submissions');
+    this.navigate.emit({ view: 'submissions', templateName: template });
   }
   viewSchemaVersions(name: string) {
-    this.saveDashboardState();
-    this.selectedTemplate = name;
-    this.mode = 'edit';
-    this.modeHistory.push('edit');
+    this.navigate.emit({ view: 'form', mode: 'edit', templateName: name });
   }
   viewHistory(name: string) {
-    this.saveDashboardState();
-    this.selectedTemplate = name;
-    this.mode = 'history';
-    this.modeHistory.push('history');
+    this.navigate.emit({ view: 'history', templateName: name });
   }
   // --- Clear state on reset/clear ---
   clearSearch() {
@@ -1397,34 +1381,15 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   }
 
   showCreateTemplate() {
-    this.saveDashboardState();
-    this.selectedTemplate = null;
-    this.duplicatedVersion = null;
-    this.prefillSubmissionName = null;
-    this.mode = 'create';
-    this.modeHistory.push('create');
+    this.navigate.emit({ view: 'form', mode: 'create' });
   }
 
   onFormClose() {
-    if (this.modeHistory.length > 1) {
-      this.modeHistory.pop();
-    }
-    this.mode = (this.modeHistory[this.modeHistory.length - 1] || 'list') as any;
-
-    // Reset form-specific data
+    this.mode = 'list';
+    this.selectedTemplate = null;
     this.duplicatedVersion = null;
     this.prefillSubmissionName = null;
-
-    if (this.mode === 'list') {
-      this.selectedTemplate = null;
-      this.restoreDashboardState();
-      // A small delay to allow the view to switch and elements to be available
-      setTimeout(() => {
-        this.restoreScroll();
-        // After restoring, we can clear the selected template from session storage
-        sessionStorage.removeItem('dashboardSelectedTemplate');
-      }, 50);
-    }
+    this.restoreDashboardState();
   }
 
   getTemplateDesc(template: string): string | null {
@@ -1438,11 +1403,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   }
 
   onDuplicateEdit(event: { template: string, submissionName: string }) {
-    this.saveDashboardState();
-    this.mode = 'use';
-    this.selectedTemplate = event.template;
-    this.prefillSubmissionName = event.submissionName;
-    this.modeHistory.push('use');
+    this.navigate.emit({ view: 'form', mode: 'use', templateName: event.template, submissionName: event.submissionName });
   }
 
   openDatePicker(input: HTMLInputElement) {
@@ -1487,10 +1448,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     const result = await dialogRef.afterClosed().toPromise();
     if (result) {
       this.schemaService.deleteTemplate(template).subscribe(() => {
-        // this.loadTemplates(); 
-        
         this.showPopup('Template deleted successfully!', 'success',1800);
-        
       });
     }
   }
@@ -1510,11 +1468,11 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   }
 
   navigateToHelpdesk() {
-    this.router.navigate(['/helpdesk']);
+    this.navigate.emit({ view: 'helpdesk' });
   }
 
   goToLaunchpad() {
-    this.router.navigate(['/']);
+    this.back.emit();
   }
 
   goToFilledByMe() {
