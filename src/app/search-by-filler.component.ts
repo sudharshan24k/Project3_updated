@@ -96,7 +96,10 @@ export class SearchByFillerComponent {
   constructor(private schemaService: SchemaService) {}
 
   onSearchByFiller() {
-    if (!this.searchFillerName) return;
+    console.log('Search button clicked, onSearchByFiller called');
+    if (!this.searchFillerName){
+      // console.log("inside if");
+       return;}
     this.isSearching = true;
     this.schemaService.searchSubmissionsByFiller(this.searchFillerName).subscribe(results => {
       this.searchResults = results;

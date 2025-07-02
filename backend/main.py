@@ -15,6 +15,11 @@ from bson import ObjectId
 from database import template_collection, submission_collection, response_collection, template_version_collection, app_team_template_collection, fillername_submission_collection
 from models import TemplateModel, SubmissionModel, ResponseModel, TemplateVersionModel
 
+# import logging
+# logging.basicConfig(level=logging.DEBUG)
+# logger = logging.getLogger(__name__)
+
+
 app = FastAPI(title="Form Template & Submission API")
 
 app.add_middleware(
@@ -24,7 +29,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+print("=== FASTAPI SERVER STARTED ===", flush=True)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # --- Helper Functions ---
@@ -96,7 +101,24 @@ async def create_template(template: TemplateModel = Body(...)):
 
     created_template = await template_collection.find_one({"_id": new_template.inserted_id})
     return serialize_mongo(created_template)
-     
+
+@app.get("/submissions/search-by-filler", response_description="Search submissions by filler name")
+async def search_submissions_by_filler(fillerName: str = Query(..., description="Filler name to search for")):
+    # print("=== ENTERED /submissions/search-by-filler ENDPOINT ===", flush=True)
+    # print(f"[DEBUG-search] fillerName param type: {type(fillerName)}, value: {fillerName}", flush=True)
+    # print("[DEBUG-search] /submissions/search-by-filler endpoint called", flush=True)
+    # print(f"[DEBUG-search] Using DB: {submission_collection.database.name}, Collection count: {await submission_collection.count_documents({})}", flush=True)
+    query = {"$or": [
+        {"fillerName": {"$regex": fillerName, "$options": "i"}},
+        {"fillername": {"$regex": fillerName, "$options": "i"}}
+    ]}
+    # print(f"[DEBUG-search] Search query: {query}", flush=True)
+    submissions = await submission_collection.find(query).to_list(1000)
+    # print(f"[DEBUG-search] Number of results: {len(submissions)}", flush=True)
+    if submissions:
+        print(f"[DEBUG-search] First submission: {submissions[0]}", flush=True)
+    return [serialize_mongo(sub) for sub in submissions]
+
 @app.get("/templates/", response_description="List all templates")
 async def list_templates():
     templates = await template_collection.find().to_list(1000)
@@ -644,16 +666,3 @@ async def delete_app_team_template(name: str):
         raise HTTPException(status_code=404, detail=f"App Team Template {name} not found")
     return JSONResponse(status_code=status.HTTP_200_OK, content={"message": f"App Team Template '{name}' deleted."})
 
-@app.get("/submissions/search-by-filler", response_description="Search submissions by filler name")
-async def search_submissions_by_filler(fillerName: str = Query(..., description="Filler name to search for")):
-    print(f"[DEBUG] fillerName param type: {type(fillerName)}, value: {fillerName}", flush=True)
-    print("[DEBUG] /submissions/search-by-filler endpoint called", flush=True)
-    # Case-insensitive, partial match on both 'fillerName' and 'fillername' fields
-    query = {"$or": [
-        {"fillerName": {"$regex": fillerName, "$options": "i"}},
-        {"fillername": {"$regex": fillerName, "$options": "i"}}
-    ]}
-    print(f"[DEBUG] Search query: {query}", flush=True)
-    submissions = await submission_collection.find(query).to_list(1000)
-    print(f"[DEBUG] Number of results: {len(submissions)}", flush=True)
-    return [serialize_mongo(sub) for sub in submissions]
