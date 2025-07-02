@@ -14,8 +14,18 @@ import { SubmissionsViewerComponent } from './submissions-viewer.component';
   standalone: true,
   imports: [CommonModule, MatIconModule, MatButtonModule, LaunchpadComponent, DashboardComponent, DynamicForm, TemplateHistoryComponent, HelpdeskComponent, SubmissionsViewerComponent],
   template: `
-    <header class="app-header" *ngIf="currentView !== 'dashboard'">
-      <h1>Configuration File Generator</h1>
+    <header class="app-header">
+      <h1>
+        {{
+          (currentView === 'dashboard' && dashboardTeam === 'application') ||
+          (['form', 'submissions', 'history', 'helpdesk'].includes(currentView) && previousView === 'dashboard' && dashboardTeam === 'application')
+            ? 'Configuration File Generator'
+          : (currentView === 'dashboard' && dashboardTeam === 'framework') ||
+            (['form', 'submissions', 'history', 'helpdesk'].includes(currentView) && previousView === 'dashboard' && dashboardTeam === 'framework')
+            ? 'Configuration File Template Generator and Management'
+          : 'Configuration File Generator and Template Management'
+        }}
+      </h1>
       <div class="header-right">
         <button (click)="toggleTheme()" mat-raised-button color="accent" class="theme-toggle-chip" aria-label="Toggle Light/Dark Mode">
           <mat-icon class="theme-icon">{{ isDarkTheme ? 'dark_mode' : 'light_mode' }}</mat-icon>
@@ -24,7 +34,7 @@ import { SubmissionsViewerComponent } from './submissions-viewer.component';
         <span class="datetime">{{ currentDateTime | date:'medium' }}</span>
       </div>
     </header>
-    <main class="app-content" [class.no-header]="currentView === 'dashboard'">
+    <main class="app-content">
       <ng-container [ngSwitch]="currentView">
         <app-launchpad *ngSwitchCase="'launchpad'" (navigate)="onNavigate($event)"></app-launchpad>
         <app-dashboard *ngSwitchCase="'dashboard'" [team]="dashboardTeam" (navigate)="onNavigate($event)" (back)="onBackNavigation()"></app-dashboard>

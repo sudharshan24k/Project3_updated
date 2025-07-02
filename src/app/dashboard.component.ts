@@ -1,5 +1,5 @@
 import { CommonModule, NgIf, NgFor } from '@angular/common';
-import { Component, OnInit, AfterViewInit, Input, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, AfterViewInit, Input, Output, EventEmitter, SimpleChanges, OnChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatExpansionModule } from '@angular/material/expansion';
@@ -29,8 +29,7 @@ import { MatDialog } from '@angular/material/dialog';
       <div *ngIf="mode === 'list'">
         <header class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
           <div style="text-align: center; flex: 1;">
-            <h1 *ngIf="!isFrameworkTeam">Configuration files</h1>
-            <h1 *ngIf="isFrameworkTeam">Create New Framework & Edit Existing Template</h1>
+            <h1>{{ isFrameworkTeam ? 'Configuration Template Generator and Management' : 'Configuration File Generator' }}</h1>
             <p class="subtitle" *ngIf="!isFrameworkTeam">Use and Fill out your Configuration files.</p>
             <p class="subtitle" *ngIf="isFrameworkTeam">Manage, edit, and create templates for the framework team.</p>
           </div>
@@ -1116,7 +1115,7 @@ import { MatDialog } from '@angular/material/dialog';
 }
   `]
 })
-export class DashboardComponent implements OnInit, AfterViewInit {
+export class DashboardComponent implements OnInit, AfterViewInit, OnChanges {
   @Input() team: 'application' | 'framework' = 'application';
   @Output() navigate = new EventEmitter<any>();
   @Output() back = new EventEmitter<void>();
@@ -1163,6 +1162,12 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit() {
     setTimeout(() => this.restoreScroll(), 0);
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['team']) {
+      this.isFrameworkTeam = this.team === 'framework';
+    }
   }
 
   // --- State Persistence ---
