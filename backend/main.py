@@ -115,8 +115,8 @@ async def search_submissions_by_filler(fillerName: str = Query(..., description=
     # print(f"[DEBUG-search] Search query: {query}", flush=True)
     submissions = await submission_collection.find(query).to_list(1000)
     # print(f"[DEBUG-search] Number of results: {len(submissions)}", flush=True)
-    if submissions:
-        print(f"[DEBUG-search] First submission: {submissions[0]}", flush=True)
+    #if submissions:
+    #    print(f"[DEBUG-search] First submission: {submissions[0]}", flush=True)
     return [serialize_mongo(sub) for sub in submissions]
 
 @app.get("/templates/", response_description="List all templates")

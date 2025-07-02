@@ -39,11 +39,11 @@ import { SearchByFillerComponent } from './search-by-filler.component';
       <ng-container [ngSwitch]="currentView">
         <app-launchpad *ngSwitchCase="'launchpad'" (navigate)="onNavigate($event)"></app-launchpad>
         <app-dashboard *ngSwitchCase="'dashboard'" [team]="dashboardTeam" (navigate)="onNavigate($event)" (back)="onBackNavigation()"></app-dashboard>
-        <app-dynamic-form *ngSwitchCase="'form'" [mode]="formMode" [templateName]="formTemplateName" (formClose)="onBackNavigation()"></app-dynamic-form>
+        <app-dynamic-form *ngSwitchCase="'form'" [mode]="formMode" [templateName]="formTemplateName" [prefillSubmissionName]="prefillSubmissionName" (formClose)="onBackNavigation()"></app-dynamic-form>
         <app-template-history *ngSwitchCase="'history'" [templateName]="formTemplateName" (close)="onBackNavigation()"></app-template-history>
         <app-submissions-viewer *ngSwitchCase="'submissions'" [templateName]="formTemplateName" (close)="onBackNavigation()"></app-submissions-viewer>
         <app-helpdesk *ngSwitchCase="'helpdesk'" (close)="onBackNavigation()"></app-helpdesk>
-        <app-search-by-filler *ngSwitchCase="'search-by-filler'" (back)="currentView = 'dashboard'"></app-search-by-filler>
+        <app-search-by-filler *ngSwitchCase="'search-by-filler'" (back)="currentView = 'dashboard'" (duplicateEdit)="onDuplicateEdit($event)"></app-search-by-filler>
       </ng-container>
     </main>
   `,
@@ -158,6 +158,7 @@ export class AppComponent implements OnDestroy {
   dashboardTeam: 'application' | 'framework' = 'application';
   formMode: 'create' | 'edit' | 'use' | 'preview' = 'use';
   formTemplateName: string | null = null;
+  prefillSubmissionName: string | null = null;
 
   constructor() {
     this.intervalId = setInterval(() => {
@@ -207,6 +208,13 @@ export class AppComponent implements OnDestroy {
     
     // Clear form data when going back
     this.formTemplateName = null;
+  }
+
+  onDuplicateEdit(event: { template: string, submissionName: string }) {
+    this.formTemplateName = event.template;
+    this.prefillSubmissionName = event.submissionName;
+    this.formMode = 'use';
+    this.currentView = 'form';
   }
 }
 
