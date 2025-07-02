@@ -646,7 +646,14 @@ async def delete_app_team_template(name: str):
 
 @app.get("/submissions/search-by-filler", response_description="Search submissions by filler name")
 async def search_submissions_by_filler(fillerName: str = Query(..., description="Filler name to search for")):
-    # Case-insensitive, partial match on the top-level 'fillerName' field
-    query = {"fillerName": {"$regex": fillerName, "$options": "i"}}
+    print(f"[DEBUG] fillerName param type: {type(fillerName)}, value: {fillerName}", flush=True)
+    print("[DEBUG] /submissions/search-by-filler endpoint called", flush=True)
+    # Case-insensitive, partial match on both 'fillerName' and 'fillername' fields
+    query = {"$or": [
+        {"fillerName": {"$regex": fillerName, "$options": "i"}},
+        {"fillername": {"$regex": fillerName, "$options": "i"}}
+    ]}
+    print(f"[DEBUG] Search query: {query}", flush=True)
     submissions = await submission_collection.find(query).to_list(1000)
+    print(f"[DEBUG] Number of results: {len(submissions)}", flush=True)
     return [serialize_mongo(sub) for sub in submissions]

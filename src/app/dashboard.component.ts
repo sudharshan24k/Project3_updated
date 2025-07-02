@@ -15,11 +15,13 @@ import { TemplateHistoryComponent } from './template-history/template-history.co
 import { AnimatedPopupComponent } from './animated-popup.component';
 import { InteractiveDialogComponent } from './interactive-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, NgIf, NgFor, DynamicForm, SubmissionsViewerComponent, MatIconModule, MatTooltipModule, MatButtonModule, FormsModule, MatTabsModule, MatExpansionModule, TemplateHistoryComponent, AnimatedPopupComponent, MatListModule],
+  imports: [CommonModule, NgIf, NgFor, DynamicForm, SubmissionsViewerComponent, MatIconModule, MatTooltipModule, MatButtonModule, FormsModule, MatTabsModule, MatExpansionModule, TemplateHistoryComponent, AnimatedPopupComponent, MatListModule, MatFormFieldModule, MatInputModule],
   template: `
     <div class="container">
       <button mat-stroked-button color="primary" (click)="goToLaunchpad()" style="margin-bottom: 1rem;">
@@ -40,6 +42,12 @@ import { MatDialog } from '@angular/material/dialog';
             </button>
           </div>
         </header>
+        <div *ngIf="!isFrameworkTeam" style="margin: 1.5rem 0 1rem 0; text-align: right;">
+          <button mat-stroked-button color="accent" (click)="navigate.emit({ view: 'search-by-filler' })">
+            <mat-icon>search</mat-icon>
+            Search Submitted Forms by User
+          </button>
+        </div>
         <div class="filter-bar card modern-search-bar team-search-bar">
           <select class="team-dropdown" [(ngModel)]="selectedTeam" (change)="applyFilters()">
             <option value="">All Teams</option>
@@ -291,7 +299,6 @@ import { MatDialog } from '@angular/material/dialog';
 
       <div *ngIf="isFormMode()">
         <app-dynamic-form
-          [mode]="mode"
           [templateName]="selectedTemplate"
           [prefillVersion]="duplicatedVersion"
           [prefillSubmissionName]="prefillSubmissionName"
@@ -1482,5 +1489,9 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnChanges {
 
   goToFilledByMe() {
     this.router.navigate(['/filled-by-me']);
+  }
+
+  onNavigate(event: any) {
+    this.navigate.emit(event);
   }
 }

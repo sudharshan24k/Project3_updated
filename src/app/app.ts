@@ -8,11 +8,12 @@ import { DynamicForm } from './dynamic-form/dynamic-form.component';
 import { TemplateHistoryComponent } from './template-history/template-history.component';
 import { HelpdeskComponent } from './helpdesk.component';
 import { SubmissionsViewerComponent } from './submissions-viewer.component';
+import { SearchByFillerComponent } from './search-by-filler.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, LaunchpadComponent, DashboardComponent, DynamicForm, TemplateHistoryComponent, HelpdeskComponent, SubmissionsViewerComponent],
+  imports: [CommonModule, MatIconModule, MatButtonModule, LaunchpadComponent, DashboardComponent, DynamicForm, TemplateHistoryComponent, HelpdeskComponent, SubmissionsViewerComponent, SearchByFillerComponent],
   template: `
     <header class="app-header">
       <h1>
@@ -22,7 +23,7 @@ import { SubmissionsViewerComponent } from './submissions-viewer.component';
             ? 'Configuration File Generator'
           : (currentView === 'dashboard' && dashboardTeam === 'framework') ||
             (['form', 'submissions', 'history', 'helpdesk'].includes(currentView) && previousView === 'dashboard' && dashboardTeam === 'framework')
-            ? 'Configuration File Template Generator and Management'
+            ? 'Configuration File Template Generator and Management'   
           : 'Configuration File Generator and Template Management'
         }}
       </h1>
@@ -42,6 +43,7 @@ import { SubmissionsViewerComponent } from './submissions-viewer.component';
         <app-template-history *ngSwitchCase="'history'" [templateName]="formTemplateName" (close)="onBackNavigation()"></app-template-history>
         <app-submissions-viewer *ngSwitchCase="'submissions'" [templateName]="formTemplateName" (close)="onBackNavigation()"></app-submissions-viewer>
         <app-helpdesk *ngSwitchCase="'helpdesk'" (close)="onBackNavigation()"></app-helpdesk>
+        <app-search-by-filler *ngSwitchCase="'search-by-filler'" (back)="currentView = 'dashboard'"></app-search-by-filler>
       </ng-container>
     </main>
   `,
@@ -151,8 +153,8 @@ export class AppComponent implements OnDestroy {
   isDarkTheme = false;
   currentDateTime = new Date();
   intervalId: any;
-  currentView: 'launchpad' | 'dashboard' | 'form' | 'history' | 'submissions' | 'helpdesk' = 'launchpad';
-  previousView: 'launchpad' | 'dashboard' | 'form' | 'history' | 'submissions' | 'helpdesk' = 'launchpad';
+  currentView: 'launchpad' | 'dashboard' | 'form' | 'history' | 'submissions' | 'helpdesk' | 'search-by-filler' = 'launchpad';
+  previousView: 'launchpad' | 'dashboard' | 'form' | 'history' | 'submissions' | 'helpdesk' | 'search-by-filler' = 'launchpad';
   dashboardTeam: 'application' | 'framework' = 'application';
   formMode: 'create' | 'edit' | 'use' | 'preview' = 'use';
   formTemplateName: string | null = null;

@@ -702,12 +702,23 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       });
     } else if (this.mode === 'use') {
       if (!this.templateName) return;
-      // Submit form without prompting for fillerName
-      this.schemaService.submitForm(this.templateName, {
-        data: this.form.getRawValue()
-      }).subscribe(() => {
-        this.showPopup('Form response submitted!', 'airplane');
-        setTimeout(() => this.closeForm(), 1800);
+      // Prompt for filler name after form is filled
+      const dialogRef = this.dialog.open(FillerNameDialogComponent, {
+        width: '400px',
+        disableClose: true
+      });
+      dialogRef.afterClosed().subscribe(fillerName => {
+        if (!fillerName || !fillerName.trim()) {
+          this.showPopup('Name is required to submit.', 'error');
+          return;
+        }
+        this.schemaService.submitForm(this.templateName!, {
+          data: this.form.getRawValue(),
+          fillerName: fillerName.trim()
+        }).subscribe(() => {
+          this.showPopup('Form response submitted!', 'airplane');
+          setTimeout(() => this.closeForm(), 1800);
+        });
       });
     }
   }
