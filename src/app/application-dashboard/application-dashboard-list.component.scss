@@ -564,4 +564,50 @@
   gap: 0.7rem;
   margin-bottom: 1.2rem;
   margin-left: 2rem;
+}
+
+.input-with-clear {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 220px;
+  min-width: 140px;
+  margin-right: 0.5rem;
+}
+
+.input-with-clear input {
+  width: 100%;
+  padding-right: 2.2em;
+  box-sizing: border-box;
+  flex: 1 1 auto;
+}
+
+.input-with-clear .clear-btn {
+  position: absolute;
+  right: 0.3em;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.85);
+  border: none;
+  cursor: pointer;
+  padding: 0 0.2em;
+  display: flex;
+  align-items: center;
+  color: #888;
+  z-index: 10;
+  font-size: 1.2em;
+  border-radius: 50%;
+  height: 1.8em;
+  width: 1.8em;
+  justify-content: center;
+}
+
+.input-with-clear .clear-btn:focus {
+  outline: none;
+}
+
+.input-with-clear input.main-search-input {
+  flex: unset;
+  max-width: unset;
+  min-width: 0;
 } 

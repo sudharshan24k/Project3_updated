@@ -11,6 +11,7 @@ from passlib.context import CryptContext
 from pydantic import BaseModel
 import os
 from bson import ObjectId
+from pymongo.errors import DuplicateKeyError
 
 from database import template_collection, submission_collection, response_collection, template_version_collection, app_team_template_collection, fillername_submission_collection
 from models import TemplateModel, SubmissionModel, ResponseModel, TemplateVersionModel
@@ -120,9 +121,12 @@ async def search_submissions_by_filler(fillerName: str = Query(..., description=
     return [serialize_mongo(sub) for sub in submissions]
 
 @app.get("/templates/", response_description="List all templates")
-async def list_templates():
-    templates = await template_collection.find().to_list(1000)
-    
+async def list_templates(team_name: str = Query(None)):
+    query = {}
+    if team_name:
+        # Use case-insensitive substring matching for team_name
+        query["team_name"] = {"$regex": team_name, "$options": "i"}
+    templates = await template_collection.find(query).to_list(1000)
     result = []
     for t in templates:
         schema = t.get("schema", {})
@@ -259,10 +263,20 @@ async def get_template_history(name: str):
 
 @app.post("/templates/{name}/rollback/{version}", response_description="Rollback a template to a specific version")
 async def rollback_template(name: str, version: int):
+    # Try to find the version with the exact name first
     template_to_restore = await template_version_collection.find_one({
         "template_name": name,
         "version": version
     })
+    # If not found, try matching base name (strip _vN)
+    if not template_to_restore:
+        import re
+        base_match = re.match(r"^(.*?)(_v\\d+)?$", name)
+        base_name = base_match.group(1) if base_match else name
+        template_to_restore = await template_version_collection.find_one({
+            "template_name": base_name,
+            "version": version
+        })
     if not template_to_restore:
         raise HTTPException(status_code=404, detail=f"Version {version} for template '{name}' not found.")
 
@@ -323,12 +337,22 @@ async def create_new_version(name: str, req: UpdateTemplateRequest = Body(...)):
                 max_version = v
     new_version = max_version + 1
     versioned_name = f"{base_name}_v{new_version}"
+
+    # Fetch previous version/template for metadata
+    prev_template = await template_collection.find_one({"name": name})
+    author = req.schema.get("author") if isinstance(req.schema, dict) and req.schema.get("author") else (prev_template.get("author") if prev_template else None)
+    team_name = req.schema.get("team_name") if isinstance(req.schema, dict) and req.schema.get("team_name") else (prev_template.get("team_name") if prev_template else None)
+    version_tag = req.schema.get("version_tag") if isinstance(req.schema, dict) and req.schema.get("version_tag") else (prev_template.get("version_tag") if prev_template else None)
+
     new_template = {
         "name": versioned_name,
         "schema": normalize_field_booleans(req.schema),
         "version": new_version,
         "created_at": datetime.datetime.utcnow(),
-        "updated_at": datetime.datetime.utcnow()
+        "updated_at": datetime.datetime.utcnow(),
+        "author": author,
+        "team_name": team_name,
+        "version_tag": version_tag
     }
     await template_collection.insert_one(new_template)
     # Also create version in history
@@ -499,29 +523,39 @@ async def duplicate_submission_by_name(template_name: str, submission_name: str)
     original = await submission_collection.find_one({"template_name": template_name, "submission_name": submission_name})
     if not original:
         raise HTTPException(status_code=404, detail="Submission not found.")
-    last_submission = await submission_collection.find_one({"template_name": template_name}, sort=[("version", -1)])
-    next_version = last_submission["version"] + 1 if last_submission else 1
-    # Generate new submission_name
     import re
-    base_match = re.match(r"^(.*)_v(\d+)$", template_name)
-    if base_match:
-        base_name = base_match.group(1)
-        version_num = base_match.group(2)
-        prefix = base_name[:2].lower()
-        count = await submission_collection.count_documents({"template_name": template_name, "version": next_version})
-        submission_number = count + 1
-        new_submission_name = f"{prefix}v{version_num}_{submission_number}"
-    else:
-        new_submission_name = f"{template_name}_v{next_version}_1"
-    new_submission = {
-        "template_name": template_name,
-        "version": next_version,
-        "data": original["data"],
-        "created_at": datetime.datetime.utcnow(),
-        "submission_name": new_submission_name
-    }
-    await submission_collection.insert_one(jsonable_encoder(new_submission))
-    return {"message": f"Submission duplicated as version {next_version}.", "version": next_version, "submission_name": new_submission_name}
+    N = 1
+    while True:
+        existing_names = await submission_collection.find({"template_name": template_name}).to_list(1000)
+        used_numbers = set()
+        pattern = re.compile(rf"^{re.escape(template_name)}_(\\d+)$")
+        for sub in existing_names:
+            match = pattern.match(sub.get("submission_name", ""))
+            if match:
+                num = int(match.group(1))
+                used_numbers.add(num)
+        while N in used_numbers:
+            N += 1
+        new_submission_name = f"{template_name}_{N}"
+        last_submission = await submission_collection.find_one({"template_name": template_name}, sort=[("version", -1)])
+        next_version = last_submission["version"] + 1 if last_submission else 1
+        new_submission = {
+            "template_name": template_name,
+            "version": next_version,
+            "data": original["data"],
+            "created_at": datetime.datetime.utcnow(),
+            "submission_name": new_submission_name
+        }
+        try:
+            await submission_collection.insert_one(jsonable_encoder(new_submission))
+            break
+        except Exception as e:
+            if 'E11000' in str(e):  # Duplicate key error
+                N += 1
+                continue
+            else:
+                raise
+    return {"message": f"Submission duplicated as {new_submission_name}.", "submission_name": new_submission_name}
 
 @app.delete("/submissions/{template_name}/by-name/{submission_name}", response_description="Delete a specific submission by submission_name")
 async def delete_submission_by_name(template_name: str, submission_name: str):
@@ -574,30 +608,38 @@ async def duplicate_submission_by_name(submission_name: str):
     if not original:
         raise HTTPException(status_code=404, detail="Submission not found.")
     template_name = original["template_name"]
-    # Get the next version number
-    last_submission = await submission_collection.find_one({"template_name": template_name}, sort=[("version", -1)])
-    next_version = last_submission["version"] + 1 if last_submission else 1
-    # Generate new submission_name
     import re
-    base_match = re.match(r"^(.*)_v(\\d+)$", template_name)
-    if base_match:
-        base_name = base_match.group(1)
-        version_num = base_match.group(2)
-        prefix = base_name[:2].lower()
-        count = await submission_collection.count_documents({"template_name": template_name, "version": next_version})
-        submission_number = count + 1
-        new_submission_name = f"{prefix}v{version_num}_{submission_number}"
-    else:
-        new_submission_name = f"{template_name}_v{next_version}_1"
-    # Prepare the new submission data
-    new_submission = {
-        "template_name": template_name,
-        "version": next_version,
-        "data": original["data"],
-        "created_at": datetime.datetime.utcnow(),
-        "submission_name": new_submission_name
-    }
-    await submission_collection.insert_one(jsonable_encoder(new_submission))
+    N = 1
+    while True:
+        existing_names = await submission_collection.find({"template_name": template_name}).to_list(1000)
+        used_numbers = set()
+        pattern = re.compile(rf"^{re.escape(template_name)}_(\\d+)$")
+        for sub in existing_names:
+            match = pattern.match(sub.get("submission_name", ""))
+            if match:
+                num = int(match.group(1))
+                used_numbers.add(num)
+        while N in used_numbers:
+            N += 1
+        new_submission_name = f"{template_name}_{N}"
+        last_submission = await submission_collection.find_one({"template_name": template_name}, sort=[("version", -1)])
+        next_version = last_submission["version"] + 1 if last_submission else 1
+        new_submission = {
+            "template_name": template_name,
+            "version": next_version,
+            "data": original["data"],
+            "created_at": datetime.datetime.utcnow(),
+            "submission_name": new_submission_name
+        }
+        try:
+            await submission_collection.insert_one(jsonable_encoder(new_submission))
+            break
+        except Exception as e:
+            if 'E11000' in str(e):  # Duplicate key error
+                N += 1
+                continue
+            else:
+                raise
     return {"message": f"Submission duplicated as {new_submission_name}.", "submission_name": new_submission_name}
 
 # --- New: Delete submission by submission_name ---

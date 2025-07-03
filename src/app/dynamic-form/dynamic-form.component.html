@@ -470,19 +470,16 @@
                       </div>
                     </div>
                     
-                    <div class="checkbox-group span-2">
-                      <div class="checkbox-wrapper">
-                        <input type="checkbox" formControlName="required" id="field-required"> 
-                        <label for="field-required">Required Field <mat-icon matTooltip="User must fill this field">help_outline</mat-icon></label>
-                      </div>
-                      <div class="checkbox-wrapper">
-                        <input type="checkbox" formControlName="editable" id="field-editable">
-                        <label for="field-editable">User Editable <mat-icon matTooltip="If unchecked, field is visible but not editable">help_outline</mat-icon></label>
-                      </div>
-                      <div class="checkbox-wrapper">
-                        <input type="checkbox" formControlName="environmentSpecific" id="field-environment-specific">
-                        <label for="field-environment-specific">Environment Specific <mat-icon matTooltip="If checked, field will have PROD/DEV/COB subfields">help_outline</mat-icon></label>
-                      </div>
+                    <div class="small-checkbox-group span-2" style="display: flex; gap: 1.2rem; align-items: center; margin-bottom: 1.2rem;">
+                      <mat-checkbox formControlName="required" color="primary" style="margin:0; font-size:0.97rem;">
+                        Required Field <mat-icon matTooltip="User must fill this field">help_outline</mat-icon>
+                      </mat-checkbox>
+                      <mat-checkbox formControlName="editable" color="primary" style="margin:0; font-size:0.97rem;">
+                        User Editable <mat-icon matTooltip="If unchecked, field is visible but not editable">help_outline</mat-icon>
+                      </mat-checkbox>
+                      <mat-checkbox formControlName="environmentSpecific" color="primary" style="margin:0; font-size:0.97rem;">
+                        Environment Specific <mat-icon matTooltip="If checked, field will have PROD/DEV/COB subfields">help_outline</mat-icon>
+                      </mat-checkbox>
                     </div>
 
                     <!-- Dropdown Options Section -->
@@ -529,58 +526,58 @@
                     <div class="section-heading span-2"><mat-icon>visibility</mat-icon> Conditional Logic</div>
                     <div class="form-field span-2">
                       <label>Visible If (Show this field only if another field has a specific value)</label>
-                      <div class="conditional-logic-row">
-                        <select [(ngModel)]="visibleIfKey" [ngModelOptions]="{standalone: true}">
+                      <div class="conditional-logic-row" style="display: flex; gap: 0.5rem; align-items: center;">
+                        <select [(ngModel)]="visibleIfKey" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
                           <option [ngValue]="null">-- Select Field --</option>
                           <option *ngFor="let f of schema.fields" [ngValue]="f.key" [disabled]="f.key === fieldForm.value.key">{{ f.label }}</option>
                         </select>
                         <ng-container *ngIf="visibleIfKey">
                           <ng-container [ngSwitch]="getFieldType(visibleIfKey)">
-                            <select *ngSwitchCase="'dropdown'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                            <select *ngSwitchCase="'dropdown'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
                               <option *ngFor="let opt of getFieldOptions(visibleIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
                             </select>
-                            <select *ngSwitchCase="'mcq_single'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                            <select *ngSwitchCase="'mcq_single'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
                               <option *ngFor="let opt of getFieldOptions(visibleIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
                             </select>
-                            <div *ngSwitchCase="'mcq_multiple'" style="flex:1; display:flex; flex-wrap:wrap; gap:0.5rem;">
+                            <div *ngSwitchCase="'mcq_multiple'" style="flex:1; display:flex; flex-wrap:wrap; gap:0.5rem; min-width: 250px;">
                               <label *ngFor="let opt of getFieldOptions(visibleIfKey)">
                                 <input type="checkbox" [value]="opt.value" (change)="onMultiCondChange($event, 'visible')" [checked]="isArray(visibleIfValue) && visibleIfValue.includes(opt.value)"> {{ opt.label }}
                               </label>
                             </div>
-                            <select *ngSwitchCase="'boolean'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                            <select *ngSwitchCase="'boolean'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
                               <option [ngValue]="true">True</option>
                               <option [ngValue]="false">False</option>
                             </select>
-                            <input *ngSwitchDefault [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value" style="flex:1;">
+                            <input *ngSwitchDefault [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value" style="flex:1; min-width: 250px;">
                           </ng-container>
                         </ng-container>
                       </div>
                     </div>
                     <div class="form-field span-2">
                       <label>Mandatory If (Make this field required only if another field has a specific value)</label>
-                      <div style="display: flex; gap: 0.5rem; align-items: center;">
-                        <select [(ngModel)]="mandatoryIfKey" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                      <div class="conditional-logic-row" style="display: flex; gap: 0.5rem; align-items: center;">
+                        <select [(ngModel)]="mandatoryIfKey" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
                           <option [ngValue]="null">-- Select Field --</option>
                           <option *ngFor="let f of schema.fields" [ngValue]="f.key" [disabled]="f.key === fieldForm.value.key">{{ f.label }}</option>
                         </select>
                         <ng-container *ngIf="mandatoryIfKey">
                           <ng-container [ngSwitch]="getFieldType(mandatoryIfKey)">
-                            <select *ngSwitchCase="'dropdown'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                            <select *ngSwitchCase="'dropdown'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
                               <option *ngFor="let opt of getFieldOptions(mandatoryIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
                             </select>
-                            <select *ngSwitchCase="'mcq_single'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                            <select *ngSwitchCase="'mcq_single'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
                               <option *ngFor="let opt of getFieldOptions(mandatoryIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
                             </select>
-                            <div *ngSwitchCase="'mcq_multiple'" style="flex:1; display:flex; flex-wrap:wrap; gap:0.5rem;">
+                            <div *ngSwitchCase="'mcq_multiple'" style="flex:1; display:flex; flex-wrap:wrap; gap:0.5rem; min-width: 250px;">
                               <label *ngFor="let opt of getFieldOptions(mandatoryIfKey)">
                                 <input type="checkbox" [value]="opt.value" (change)="onMultiCondChange($event, 'mandatory')" [checked]="isArray(mandatoryIfValue) && mandatoryIfValue.includes(opt.value)"> {{ opt.label }}
                               </label>
                             </div>
-                            <select *ngSwitchCase="'boolean'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                            <select *ngSwitchCase="'boolean'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
                               <option [ngValue]="true">True</option>
                               <option [ngValue]="false">False</option>
                             </select>
-                            <input *ngSwitchDefault [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value" style="flex:1;">
+                            <input *ngSwitchDefault [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value" style="flex:1; min-width: 250px;">
                           </ng-container>
                         </ng-container>
                       </div>
@@ -697,19 +694,16 @@
                   </div>
                 </div>
                 
-                <div class="checkbox-group span-2">
-                  <div class="checkbox-wrapper">
-                    <input type="checkbox" formControlName="required" id="field-required"> 
-                    <label for="field-required">Required Field <mat-icon matTooltip="User must fill this field">help_outline</mat-icon></label>
-                  </div>
-                  <div class="checkbox-wrapper">
-                    <input type="checkbox" formControlName="editable" id="field-editable">
-                    <label for="field-editable">User Editable <mat-icon matTooltip="If unchecked, field is visible but not editable">help_outline</mat-icon></label>
-                  </div>
-                  <div class="checkbox-wrapper">
-                    <input type="checkbox" formControlName="environmentSpecific" id="field-environment-specific">
-                    <label for="field-environment-specific">Environment Specific <mat-icon matTooltip="If checked, field will have PROD/DEV/COB subfields">help_outline</mat-icon></label>
-                  </div>
+                <div class="small-checkbox-group span-2" style="display: flex; gap: 1.2rem; align-items: center; margin-bottom: 1.2rem;">
+                  <mat-checkbox formControlName="required" color="primary" style="margin:0; font-size:0.97rem;">
+                    Required Field <mat-icon matTooltip="User must fill this field">help_outline</mat-icon>
+                  </mat-checkbox>
+                  <mat-checkbox formControlName="editable" color="primary" style="margin:0; font-size:0.97rem;">
+                    User Editable <mat-icon matTooltip="If unchecked, field is visible but not editable">help_outline</mat-icon>
+                  </mat-checkbox>
+                  <mat-checkbox formControlName="environmentSpecific" color="primary" style="margin:0; font-size:0.97rem;">
+                    Environment Specific <mat-icon matTooltip="If checked, field will have PROD/DEV/COB subfields">help_outline</mat-icon>
+                  </mat-checkbox>
                 </div>
 
                 <!-- Dropdown Options Section -->
@@ -756,58 +750,58 @@
                 <div class="section-heading span-2"><mat-icon>visibility</mat-icon> Conditional Logic</div>
                 <div class="form-field span-2">
                   <label>Visible If (Show this field only if another field has a specific value)</label>
-                  <div class="conditional-logic-row">
-                    <select [(ngModel)]="visibleIfKey" [ngModelOptions]="{standalone: true}">
+                  <div class="conditional-logic-row" style="display: flex; gap: 0.5rem; align-items: center;">
+                    <select [(ngModel)]="visibleIfKey" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
                       <option [ngValue]="null">-- Select Field --</option>
                       <option *ngFor="let f of schema.fields" [ngValue]="f.key" [disabled]="f.key === fieldForm.value.key">{{ f.label }}</option>
                     </select>
                     <ng-container *ngIf="visibleIfKey">
                       <ng-container [ngSwitch]="getFieldType(visibleIfKey)">
-                        <select *ngSwitchCase="'dropdown'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                        <select *ngSwitchCase="'dropdown'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
                           <option *ngFor="let opt of getFieldOptions(visibleIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
                         </select>
-                        <select *ngSwitchCase="'mcq_single'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                        <select *ngSwitchCase="'mcq_single'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
                           <option *ngFor="let opt of getFieldOptions(visibleIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
                         </select>
-                        <div *ngSwitchCase="'mcq_multiple'" style="flex:1; display:flex; flex-wrap:wrap; gap:0.5rem;">
+                        <div *ngSwitchCase="'mcq_multiple'" style="flex:1; display:flex; flex-wrap:wrap; gap:0.5rem; min-width: 250px;">
                           <label *ngFor="let opt of getFieldOptions(visibleIfKey)">
                             <input type="checkbox" [value]="opt.value" (change)="onMultiCondChange($event, 'visible')" [checked]="isArray(visibleIfValue) && visibleIfValue.includes(opt.value)"> {{ opt.label }}
                           </label>
                         </div>
-                        <select *ngSwitchCase="'boolean'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                        <select *ngSwitchCase="'boolean'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
                           <option [ngValue]="true">True</option>
                           <option [ngValue]="false">False</option>
                         </select>
-                        <input *ngSwitchDefault [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value" style="flex:1;">
+                        <input *ngSwitchDefault [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value" style="flex:1; min-width: 250px;">
                       </ng-container>
                     </ng-container>
                   </div>
                 </div>
                 <div class="form-field span-2">
                   <label>Mandatory If (Make this field required only if another field has a specific value)</label>
-                  <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    <select [(ngModel)]="mandatoryIfKey" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                  <div class="conditional-logic-row" style="display: flex; gap: 0.5rem; align-items: center;">
+                    <select [(ngModel)]="mandatoryIfKey" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
                       <option [ngValue]="null">-- Select Field --</option>
                       <option *ngFor="let f of schema.fields" [ngValue]="f.key" [disabled]="f.key === fieldForm.value.key">{{ f.label }}</option>
                     </select>
                     <ng-container *ngIf="mandatoryIfKey">
                       <ng-container [ngSwitch]="getFieldType(mandatoryIfKey)">
-                        <select *ngSwitchCase="'dropdown'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                        <select *ngSwitchCase="'dropdown'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
                           <option *ngFor="let opt of getFieldOptions(mandatoryIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
                         </select>
-                        <select *ngSwitchCase="'mcq_single'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                        <select *ngSwitchCase="'mcq_single'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
                           <option *ngFor="let opt of getFieldOptions(mandatoryIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
                         </select>
-                        <div *ngSwitchCase="'mcq_multiple'" style="flex:1; display:flex; flex-wrap:wrap; gap:0.5rem;">
+                        <div *ngSwitchCase="'mcq_multiple'" style="flex:1; display:flex; flex-wrap:wrap; gap:0.5rem; min-width: 250px;">
                           <label *ngFor="let opt of getFieldOptions(mandatoryIfKey)">
                             <input type="checkbox" [value]="opt.value" (change)="onMultiCondChange($event, 'mandatory')" [checked]="isArray(mandatoryIfValue) && mandatoryIfValue.includes(opt.value)"> {{ opt.label }}
                           </label>
                         </div>
-                        <select *ngSwitchCase="'boolean'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1;">
+                        <select *ngSwitchCase="'boolean'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
                           <option [ngValue]="true">True</option>
                           <option [ngValue]="false">False</option>
                         </select>
-                        <input *ngSwitchDefault [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value" style="flex:1;">
+                        <input *ngSwitchDefault [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value" style="flex:1; min-width: 250px;">
                       </ng-container>
                     </ng-container>
                   </div>
@@ -834,47 +828,6 @@
 
 
 
-        </div>
-
-        <!-- Preview Mode: Show Field Conditions Panel -->
-        <div *ngIf="mode === 'preview'" class="conditions-panel card">
-          <header class="panel-header">
-            <h3><mat-icon>info</mat-icon> Field Conditions & Rules</h3>
-            <p class="panel-subtitle">Below are all the conditions and rules defined for each field in this template.</p>
-          </header>
-          <div class="conditions-list">
-            <div *ngFor="let field of schema.fields" class="condition-item">
-              <div class="condition-title">
-                <mat-icon>label</mat-icon>
-                <strong>{{ field.label }}</strong>
-                <span class="field-meta">({{ field.key }}, {{ field.type }})</span>
-              </div>
-              <ul class="condition-details">
-                <li *ngIf="field.required"><mat-icon>check_circle</mat-icon> <b>Required</b></li>
-                <li *ngIf="!field.required"><mat-icon>radio_button_unchecked</mat-icon> Optional</li>
-                <li *ngIf="!isFieldEditable(field)"><mat-icon>lock</mat-icon> <b>Non-editable</b></li>
-                <li *ngIf="field.regex"><mat-icon>code</mat-icon> Regex: <code>{{ field.regex }}</code></li>
-                <li *ngIf="field.visibleIf"><mat-icon>visibility</mat-icon> <b>Visible if</b>: <code>{{ field.visibleIf.key }}</code> = <code>{{ field.visibleIf.value }}</code></li>
-                <li *ngIf="field.mandatoryIf"><mat-icon>assignment_turned_in</mat-icon> <b>Required if</b>: <code>{{ field.mandatoryIf.key }}</code> = <code>{{ field.mandatoryIf.value }}</code></li>
-                <li *ngIf="field.type === 'dropdown' && field.options"><mat-icon>arrow_drop_down_circle</mat-icon> Options: <span *ngFor="let opt of field.options; let last = last">{{ opt.label || opt }}<span *ngIf="!last">, </span></span></li>
-                <li *ngIf="field.type === 'boolean'"><mat-icon>toggle_on</mat-icon> Boolean (True/False)</li>
-                <li *ngIf="field.placeholder"><mat-icon>info</mat-icon> Placeholder: <i>{{ field.placeholder }}</i></li>
-                <li *ngIf="field.defaultValue !== undefined && field.defaultValue !== null"><mat-icon>star</mat-icon> Default: <code>{{ field.defaultValue }}</code></li>
-                <li *ngIf="field.created_at"><mat-icon>calendar_today</mat-icon> Field Created: {{ field.created_at | date:'medium' }}</li>
-                <li *ngIf="field.updated_at"><mat-icon>update</mat-icon> Field Updated: {{ field.updated_at | date:'medium' }}</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <!-- Preview Mode: Show Template Timestamps -->
-        <div *ngIf="mode === 'preview'" class="template-timestamps card">
-          <div class="timestamp-row">
-            <mat-icon>calendar_today</mat-icon>
-            <span><b>Created:</b> {{ schema.created_at | date:'medium' }}</span>
-            <mat-icon>update</mat-icon>
-            <span><b>Last Updated:</b> {{ schema.updated_at | date:'medium' }}</span>
-          </div>
         </div>
       </main>
       <!-- Animated popup notification -->

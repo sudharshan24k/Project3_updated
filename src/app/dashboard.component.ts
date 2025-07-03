@@ -24,30 +24,31 @@ import { MatInputModule } from '@angular/material/input';
   imports: [CommonModule, NgIf, NgFor, DynamicForm, SubmissionsViewerComponent, MatIconModule, MatTooltipModule, MatButtonModule, FormsModule, MatTabsModule, MatExpansionModule, TemplateHistoryComponent, AnimatedPopupComponent, MatListModule, MatFormFieldModule, MatInputModule],
   template: `
     <div class="container">
-      <button mat-stroked-button color="primary" (click)="goToLaunchpad()" style="margin-bottom: 1rem;">
-        <mat-icon>arrow_back</mat-icon>
-        Back to Launchpad
-      </button>
+      
       <div *ngIf="mode === 'list'">
-        <header class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-          <div style="text-align: center; flex: 1;">
-            <h1>{{ isFrameworkTeam ? 'Configuration Template Generator and Management' : 'Configuration File Generator' }}</h1>
+        <header class="dashboard-header" style="display: flex; align-items: center; width: 100%; max-width: 100vw; overflow-x: hidden; box-sizing: border-box;">
+          <div style="flex: 0 0 auto; margin-left: 5px;">
+            <button mat-stroked-button color="primary" (click)="goToLaunchpad()">
+              <mat-icon>arrow_back</mat-icon>
+              Back to Launchpad
+            </button>
+          </div>
+          <div style="flex: 1 1 0; text-align: center; min-width: 0;">
+            <h1 style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ isFrameworkTeam ? 'Configuration Template Generator and Management' : 'Configuration File Generator' }}</h1>
             <p class="subtitle" *ngIf="!isFrameworkTeam">Use and Fill out your Configuration files.</p>
             <p class="subtitle" *ngIf="isFrameworkTeam">Manage, edit, and create templates for the framework team.</p>
           </div>
-          <div *ngIf="isFrameworkTeam">
-            <button mat-raised-button color="primary" class="big-create-btn" (click)="showCreateTemplate()">
-              <mat-icon style="font-size: 2.5rem;">add</mat-icon>
-              <span style="font-size: 1.3rem; font-weight: 600; margin-left: 0.5rem;">Create New Template</span>
+          <div style="flex: 0 0 auto; margin-right: 5px; display: flex; gap: 0.5rem; align-items: center;">
+            <button *ngIf="!isFrameworkTeam" mat-stroked-button color="accent" (click)="navigate.emit({ view: 'search-by-filler' })">
+              <mat-icon>search</mat-icon>
+              Search Submitted Forms by User
+            </button>
+            <button *ngIf="isFrameworkTeam" mat-raised-button color="primary" class="big-create-btn" (click)="showCreateTemplate()" style="height: 52px; min-width: 220px; border-radius: 28px; box-shadow: 0 2px 12px rgba(23,78,166,0.10); display: flex; align-items: center; gap: 0.7rem; font-size: 1.18rem; font-weight: 600; letter-spacing: 0.01em;">
+              <mat-icon style="font-size: 2.2rem;">add</mat-icon>
+              <span class="btn-title" style="font-size: 1.18rem; font-weight: 600;">Create New Template</span>
             </button>
           </div>
         </header>
-        <div *ngIf="!isFrameworkTeam" style="margin: 1.5rem 0 1rem 0; text-align: right;">
-          <button mat-stroked-button color="accent" (click)="navigate.emit({ view: 'search-by-filler' })">
-            <mat-icon>search</mat-icon>
-            Search Submitted Forms by User
-          </button>
-        </div>
         <div class="filter-bar card modern-search-bar team-search-bar">
           <input type="text" class="team-dropdown" placeholder="Team contains..." [(ngModel)]="selectedTeam" (input)="applyFilters()">
           <input

@@ -19,13 +19,13 @@ import { Router } from '@angular/router';
     <div *ngIf="!selectedSubmission; else detailView">
       <div class="card" style="max-width: 600px; margin: 2rem auto; padding: 2rem;">
         <h2>Search Submitted Forms by User</h2>
-        <form (ngSubmit)="onSearchByFiller()" #searchForm="ngForm" style="display: flex; gap: 1rem; align-items: flex-end;">
-          <mat-form-field appearance="outline" style="flex: 1;">
+        <form (ngSubmit)="onSearchByFiller()" #searchForm="ngForm" style="display: flex; align-items: center; gap: 1.2rem; margin-top: 1.2rem; margin-bottom: 1.2rem;">
+          <mat-form-field appearance="outline" style="flex: 1; min-width: 0; margin: 0;">
             <mat-label>Enter User Name</mat-label>
-            <input matInput [(ngModel)]="searchFillerName" name="searchFillerName" required placeholder="e.g. John" />
+            <input matInput [(ngModel)]="searchFillerName" name="searchFillerName" required placeholder="e.g. John" style="height: 44px;" />
           </mat-form-field>
-          <button mat-raised-button color="primary" type="submit" [disabled]="!searchFillerName || isSearching">Search</button>
-          <button mat-button type="button" (click)="back.emit()">Back</button>
+          <button mat-stroked-button color="primary" type="submit" [disabled]="!searchFillerName || isSearching" style="height: 44px; min-width: 110px; font-weight: 500; border-radius: 24px;">Search</button>
+          <button mat-stroked-button color="primary" type="button" (click)="back.emit()" style="height: 44px; min-width: 90px; font-weight: 500; border-radius: 24px;">Back</button>
         </form>
         <div *ngIf="isSearching" style="margin-top: 1.5rem; text-align: center;">
           <mat-icon class="spinning">refresh</mat-icon> Searching...
@@ -119,9 +119,7 @@ export class SearchByFillerComponent {
   constructor(private schemaService: SchemaService, private router: Router) {}
 
   onSearchByFiller() {
-    console.log('Search button clicked, onSearchByFiller called');
     if (!this.searchFillerName){
-      // console.log("inside if");
        return;}
     this.isSearching = true;
     this.schemaService.searchSubmissionsByFiller(this.searchFillerName).subscribe(results => {

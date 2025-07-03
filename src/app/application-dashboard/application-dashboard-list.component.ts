@@ -36,12 +36,30 @@ import { trigger, state, style, transition, animate } from '@angular/animations'
       <div *ngIf="error && !loading" class="error-message">{{ error }}</div>
       <div *ngIf="!loading && !error">
         <div class="filter-bar card">
-          <input type="text" class="main-search-input" placeholder="Filter by Name" [(ngModel)]="nameFilter" (input)="applyFilters()">
-          <input type="text" class="main-search-input" placeholder="Filter by Description" [(ngModel)]="descFilter" (input)="applyFilters()">
-          <input type="text" class="main-search-input" placeholder="Filter by Author" [(ngModel)]="authorFilter" (input)="applyFilters()">
-          <input type="text" class="main-search-input" placeholder="Filter by Team" [(ngModel)]="teamFilter" (input)="applyFilters()">
-          <input type="text" class="main-search-input" placeholder="Filter by Version" [(ngModel)]="versionFilter" (input)="applyFilters()">
-          <input type="text" class="main-search-input" placeholder="Filter by Audit Pipeline" [(ngModel)]="auditFilter" (input)="applyFilters()">
+          <div class="input-with-clear">
+            <input type="text" class="main-search-input" placeholder="Filter by Name" [(ngModel)]="nameFilter" (input)="applyFilters()">
+            <button *ngIf="nameFilter" type="button" class="clear-btn" (click)="nameFilter=''; applyFilters()"><mat-icon>close</mat-icon></button>
+          </div>
+          <div class="input-with-clear">
+            <input type="text" class="main-search-input" placeholder="Filter by Description" [(ngModel)]="descFilter" (input)="applyFilters()">
+            <button *ngIf="descFilter" type="button" class="clear-btn" (click)="descFilter=''; applyFilters()"><mat-icon>close</mat-icon></button>
+          </div>
+          <div class="input-with-clear">
+            <input type="text" class="main-search-input" placeholder="Filter by Author" [(ngModel)]="authorFilter" (input)="applyFilters()">
+            <button *ngIf="authorFilter" type="button" class="clear-btn" (click)="authorFilter=''; applyFilters()"><mat-icon>close</mat-icon></button>
+          </div>
+          <div class="input-with-clear">
+            <input type="text" class="main-search-input" placeholder="Filter by Team" [(ngModel)]="teamFilter" (input)="applyFilters()">
+            <button *ngIf="teamFilter" type="button" class="clear-btn" (click)="teamFilter=''; applyFilters()"><mat-icon>close</mat-icon></button>
+          </div>
+          <div class="input-with-clear">
+            <input type="text" class="main-search-input" placeholder="Filter by Version" [(ngModel)]="versionFilter" (input)="applyFilters()">
+            <button *ngIf="versionFilter" type="button" class="clear-btn" (click)="versionFilter=''; applyFilters()"><mat-icon>close</mat-icon></button>
+          </div>
+          <div class="input-with-clear">
+            <input type="text" class="main-search-input" placeholder="Filter by Audit Pipeline" [(ngModel)]="auditFilter" (input)="applyFilters()">
+            <button *ngIf="auditFilter" type="button" class="clear-btn" (click)="auditFilter=''; applyFilters()"><mat-icon>close</mat-icon></button>
+          </div>
           <button mat-icon-button (click)="clearAllFilters()" [attr.aria-label]="'Clear all filters'">
             <mat-icon>close</mat-icon>
           </button>

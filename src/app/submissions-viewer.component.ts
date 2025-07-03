@@ -93,7 +93,6 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
     this.diffResult = null;
     this.selectedEnv = 'PROD'; // Default to PROD tab
     this.schemaService.getSubmissionByName(this.templateName, submissionName).subscribe(sub => {
-      console.log('Backend submission response:', sub); // DEBUG
       this.selectedSubmission = sub;
       this.selectedSubmissionData = sub.data;
       // Generate config for all environments
@@ -114,7 +113,6 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
 
   // Helper: Generate config for a specific environment
   private formatAsConfEnv(data: any, env: string): string {
-    console.log('formatAsConfEnv input data:', data, 'env:', env); // DEBUG
     if (!data) return '';
     let confContent = '';
     for (const key in data) {

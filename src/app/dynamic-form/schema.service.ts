@@ -168,7 +168,6 @@ export class SchemaService {
       email: email,
     };
     // This will be replaced with a real API call
-    console.log('Sending email with payload:', payload);
     return of({ success: true, message: 'Email sent successfully (mocked).' });
   }
 

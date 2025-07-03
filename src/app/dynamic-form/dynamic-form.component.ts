@@ -174,6 +174,8 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
   // Add form controls for top-level required fields
   topLevelForm: FormGroup;
 
+  hasLoadedPrefill = false;
+
   constructor(private fb: FormBuilder, private route: ActivatedRoute, private router: Router, private schemaService: SchemaService, private cdr: ChangeDetectorRef, private dialog: MatDialog) {
     this.form = this.fb.group({});
     this.fieldForm = this.fb.group({
@@ -273,14 +275,11 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
         this.prefillVersion = null;
       });
     }
-    
-    // Call setupComponent when templateName changes
-    if (changes['templateName'] && this.templateName) {
-      this.setupComponent();
-    }
-    // Also call setupComponent when prefillSubmissionName changes
-    if (changes['prefillSubmissionName'] && this.prefillSubmissionName) {
-      this.setupComponent();
+    // Only call setupComponent if not already loading or already loaded prefill
+    if ((changes['templateName'] && this.templateName) || (changes['prefillSubmissionName'] && this.prefillSubmissionName)) {
+      if (!this.isLoading && !this.hasLoadedPrefill) {
+        this.setupComponent();
+      }
     }
   }
 
@@ -367,9 +366,6 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
     this.isLoading = true;
     this.schemaService.getTemplate(this.templateName).subscribe({
       next: (data) => {
-        if (this.mode === 'use') {
-          console.log('API response:', data);
-        }
         this.schema = data.schema;
         this.schema.name = data.name; // ensure name is populated
         // Copy top-level fields to schema for UI binding
@@ -377,9 +373,6 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
         this.schema.team_name = data.team_name;
         this.schema.version = data.version_tag;
         this.normalizeFieldBooleans(this.schema);
-        if (this.mode === 'use') {
-          console.log('Normalized fields:', this.schema.fields);
-        }
         this.buildForm();
         this.isLoading = false;
         // Set button text for edit/use modes if not already set
@@ -414,41 +407,30 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
   }
 
   loadTemplateWithSubmissionPrefill() {
-    if (!this.templateName || !this.prefillSubmissionName) {
+    if (!this.templateName || !this.prefillSubmissionName || this.isLoading || this.hasLoadedPrefill) {
       return;
     }
-
     this.isLoading = true;
     const currentTemplateName = this.templateName;
     const currentSubmissionName = this.prefillSubmissionName;
-
     this.schemaService.getTemplate(currentTemplateName).subscribe(schema => {
       this.schema = schema.schema;
-      this.schema.name = schema.name; // Keep the original template name
+      this.schema.name = schema.name;
       this.normalizeFieldBooleans(this.schema);
       this.title = `Editing Submission for: ${currentTemplateName}`;
       this.submitButtonText = 'Submit as New';
-
-      // Add a short delay to avoid race condition
       setTimeout(() => {
         this.schemaService.getSubmissionByName(currentTemplateName, currentSubmissionName).subscribe({
           next: (submission) => {
-            console.log('Submission data received:', submission); // Debug log
-            this.buildForm(); // Build form first
-            
-            // Handle different possible data structures
+            this.buildForm();
             let submissionData = submission.data;
             if (submissionData && submissionData.data) {
-              // If data is nested under a 'data' property
               submissionData = submissionData.data;
             }
-            
-            console.log('Patching form with data:', submissionData); // Debug log
-            
-            // Enhanced patching for complex field types
             this.patchFormWithSubmissionData(submissionData || {});
-            
             this.isLoading = false;
+            this.hasLoadedPrefill = true;
+            this.prefillSubmissionName = null; // Prevent further reloads
             this.cdr.detectChanges();
           },
           error: (err) => {
@@ -756,14 +738,12 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
         if (action === 'update') {
           this.schemaService.updateTemplate(this.schema.name, this.schema, description).subscribe(() => {
             this.showPopup('Template updated successfully!', 'success');
-            // setTimeout(() => this.closeForm(), 1800);
-            // window.location.reload(); // Reload to show updated templates
+            setTimeout(() => this.closeForm(), 1800);
           });
         } else if (action === 'newVersion') {
           this.schemaService.createNewVersion(this.schema.name, this.schema, description).subscribe(() => {
             this.showPopup('New version created successfully!', 'success');
-            // setTimeout(() => this.closeForm(), 1800);
-            // window.location.reload(); // Reload to show new version list
+            setTimeout(() => this.closeForm(), 1800);
           });
         }
       });
@@ -1032,10 +1012,7 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
     this.popupVisible = true;
     setTimeout(() => {
       this.popupVisible = false;
-      // Instead of reloading, navigate to the dashboard
-      // If you have a dashboard route, use it here. Example:
-      this.router.navigate(['/dashboard']);
-      // If you want to go to a specific dashboard, adjust the route as needed.
+      // Navigation is now handled by parent via formClose
     }, timeout);
   }
 

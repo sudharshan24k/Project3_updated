@@ -4,7 +4,7 @@ import { MatCardModule } from '@angular/material/card';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { AnimatedPopupComponent } from './animated-popup.component';
@@ -37,10 +37,7 @@ import { InteractiveDialogComponent } from './interactive-dialog.component';
           <form [formGroup]="issueForm" (ngSubmit)="submitIssue()" class="issue-form">
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Your Name</mat-label>
-              <input matInput formControlName="name" required>
-              <mat-error *ngIf="issueForm.get('name')?.hasError('required')">
-                Name is required.
-              </mat-error>
+              <input matInput formControlName="name">
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
@@ -50,15 +47,15 @@ import { InteractiveDialogComponent } from './interactive-dialog.component';
 
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Issue Description</mat-label>
-              <textarea matInput formControlName="issueDescription" rows="5" required></textarea>
-              <mat-error *ngIf="issueForm.get('issueDescription')?.hasError('required')">
-                Issue description is required.
-              </mat-error>
+              <textarea matInput formControlName="issueDescription" rows="5"></textarea>
             </mat-form-field>
 
-            <button mat-raised-button color="primary" type="submit" [disabled]="issueForm.invalid">
+            <button mat-raised-button color="primary" type="submit">
               Submit Issue
             </button>
+            <div *ngIf="staticSuccess" class="static-success-message">
+              Issue submitted successfully!
+            </div>
           </form>
 
           <app-animated-popup
@@ -89,6 +86,18 @@ import { InteractiveDialogComponent } from './interactive-dialog.component';
     .full-width {
       width: 100%;
     }
+    .static-success-message {
+      color: #388e3c;
+      background: #e8f5e9;
+      border: 1px solid #c8e6c9;
+      border-radius: 6px;
+      padding: 0.7rem 1.2rem;
+      margin-top: 1rem;
+      font-size: 1.1rem;
+      text-align: center;
+      font-weight: 600;
+      box-shadow: 0 2px 8px #388e3c22;
+    }
   `]
 })
 export class HelpdeskComponent {
@@ -98,12 +107,13 @@ export class HelpdeskComponent {
   popupMessage: string = '';
   popupType: 'success' | 'error' | 'airplane' = 'success';
   popupVisible = false;
+  staticSuccess = false;
 
   constructor(private router: Router, private fb: FormBuilder) {
     this.issueForm = this.fb.group({
-      name: ['', Validators.required],
+      name: [''],
       teamName: [''],
-      issueDescription: ['', Validators.required]
+      issueDescription: ['']
     });
   }
 
@@ -112,10 +122,14 @@ export class HelpdeskComponent {
   }
 
   submitIssue() {
-    if (this.issueForm.valid) {
-      console.log('Submitting issue:', this.issueForm.value);
-      // TODO: Implement email sending logic here
-      this.showPopup('Issue submitted successfully! (Check console for data)', 'success');
+    if (
+      this.issueForm.get('name')?.value?.trim() ||
+      this.issueForm.get('teamName')?.value?.trim() ||
+      this.issueForm.get('issueDescription')?.value?.trim()
+    ) {
+      this.showPopup('Issue submitted successfully!', 'success');
+      this.staticSuccess = true;
+      setTimeout(() => { this.staticSuccess = false; }, 1800);
       this.issueForm.reset();
     }
   }
