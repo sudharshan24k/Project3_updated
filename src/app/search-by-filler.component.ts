@@ -80,6 +80,7 @@ import { Router } from '@angular/router';
                 <mat-icon>download</mat-icon>
               </button>
               <button mat-stroked-button color="accent" (click)="duplicateAndEdit()" matTooltip="Duplicate and edit this submission">Duplicate & Edit</button>
+              
             </div>
           </div>
           <mat-divider style="margin: 1rem 0;"></mat-divider>

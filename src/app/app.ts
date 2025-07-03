@@ -41,7 +41,7 @@ import { SearchByFillerComponent } from './search-by-filler.component';
         <app-dashboard *ngSwitchCase="'dashboard'" [team]="dashboardTeam" (navigate)="onNavigate($event)" (back)="onBackNavigation()"></app-dashboard>
         <app-dynamic-form *ngSwitchCase="'form'" [mode]="formMode" [templateName]="formTemplateName" [prefillSubmissionName]="prefillSubmissionName" (formClose)="onBackNavigation()"></app-dynamic-form>
         <app-template-history *ngSwitchCase="'history'" [templateName]="formTemplateName" (close)="onBackNavigation()"></app-template-history>
-        <app-submissions-viewer *ngSwitchCase="'submissions'" [templateName]="formTemplateName" (close)="onBackNavigation()"></app-submissions-viewer>
+        <app-submissions-viewer *ngSwitchCase="'submissions'" [templateName]="formTemplateName" (close)="onBackNavigation()" (duplicateEdit)="onDuplicateEdit($event)"></app-submissions-viewer>
         <app-helpdesk *ngSwitchCase="'helpdesk'" (close)="onBackNavigation()"></app-helpdesk>
         <app-search-by-filler *ngSwitchCase="'search-by-filler'" (back)="currentView = 'dashboard'" (duplicateEdit)="onDuplicateEdit($event)"></app-search-by-filler>
       </ng-container>

@@ -82,8 +82,6 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
   @ViewChild('templateInput') templateInput!: ElementRef<HTMLInputElement>;
 
   teamNames: string[] = ['Framework Team', 'PID Team'];
-  teamNameCtrl = new FormControl('');
-  filteredTeamNames$: Observable<string[]>;
 
   private destroy$ = new Subject<void>();
 
@@ -212,19 +210,6 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       startWith(''),
       map(value => this._filterTemplates(value))
     );
-
-    this.filteredTeamNames$ = this.teamNameCtrl.valueChanges.pipe(
-      startWith(''),
-      map(value => this._filterTeamNames(value || '')),
-    );
-
-    this.teamNameCtrl.valueChanges.pipe(
-      takeUntil(this.destroy$)
-    ).subscribe(value => {
-      if (this.schema) {
-        this.schema.team_name = value;
-      }
-    });
   }
 
   ngOnInit() {
@@ -331,7 +316,6 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       this.title = 'Create New Template';
       this.submitButtonText = 'Save Template';
       this.schema = { name: '', description: '', fields: [], version: '', team_name: '', audit_pipeline: '' };
-      this.teamNameCtrl.setValue(this.schema.team_name || '', { emitEvent: false });
       this.buildForm();
     } else if (this.templateName) {
       if (this.prefillSubmissionName) {
@@ -449,8 +433,21 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       setTimeout(() => {
         this.schemaService.getSubmissionByName(currentTemplateName, currentSubmissionName).subscribe({
           next: (submission) => {
+            console.log('Submission data received:', submission); // Debug log
             this.buildForm(); // Build form first
-            this.form.patchValue(submission.data || {}); // Then patch with data
+            
+            // Handle different possible data structures
+            let submissionData = submission.data;
+            if (submissionData && submissionData.data) {
+              // If data is nested under a 'data' property
+              submissionData = submissionData.data;
+            }
+            
+            console.log('Patching form with data:', submissionData); // Debug log
+            
+            // Enhanced patching for complex field types
+            this.patchFormWithSubmissionData(submissionData || {});
+            
             this.isLoading = false;
             this.cdr.detectChanges();
           },
@@ -466,6 +463,76 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       this.isLoading = false;
       this.cdr.detectChanges();
     });
+  }
+
+  // Enhanced method to patch form with submission data
+  private patchFormWithSubmissionData(submissionData: any) {
+    if (!this.form || !submissionData) return;
+
+    // First, do a basic patch
+    this.form.patchValue(submissionData);
+
+    // Then handle complex field types that need special treatment
+    this.schema.fields.forEach((field: any) => {
+      const fieldKey = field.key;
+      const fieldValue = submissionData[fieldKey];
+      
+      if (fieldValue !== undefined && fieldValue !== null) {
+        if (field.environmentSpecific) {
+          // Handle environment-specific fields
+          const envControl = this.form.get(fieldKey) as FormGroup;
+          if (envControl && typeof fieldValue === 'object') {
+            // Patch each environment
+            ['PROD', 'DEV', 'COB'].forEach(env => {
+              if (fieldValue[env] !== undefined) {
+                const envFieldControl = envControl.get(env);
+                if (envFieldControl) {
+                  if (field.type === 'keyvalue' && Array.isArray(fieldValue[env])) {
+                    // Handle keyvalue arrays for environment-specific fields
+                    const keyValueArray = envFieldControl as FormArray;
+                    keyValueArray.clear();
+                    fieldValue[env].forEach((pair: any) => {
+                      keyValueArray.push(this.fb.group({ key: pair.key || '', value: pair.value || '' }));
+                    });
+                  } else if (field.type === 'mcq_multiple' && Array.isArray(fieldValue[env])) {
+                    // Handle MCQ multiple arrays for environment-specific fields
+                    const mcqArray = envFieldControl as FormArray;
+                    mcqArray.clear();
+                    fieldValue[env].forEach((value: any) => {
+                      mcqArray.push(this.fb.control(value));
+                    });
+                  } else {
+                    envFieldControl.patchValue(fieldValue[env]);
+                  }
+                }
+              }
+            });
+          }
+        } else if (field.type === 'keyvalue' && Array.isArray(fieldValue)) {
+          // Handle regular keyvalue arrays
+          const keyValueArray = this.form.get(fieldKey) as FormArray;
+          if (keyValueArray) {
+            keyValueArray.clear();
+            fieldValue.forEach((pair: any) => {
+              keyValueArray.push(this.fb.group({ key: pair.key || '', value: pair.value || '' }));
+            });
+          }
+        } else if (field.type === 'mcq_multiple' && Array.isArray(fieldValue)) {
+          // Handle regular MCQ multiple arrays
+          const mcqArray = this.form.get(fieldKey) as FormArray;
+          if (mcqArray) {
+            mcqArray.clear();
+            fieldValue.forEach((value: any) => {
+              mcqArray.push(this.fb.control(value));
+            });
+          }
+        }
+      }
+    });
+
+    // Trigger change detection
+    this.form.updateValueAndValidity();
+    this.cdr.detectChanges();
   }
 
   buildForm() {
@@ -954,11 +1021,6 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
     return validators;
   }
 
-  private _filterTeamNames(value: string): string[] {
-    const filterValue = value.toLowerCase();
-    return this.teamNames.filter(team => team.toLowerCase().includes(filterValue));
-  }
-
   // --- Animated popup state ---
   popupMessage: string = '';
   popupType: 'success' | 'error' | 'airplane' = 'success';
@@ -970,8 +1032,10 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
     this.popupVisible = true;
     setTimeout(() => {
       this.popupVisible = false;
-      window.location.reload(); 
-      // Reload the page after showing the popup
+      // Instead of reloading, navigate to the dashboard
+      // If you have a dashboard route, use it here. Example:
+      this.router.navigate(['/dashboard']);
+      // If you want to go to a specific dashboard, adjust the route as needed.
     }, timeout);
   }
 

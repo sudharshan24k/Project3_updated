@@ -49,10 +49,7 @@ import { MatInputModule } from '@angular/material/input';
           </button>
         </div>
         <div class="filter-bar card modern-search-bar team-search-bar">
-          <select class="team-dropdown" [(ngModel)]="selectedTeam" (change)="applyFilters()">
-            <option value="">All Teams</option>
-            <option *ngFor="let team of teamNames" [value]="team">{{ team }}</option>
-          </select>
+          <input type="text" class="team-dropdown" placeholder="Team contains..." [(ngModel)]="selectedTeam" (input)="applyFilters()">
           <input
             type="text"
             class="main-search-input"

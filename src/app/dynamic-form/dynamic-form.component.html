@@ -326,21 +326,8 @@
             </div>
             <div class="form-field">
               <label>Team Name</label>
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Select or enter team</mat-label>
-                <input type="text"
-                       placeholder="Select or enter team"
-                       aria-label="Team Name"
-                       matInput
-                       [formControl]="teamNameCtrl"
-                       [matAutocomplete]="autoTeam">
-                <mat-autocomplete #autoTeam="matAutocomplete">
-                  <mat-option *ngFor="let team of filteredTeamNames$ | async" [value]="team">
-                    {{team}}
-                  </mat-option>
-                </mat-autocomplete>
-              </mat-form-field>
-              <small class="field-help">Select an existing team or type a new one. Team name is required.</small>
+              <input [(ngModel)]="schema.team_name" placeholder="Enter team name" [ngModelOptions]="{standalone: true}">
+              <small class="field-help">Enter the team name. Team name is required.</small>
             </div>
             <div class="form-field">
               <label>Audit Pipeline</label>

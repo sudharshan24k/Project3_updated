@@ -260,9 +260,19 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
 
   duplicateAndEdit(submissionName: string) {
     if (!this.templateName) return;
-    this.duplicateEdit.emit({
-      template: this.templateName!,
-      submissionName: submissionName
+    this.popupMessage = '';
+    this.schemaService.duplicateSubmissionByName(this.templateName, submissionName).subscribe({
+      next: (res: any) => {
+        const newSubmissionName = res.submission_name;
+        this.duplicateEdit.emit({
+          template: this.templateName!,
+          submissionName: newSubmissionName
+        });
+      },
+      error: (err) => {
+        this.popupMessage = 'Failed to duplicate submission. Please try again.';
+        console.error('Error duplicating submission:', err);
+      }
     });
   }
 
