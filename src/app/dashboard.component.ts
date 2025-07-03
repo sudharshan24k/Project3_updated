@@ -50,25 +50,34 @@ import { MatInputModule } from '@angular/material/input';
           </div>
         </header>
         <div class="filter-bar card modern-search-bar team-search-bar">
-          <input type="text" class="team-dropdown" placeholder="Team contains..." [(ngModel)]="selectedTeam" (input)="applyFilters()">
-          <input
-            type="text"
-            class="main-search-input"
-            placeholder="Search templates..."
-            [(ngModel)]="searchText"
-            (keyup.enter)="applyFilters()"
-            (input)="applyFilters()"
-          >
-          <button
-            mat-icon-button
-            class="search-icon-btn"
-            (click)="searchText ? clearSearch() : null"
-            [attr.aria-label]="searchText ? 'Clear search' : 'Search'"
-            tabindex="0"
-          >
-            <span *ngIf="!searchText" class="search-emoji">🔍</span>
-            <mat-icon *ngIf="searchText">close</mat-icon>
-          </button>
+          <div style="position: relative; display: flex; align-items: center;">
+            <input type="text" class="team-dropdown" placeholder="Team contains..." [(ngModel)]="selectedTeam" (input)="applyFilters()">
+            <button *ngIf="selectedTeam" mat-icon-button class="clear-input-btn" style="position: absolute; right: 0.3rem;" (click)="selectedTeam=''; applyFilters()" tabindex="-1">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          <div style="position: relative; display: flex; align-items: center; flex: 1;">
+            <input
+              type="text"
+              class="main-search-input"
+              placeholder="Search templates..."
+              [(ngModel)]="searchText"
+              (keyup.enter)="applyFilters()"
+              (input)="applyFilters()"
+              style="padding-right: 2.5rem;"
+            >
+            <button
+              mat-icon-button
+              class="search-icon-btn"
+              style="position: absolute; right: 0.3rem; top: 50%; transform: translateY(-50%);"
+              (click)="searchText ? clearSearch() : null"
+              [attr.aria-label]="searchText ? 'Clear search' : 'Search'"
+              tabindex="0"
+            >
+              <span *ngIf="!searchText" class="search-emoji">🔍</span>
+              <mat-icon *ngIf="searchText">close</mat-icon>
+            </button>
+          </div>
           <button
             mat-stroked-button
             class="advanced-toggle"
@@ -80,46 +89,76 @@ import { MatInputModule } from '@angular/material/input';
           </button>
         </div>
         <div *ngIf="advancedSearch" class="advanced-fields card">
-          <input
-            type="text"
-            class="filter-input"
-            placeholder="Description contains..."
-            [(ngModel)]="filterDescription"
-            (input)="applyFilters()"
-          >
-          <input
-            type="text"
-            class="filter-input"
-            placeholder="Author name contains..."
-            [(ngModel)]="filterAuthor"
-            (input)="applyFilters()"
-          >
-          <input
-            type="text"
-            class="filter-input"
-            placeholder="Version tag contains..."
-            [(ngModel)]="filterVersionTag"
-            (input)="applyFilters()"
-          >
-          <input
-            type="text"
-            class="filter-input"
-            placeholder="Audit pipeline contains..."
-            [(ngModel)]="filterAuditPipeline"
-            (input)="applyFilters()"
-          >
+          <div style="position: relative;width: 350px; display: flex; align-items: center;">
+            <input
+              type="text"
+              class="filter-input"
+              placeholder="Description contains..."
+              [(ngModel)]="filterDescription"
+              (input)="applyFilters()"
+            >
+            <button *ngIf="filterDescription" mat-icon-button class="clear-input-btn" style="position: absolute; right: 0.3rem;" (click)="filterDescription=''; applyFilters()" tabindex="-1">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          <div style="position: relative; width: 350px;display: flex; align-items: center;">
+            <input
+              type="text"
+              class="filter-input"
+              placeholder="Author name contains..."
+              [(ngModel)]="filterAuthor"
+              (input)="applyFilters()"
+            >
+            <button *ngIf="filterAuthor" mat-icon-button class="clear-input-btn" style="position: absolute; right: 0.3rem;" (click)="filterAuthor=''; applyFilters()" tabindex="-1">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          <div style="position: relative;width: 350px; display: flex; align-items: center;">
+            <input
+              type="text"
+              class="filter-input"
+              placeholder="Version tag contains..."
+              [(ngModel)]="filterVersionTag"
+              (input)="applyFilters()"
+            >
+            <button *ngIf="filterVersionTag" mat-icon-button class="clear-input-btn" style="position: absolute; right: 0.3rem;" (click)="filterVersionTag=''; applyFilters()" tabindex="-1">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          <div style="position: relative;width: 350px; display: flex; align-items: center;">
+            <input
+              type="text"
+              class="filter-input"
+              placeholder="Audit pipeline contains..."
+              [(ngModel)]="filterAuditPipeline"
+              (input)="applyFilters()"
+            >
+            <button *ngIf="filterAuditPipeline" mat-icon-button class="clear-input-btn" style="position: absolute; right: 0.3rem;" (click)="filterAuditPipeline=''; applyFilters()" tabindex="-1">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
           <div class="date-range-filter">
-            <div class="date-input-group">
+            <div class="date-input-group" style="position: relative; display: flex; align-items: center;">
               <input #startDateInput type="date" class="filter-input" [(ngModel)]="filterStartDate" (change)="applyFilters()">
-              <button mat-icon-button tabindex="-1" class="calendar-btn" matTooltip="Pick start date" type="button" (click)="openDatePicker(startDateInput)">
+              <button mat-icon-button tabindex="-1" class="calendar-btn" matTooltip="Pick start date" type="button"
+                *ngIf="!filterStartDate" (click)="openDatePicker(startDateInput)">
                 <mat-icon>calendar_today</mat-icon>
+              </button>
+              <button mat-icon-button tabindex="-1" class="calendar-btn" matTooltip="Clear start date" type="button"
+                *ngIf="filterStartDate" (click)="filterStartDate=''; applyFilters()">
+                <mat-icon>close</mat-icon>
               </button>
             </div>
             <span class="date-range-separator">to</span>
-            <div class="date-input-group">
+            <div class="date-input-group" style="position: relative; display: flex; align-items: center;">
               <input #endDateInput type="date" class="filter-input" [(ngModel)]="filterEndDate" (change)="applyFilters()">
-              <button mat-icon-button tabindex="-1" class="calendar-btn" matTooltip="Pick end date" type="button" (click)="openDatePicker(endDateInput)">
+              <button mat-icon-button tabindex="-1" class="calendar-btn" matTooltip="Pick end date" type="button"
+                *ngIf="!filterEndDate" (click)="openDatePicker(endDateInput)">
                 <mat-icon>calendar_today</mat-icon>
+              </button>
+              <button mat-icon-button tabindex="-1" class="calendar-btn" matTooltip="Clear end date" type="button"
+                *ngIf="filterEndDate" (click)="filterEndDate=''; applyFilters()">
+                <mat-icon>close</mat-icon>
               </button>
             </div>
           </div>
@@ -1320,9 +1359,10 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnChanges {
         (t.author && t.author.toLowerCase().includes(search))
       );
     }
-    if (this.selectedTeam) {
-      filtered = filtered.filter(t => t.team_name === this.selectedTeam);
-    }
+    if (this.selectedTeam.trim()) {
+  const team = this.selectedTeam.trim().toLowerCase();
+  filtered = filtered.filter(t => (t.team_name || '').toLowerCase().includes(team));
+}
     if (this.advancedSearch) {
       if (this.filterDescription.trim()) {
         const desc = this.filterDescription.trim().toLowerCase();
