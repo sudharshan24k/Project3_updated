@@ -1,6 +1,6 @@
 import { Component, Inject } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
-import { parseConfFile, mapConfToPrefill, validateConfAgainstSchema } from './dynamic-form/conf-parser';
+import { parseConfFile, strictParseConfFile, mapConfToPrefill, validateConfAgainstSchema, getConfigValidationFieldResults } from './dynamic-form/conf-parser';
 import { SchemaService, TemplateInfo, TemplateSchema } from './dynamic-form/schema.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
@@ -12,6 +12,7 @@ import { MatSelectModule } from '@angular/material/select'; // Add this import
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Observable, of } from 'rxjs';
+import { ConfigValidatorBoxComponent, ConfigValidationFieldResult } from './config-validator-box.component';
 
 @Component({
   selector: 'app-upload-config-dialog',
@@ -20,55 +21,58 @@ import { Observable, of } from 'rxjs';
     <mat-dialog-content>
       <input type="file" accept=".conf" (change)="onFileSelected($event)" />
       <div *ngIf="fileName" style="margin-top: 1rem;">Selected: <b>{{ fileName }}</b></div>
-      <div *ngIf="errorMessage" style="color: #d32f2f; margin-top: 1rem;">{{ errorMessage }}</div>
       <div *ngIf="loading" style="margin: 1rem 0; color: #1976d2;">Loading...</div>
-      <div *ngIf="parsedData">
+      <div *ngIf="rawConfigContent && !actionChosen">
+        <div style="margin: 1.5rem 0;">
+          <b>Choose what you want to do with this config file:</b><br>
+          <button mat-stroked-button color="primary" style="margin-top: 1rem;" (click)="chooseAction('validate')">Validate Config File</button>
+          <button mat-raised-button color="accent" style="margin-left: 1rem; margin-top: 1rem;" (click)="chooseAction('edit')">Duplicate & Edit</button>
+        </div>
+      </div>
+      <div *ngIf="actionChosen && parsedData">
         <p style="color: #388e3c;">Config file parsed successfully.</p>
         <pre style="background: #222; color: #e0e0e0; padding: 0.5rem; border-radius: 4px; max-height: 200px; overflow: auto;">{{ parsedData | json }}</pre>
-        <div *ngIf="!actionChosen">
-          <button mat-stroked-button color="primary" (click)="chooseAction('validate')">Validate Config File</button>
-          <button mat-raised-button color="accent" style="margin-left: 1rem;" (click)="chooseAction('edit')">Duplicate & Edit</button>
+      </div>
+      <div *ngIf="actionChosen">
+        <mat-form-field *ngIf="filteredTemplates.length > 0" appearance="outline" style="width: 100%; margin-top: 1.5rem;">
+          <mat-label>Template Name</mat-label>
+          <input matInput name="templateName" [(ngModel)]="selectedTemplateName" (input)="onTemplateInput()" [matAutocomplete]="auto" placeholder="Type or select template name">
+          <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onTemplateSelected($event.option.value)">
+            <mat-option *ngFor="let t of filteredTemplates" [value]="t">{{ t }}</mat-option>
+          </mat-autocomplete>
+        </mat-form-field>
+        <mat-form-field *ngIf="selectedTemplateName && availableVersions.length > 0" appearance="outline" style="width: 100%; margin-top: 1rem;">
+          <mat-label>Version</mat-label>
+          <mat-select [(ngModel)]="selectedVersionTag" (selectionChange)="onVersionSelected()">
+            <mat-option *ngFor="let v of availableVersions" [value]="v">{{ v }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" style="width: 100%; margin-top: 1rem;">
+          <mat-label>Environment</mat-label>
+          <mat-select [(ngModel)]="selectedEnvironment">
+            <mat-option value="PROD">PROD</mat-option>
+            <mat-option value="DEV">DEV</mat-option>
+            <mat-option value="COB">COB</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <div *ngIf="schema && actionChosen === 'validate'">
+          <button mat-stroked-button (click)="onValidate()">Validate</button>
         </div>
-        <div *ngIf="actionChosen">
-          <mat-form-field *ngIf="filteredTemplates.length > 0" appearance="outline" style="width: 100%; margin-top: 1.5rem;">
-            <mat-label>Template Name</mat-label>
-            <input matInput name="templateName" [(ngModel)]="selectedTemplateName" (input)="onTemplateInput()" [matAutocomplete]="auto" placeholder="Type or select template name">
-            <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onTemplateSelected($event.option.value)">
-              <mat-option *ngFor="let t of filteredTemplates" [value]="t">{{ t }}</mat-option>
-            </mat-autocomplete>
-          </mat-form-field>
-          <mat-form-field *ngIf="selectedTemplateName && availableVersions.length > 0" appearance="outline" style="width: 100%; margin-top: 1rem;">
-            <mat-label>Version</mat-label>
-            <mat-select [(ngModel)]="selectedVersionTag" (selectionChange)="onVersionSelected()">
-              <mat-option *ngFor="let v of availableVersions" [value]="v">{{ v }}</mat-option>
-            </mat-select>
-          </mat-form-field>
-          <mat-form-field appearance="outline" style="width: 100%; margin-top: 1rem;">
-            <mat-label>Environment</mat-label>
-            <mat-select [(ngModel)]="selectedEnvironment">
-              <mat-option value="PROD">PROD</mat-option>
-              <mat-option value="DEV">DEV</mat-option>
-              <mat-option value="COB">COB</mat-option>
-            </mat-select>
-          </mat-form-field>
-          <div *ngIf="schema && actionChosen === 'validate'">
-            <button mat-stroked-button (click)="onValidate()">Validate</button>
-          </div>
-          <div *ngIf="schema && actionChosen === 'edit'">
-            <button mat-raised-button color="primary" (click)="onUpdateAndEdit()" [disabled]="!schema || !selectedVersionTag || !selectedEnvironment">Duplicate & Edit</button>
-          </div>
+        <div *ngIf="schema && actionChosen === 'edit'">
+          <button mat-raised-button color="primary" (click)="onUpdateAndEdit()" [disabled]="!schema || !selectedVersionTag || !selectedEnvironment">Duplicate & Edit</button>
         </div>
       </div>
-      <div *ngIf="validationResult">
-        <div *ngIf="validationResult.valid" style="color: #388e3c;">Validation successful! Config matches the template schema.</div>
-        <div *ngIf="!validationResult.valid" style="color: #d32f2f;">Validation failed:</div>
-        <ul *ngIf="validationResult.errors.length">
-          <li *ngFor="let err of validationResult.errors" style="color: #d32f2f;">{{ err }}</li>
-        </ul>
-        <ul *ngIf="validationResult.warnings.length">
-          <li *ngFor="let warn of validationResult.warnings" style="color: #fbc02d;">{{ warn }}</li>
-        </ul>
-      </div>
+      <app-config-validator-box *ngIf="showValidatorBox"
+        [formName]="validatorBoxData?.formName ?? ''"
+        [overallStatus]="validatorBoxData?.overallStatus ?? 'fail'"
+        [fieldResults]="validatorBoxData?.fieldResults ?? []"
+        [extraFields]="validatorBoxData?.extraFields ?? []"
+        [missingFields]="validatorBoxData?.missingFields ?? []"
+        [syntaxErrors]="validatorBoxData?.syntaxErrors ?? []"
+        [validationErrors]="validatorBoxData?.validationErrors ?? []"
+        [warnings]="validatorBoxData?.warnings ?? []"
+        (close)="showValidatorBox = false">
+      </app-config-validator-box>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="onCancel()">Cancel</button>
@@ -86,11 +90,13 @@ import { Observable, of } from 'rxjs';
     MatOptionModule, 
     MatSelectModule, // Add this to the imports array
     MatButtonModule, 
-    MatIconModule
+    MatIconModule,
+    ConfigValidatorBoxComponent // <-- Add this
   ]
 })
 export class UploadConfigDialogComponent {
   fileName: string = '';
+  rawConfigContent: string = '';
   parsedData: any = null;
   errorMessage: string = '';
   templates: TemplateInfo[] = [];
@@ -103,10 +109,24 @@ export class UploadConfigDialogComponent {
   allTemplateVersions: string[] = [];
   availableVersions: string[] = [];
   schema: any = null;
-  validationResult: { valid: boolean, errors: string[], warnings: string[] } | null = null;
+  validationResult: { valid: boolean, errors: string[], warnings: string[], extraFields?: string[], missingFields?: string[] } | null = null;
   loading = false;
   templateNameControl = new FormControl('');
   selectedEnvironment: 'PROD' | 'DEV' | 'COB' | '' = '';
+  showValidatorBox = false;
+  validatorBoxData: {
+    formName: string;
+    overallStatus: 'success' | 'fail';
+    fieldResults: ConfigValidationFieldResult[];
+    extraFields?: string[];
+    missingFields?: string[];
+    syntaxErrors?: string[];
+    validationErrors?: string[];
+    warnings?: string[];
+  } | null = null;
+
+  // Add property to hold syntax errors
+  syntaxErrors: string[] = [];
 
   constructor(
     public dialogRef: MatDialogRef<UploadConfigDialogComponent>,
@@ -134,13 +154,10 @@ export class UploadConfigDialogComponent {
     this.loading = true;
     const reader = new FileReader();
     reader.onload = () => {
-      try {
-        this.parsedData = parseConfFile(reader.result as string);
-        this.errorMessage = '';
-      } catch (e) {
-        this.errorMessage = 'Failed to parse config file.';
-        this.parsedData = null;
-      }
+      this.rawConfigContent = reader.result as string;
+      this.errorMessage = '';
+      this.parsedData = null;
+      this.actionChosen = null; // Reset action
       this.loading = false;
     };
     reader.readAsText(file);
@@ -153,6 +170,20 @@ export class UploadConfigDialogComponent {
     this.schema = null;
     this.validationResult = null;
     this.availableVersions = [];
+    // Parse config only after action is chosen
+    if (this.rawConfigContent) {
+      try {
+        if (action === 'validate') {
+          // Wait for schema to be selected, then parse strictly
+          this.parsedData = null;
+        } else {
+          this.parsedData = parseConfFile(this.rawConfigContent);
+        }
+      } catch (e) {
+        this.errorMessage = 'Failed to parse config file.';
+        this.parsedData = null;
+      }
+    }
   }
 
   onTemplateInput() {
@@ -186,6 +217,12 @@ export class UploadConfigDialogComponent {
       next: (resp) => {
         this.schema = resp.schema;
         this.loading = false;
+        // For validation, parse strictly now that schema is available
+        if (this.actionChosen === 'validate' && this.rawConfigContent) {
+          const strictResult = strictParseConfFile(this.rawConfigContent, this.schema);
+          this.parsedData = strictResult.parsed;
+          this.syntaxErrors = strictResult.syntaxErrors;
+        }
       },
       error: (err: any) => {
         this.errorMessage = 'Failed to fetch version schema.';
@@ -196,7 +233,31 @@ export class UploadConfigDialogComponent {
 
   onValidate() {
     if (!this.schema) return;
-    this.validationResult = validateConfAgainstSchema(this.parsedData, this.schema);
+    // Use strict parser result
+    const strictResult = strictParseConfFile(this.rawConfigContent, this.schema);
+    this.parsedData = strictResult.parsed;
+    const syntaxErrors = strictResult.syntaxErrors;
+    // Compute extra/missing fields
+    const configKeys = Object.keys(this.parsedData || {});
+    const schemaKeys = (this.schema.fields || []).map((f: any) => f.key);
+    const extraFields = configKeys.filter(k => !schemaKeys.includes(k));
+    const missingFields = schemaKeys.filter((k: string) => !(configKeys.includes(k)));
+    this.validationResult = validateConfAgainstSchema(this.parsedData, this.schema, syntaxErrors);
+    this.validationResult.extraFields = extraFields;
+    this.validationResult.missingFields = missingFields;
+    // Prepare data for validator box
+    const fieldResults: ConfigValidationFieldResult[] = getConfigValidationFieldResults(this.parsedData, this.schema);
+    this.validatorBoxData = {
+      formName: this.selectedTemplateName,
+      overallStatus: this.validationResult.valid ? 'success' : 'fail',
+      fieldResults,
+      extraFields,
+      missingFields,
+      syntaxErrors: syntaxErrors || [],
+      validationErrors: this.validationResult.errors || [],
+      warnings: this.validationResult.warnings || []
+    };
+    this.showValidatorBox = true;
   }
 
   onUpdateAndEdit() {

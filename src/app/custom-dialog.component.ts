@@ -5,6 +5,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatDialog } from '@angular/material/dialog';
+import { ConfigValidatorBoxComponent, ConfigValidationFieldResult } from './config-validator-box.component';
+import { getConfigValidationFieldResults, validateConfAgainstSchema } from './dynamic-form/conf-parser';
 
 @Component({
   selector: 'app-custom-dialog',
@@ -86,7 +89,8 @@ export class CustomDialogComponent {
   inputValue: string = '';
   constructor(
     public dialogRef: MatDialogRef<CustomDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: any
+    @Inject(MAT_DIALOG_DATA) public data: any,
+    private dialog: MatDialog
   ) {
     if (data && data.defaultValue) {
       this.inputValue = data.defaultValue;
@@ -95,5 +99,21 @@ export class CustomDialogComponent {
 
   close(result?: any) {
     this.dialogRef.close(result);
+  }
+
+  openConfigValidatorBox(parsedData: any, schema: any, formName: string) {
+    const validation = validateConfAgainstSchema(parsedData, schema);
+    const fieldResults: ConfigValidationFieldResult[] = getConfigValidationFieldResults(parsedData, schema);
+    const overallStatus = validation.valid ? 'success' : 'fail';
+    this.dialog.open(ConfigValidatorBoxComponent, {
+      data: {
+        formName,
+        overallStatus,
+        fieldResults
+      },
+      width: '650px',
+      panelClass: 'config-validator-dialog-panel',
+      disableClose: false
+    });
   }
 }
