@@ -284,8 +284,20 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
     }
     // Remove duplicate-and-edit logic here
     if (changes['prefillSubmissionData'] && this.prefillSubmissionData) {
+      // If environment-specific, only patch the selected environment
+      const env = (changes['selectedEnvironment'] && changes['selectedEnvironment'].currentValue) || (this as any).selectedEnvironment || 'PROD';
+      const patchedData: any = { ...this.prefillSubmissionData };
+      if (this.schema.fields && Array.isArray(this.schema.fields)) {
+        this.schema.fields.forEach((field: any) => {
+          if (field.environmentSpecific && patchedData[field.key] && typeof patchedData[field.key] === 'object') {
+            // Only keep the selected environment's data
+            const envData = patchedData[field.key][env];
+            patchedData[field.key] = { [env]: envData };
+          }
+        });
+      }
       if (this.form) {
-        this.form.patchValue(this.prefillSubmissionData);
+        this.form.patchValue(patchedData);
       }
     }
   }
@@ -360,105 +372,166 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
     });
   }
 
-  loadTemplate() {
-    if (!this.templateName) return;
-    this.isLoading = true;
-    this.schemaService.getTemplate(this.templateName).subscribe({
-      next: (data) => {
-        this.schema = data.schema;
-        this.schema.name = data.name; // ensure name is populated
-        // Copy top-level fields to schema for UI binding
-        this.schema.author = data.author;
-        this.schema.team_name = data.team_name;
-        this.schema.version = data.version_tag;
-        this.normalizeFieldBooleans(this.schema);
-        this.buildForm();
+loadTemplate() {
+  if (!this.templateName) return;
+  this.isLoading = true;
+  this.schemaService.getTemplate(this.templateName).subscribe({
+    next: (data) => {
+      // Add comprehensive null checks and validation
+      if (!data) {
+        console.error('No data received from template service');
         this.isLoading = false;
-        // Set button text for edit/use modes if not already set
-        if (this.mode === 'edit') {
-          this.submitButtonText = 'Update Template';
-        } else if (this.mode === 'use' || this.mode === 'submissions') {
-          this.submitButtonText = 'Submit';
-        }
-        this.cdr.detectChanges(); // Force UI update
-      },
-      error: (error) => {
-        console.error('Error loading template:', error);
-        this.isLoading = false;
-        this.cdr.detectChanges();
+        return;
       }
-    });
-  }
+      
+      if (!data.schema) {
+        console.error('No schema found in template data');
+        this.isLoading = false;
+        return;
+      }
+      
+      this.schema = data.schema;
+      
+      // Ensure schema has required properties
+      if (!this.schema.fields) {
+        console.warn('Schema fields is missing, initializing as empty array');
+        this.schema.fields = [];
+      }
+      
+      if (!Array.isArray(this.schema.fields)) {
+        console.warn('Schema fields is not an array, converting to array');
+        this.schema.fields = [];
+      }
+      
+      this.schema.name = data.name || ''; // ensure name is populated
+      // Copy top-level fields to schema for UI binding
+      this.schema.author = data.author || '';
+      this.schema.team_name = data.team_name || '';
+      this.schema.version = data.version_tag || '';
+      
+      this.normalizeFieldBooleans(this.schema);
+      this.buildForm();
+      this.isLoading = false;
+      
+      // Set button text for edit/use modes if not already set
+      if (this.mode === 'edit') {
+        this.submitButtonText = 'Update Template';
+      } else if (this.mode === 'use' || this.mode === 'submissions') {
+        this.submitButtonText = 'Submit';
+      }
+      this.cdr.detectChanges(); // Force UI update
+    },
+    error: (error) => {
+      console.error('Error loading template:', error);
+      // Initialize with empty schema to prevent further errors
+      this.schema = {
+        name: '',
+        description: '',
+        fields: [],
+        version: '',
+        team_name: '',
+        audit_pipeline: ''
+      };
+      this.buildForm();
+      this.isLoading = false;
+      this.cdr.detectChanges();
+    }
+  });
+}
 
-  buildForm() {
-    const controls: { [key: string]: any } = {};
-    this.schema.fields.forEach((field: any) => {
-      const validators: ValidatorFn[] = [];
-      if (field.required === true) {
-        validators.push(Validators.required);
-      }
-      if (field.regex) {
-        validators.push(Validators.pattern(field.regex));
-      }
-      let defaultValue = field.defaultValue;
-      if (defaultValue === undefined || defaultValue === null || defaultValue === 'None') {
-        defaultValue = '';
-      }
-      if (field.environmentSpecific) {
-        // For environment-specific, create a FormGroup with PROD, DEV, COB for all types
-        if (field.type === 'keyvalue') {
-          const makeArray = () => {
-            let initialPairs: any[] = [];
-            if (Array.isArray(field.initialKeys)) {
-              initialPairs = field.initialKeys.map((k: string) => ({ key: k, value: '' }));
-            }
-            return this.fb.array(
-              initialPairs.map((pair: {key: string, value: string}) => this.fb.group(pair)),
-              validators
-            );
-          };
-          controls[field.key] = this.fb.group({
-            PROD: makeArray(),
-            DEV: makeArray(),
-            COB: makeArray(),
-          });
-        } else if (field.type === 'mcq_multiple') {
-          controls[field.key] = this.fb.group({
-            PROD: this.fb.array(defaultValue && defaultValue.PROD ? defaultValue.PROD : [], validators),
-            DEV: this.fb.array(defaultValue && defaultValue.DEV ? defaultValue.DEV : [], validators),
-            COB: this.fb.array(defaultValue && defaultValue.COB ? defaultValue.COB : [], validators),
-          });
-        } else {
-          controls[field.key] = this.fb.group({
-            PROD: [defaultValue && defaultValue.PROD ? defaultValue.PROD : '', validators],
-            DEV: [defaultValue && defaultValue.DEV ? defaultValue.DEV : '', validators],
-            COB: [defaultValue && defaultValue.COB ? defaultValue.COB : '', validators],
-          });
-        }
-      } else if (field.type === 'mcq_multiple') {
-        controls[field.key] = this.fb.array(defaultValue || [], validators);
-      } else if (field.type === 'keyvalue') {
-        let initialPairs = [];
-        if (Array.isArray(field.initialKeys)) {
-          initialPairs = field.initialKeys.map((k: string) => ({ key: k, value: '' }));
-        }
-        controls[field.key] = this.fb.array(
-          initialPairs.map((pair: {key: string, value: string}) => this.fb.group(pair)),
-          validators
-        );
-      } else {
-        controls[field.key] = [defaultValue, validators];
-      }
-    });
+ buildForm() {
+  const controls: { [key: string]: any } = {};
+  
+  // Add null/undefined checks for schema and fields
+  if (!this.schema) {
+    console.warn('Schema is not defined, initializing empty form');
     this.form = this.fb.group(controls);
-    this.form.valueChanges.subscribe(() => {
-      this.updateDynamicValidators();
-      if (this.mode === 'use') {
-        void this.visibleFields;
-        this.cdr.markForCheck();
-        this.cdr.detectChanges();
+    return;
+  }
+  
+  if (!this.schema.fields || !Array.isArray(this.schema.fields)) {
+    console.warn('Schema fields is not an array, initializing empty form');
+    this.form = this.fb.group(controls);
+    return;
+  }
+  
+  this.schema.fields.forEach((field: any) => {
+    // Guard: skip fields with no type or unknown type
+    if (!field.type || typeof field.type !== 'string') return;
+    const validTypes = [
+      'text', 'number', 'email', 'timestamp', 'dropdown', 'mcq_single', 'mcq_multiple', 'boolean', 'keyvalue'
+    ];
+    if (!validTypes.includes(field.type)) return;
+    const validators: ValidatorFn[] = [];
+    if (field.required === true) {
+      validators.push(Validators.required);
+    }
+    if (field.regex) {
+      validators.push(Validators.pattern(field.regex));
+    }
+    let defaultValue = field.defaultValue;
+    if (defaultValue === undefined || defaultValue === null || defaultValue === 'None') {
+      defaultValue = '';
+    }
+    if (field.environmentSpecific) {
+      // For environment-specific, create a FormGroup with PROD, DEV, COB for all types
+      if (field.type === 'keyvalue') {
+        const makeArray = () => {
+          let initialPairs: any[] = [];
+          if (Array.isArray(field.initialKeys)) {
+            initialPairs = field.initialKeys.map((k: string) => ({ key: k, value: '' }));
+          }
+          return this.fb.array(
+            initialPairs.map((pair: {key: string, value: string}) => this.fb.group(pair)),
+            validators
+          );
+        };
+        controls[field.key] = this.fb.group({
+          PROD: makeArray(),
+          DEV: makeArray(),
+          COB: makeArray(),
+        });
+      } else if (field.type === 'mcq_multiple') {
+        controls[field.key] = this.fb.group({
+          PROD: this.fb.array(defaultValue && defaultValue.PROD ? defaultValue.PROD : [], validators),
+          DEV: this.fb.array(defaultValue && defaultValue.DEV ? defaultValue.DEV : [], validators),
+          COB: this.fb.array(defaultValue && defaultValue.COB ? defaultValue.COB : [], validators),
+        });
+      } else {
+        controls[field.key] = this.fb.group({
+          PROD: [defaultValue && defaultValue.PROD ? defaultValue.PROD : '', validators],
+          DEV: [defaultValue && defaultValue.DEV ? defaultValue.DEV : '', validators],
+          COB: [defaultValue && defaultValue.COB ? defaultValue.COB : '', validators],
+        });
       }
-    });
+    } else if (field.type === 'mcq_multiple') {
+      controls[field.key] = this.fb.array(defaultValue || [], validators);
+    } else if (field.type === 'keyvalue') {
+      let initialPairs = [];
+      if (Array.isArray(field.initialKeys)) {
+        initialPairs = field.initialKeys.map((k: string) => ({ key: k, value: '' }));
+      }
+      controls[field.key] = this.fb.array(
+        initialPairs.map((pair: {key: string, value: string}) => this.fb.group(pair)),
+        validators
+      );
+    } else {
+      controls[field.key] = [defaultValue, validators];
+    }
+  });
+  
+  this.form = this.fb.group(controls);
+  this.form.valueChanges.subscribe(() => {
+    this.updateDynamicValidators();
+    if (this.mode === 'use') {
+      void this.visibleFields;
+      this.cdr.markForCheck();
+      this.cdr.detectChanges();
+    }
+  });
+  
+  // Add null check before second forEach
+  if (this.schema.fields && Array.isArray(this.schema.fields)) {
     this.schema.fields.forEach((field: any) => {
       if (field.type === 'boolean') {
         const control = this.form.get(field.key);
@@ -470,10 +543,14 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
         }
       }
     });
-    this.updateDynamicValidators();
-    // Patch form with prefillSubmissionData if present
-    if (this.prefillSubmissionData) {
-      // Dynamically adjust form controls for arrays/objects to match prefill data
+  }
+  
+  this.updateDynamicValidators();
+  
+  // Patch form with prefillSubmissionData if present
+  if (this.prefillSubmissionData) {
+    // Dynamically adjust form controls for arrays/objects to match prefill data
+    if (this.schema.fields && Array.isArray(this.schema.fields)) {
       this.schema.fields.forEach((field: any) => {
         const key = field.key;
         const fieldType = field.type;
@@ -482,35 +559,57 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
           const envGroup = this.form.get(key);
           if (envGroup && typeof prefill === 'object') {
             ['PROD', 'DEV', 'COB'].forEach(env => {
-              const envVal = prefill[env];
+              let envVal = prefill[env];
               const envCtrl = envGroup.get(env);
-              if (fieldType === 'keyvalue' && Array.isArray(envVal) && envCtrl instanceof FormArray) {
+              if (fieldType === 'keyvalue' && envCtrl instanceof FormArray) {
+                if (!Array.isArray(envVal)) envVal = [];
                 while (envCtrl.length < envVal.length) envCtrl.push(this.fb.group({ key: '', value: '' }));
                 while (envCtrl.length > envVal.length) envCtrl.removeAt(envCtrl.length - 1);
-              } else if (fieldType === 'mcq_multiple' && Array.isArray(envVal) && envCtrl instanceof FormArray) {
+              } else if (fieldType === 'mcq_multiple' && envCtrl instanceof FormArray) {
+                if (!Array.isArray(envVal)) envVal = [];
                 while (envCtrl.length < envVal.length) envCtrl.push(this.fb.control(''));
                 while (envCtrl.length > envVal.length) envCtrl.removeAt(envCtrl.length - 1);
               }
             });
           }
-        } else if (fieldType === 'keyvalue' && Array.isArray(prefill)) {
+        } else if (fieldType === 'keyvalue') {
           const arrCtrl = this.form.get(key);
+          const arr = Array.isArray(prefill) ? prefill : [];
           if (arrCtrl instanceof FormArray) {
-            while (arrCtrl.length < prefill.length) arrCtrl.push(this.fb.group({ key: '', value: '' }));
-            while (arrCtrl.length > prefill.length) arrCtrl.removeAt(arrCtrl.length - 1);
+            while (arrCtrl.length < arr.length) arrCtrl.push(this.fb.group({ key: '', value: '' }));
+            while (arrCtrl.length > arr.length) arrCtrl.removeAt(arrCtrl.length - 1);
           }
-        } else if (fieldType === 'mcq_multiple' && Array.isArray(prefill)) {
+        } else if (fieldType === 'mcq_multiple') {
           const arrCtrl = this.form.get(key);
+          const arr = Array.isArray(prefill) ? prefill : [];
           if (arrCtrl instanceof FormArray) {
-            while (arrCtrl.length < prefill.length) arrCtrl.push(this.fb.control(''));
-            while (arrCtrl.length > prefill.length) arrCtrl.removeAt(arrCtrl.length - 1);
+            while (arrCtrl.length < arr.length) arrCtrl.push(this.fb.control(''));
+            while (arrCtrl.length > arr.length) arrCtrl.removeAt(arrCtrl.length - 1);
           }
         }
       });
-      // Now patch values
-      this.form.patchValue(this.prefillSubmissionData);
     }
+    // Sanitize prefillSubmissionData for FormArray fields
+    const sanitizedPrefill: any = { ...this.prefillSubmissionData };
+    if (this.schema.fields && Array.isArray(this.schema.fields)) {
+      this.schema.fields.forEach((field: any) => {
+        const key = field.key;
+        const fieldType = field.type;
+        if (field.environmentSpecific && sanitizedPrefill[key]) {
+          ['PROD', 'DEV', 'COB'].forEach(env => {
+            if ((fieldType === 'keyvalue' || fieldType === 'mcq_multiple') && sanitizedPrefill[key][env] && !Array.isArray(sanitizedPrefill[key][env])) {
+              sanitizedPrefill[key][env] = [];
+            }
+          });
+        } else if ((fieldType === 'keyvalue' || fieldType === 'mcq_multiple') && sanitizedPrefill[key] && !Array.isArray(sanitizedPrefill[key])) {
+          sanitizedPrefill[key] = [];
+        }
+      });
+    }
+    // Now patch values
+    this.form.patchValue(sanitizedPrefill);
   }
+}
 
   updateDynamicValidators() {
     this.schema.fields.forEach((field: any) => {

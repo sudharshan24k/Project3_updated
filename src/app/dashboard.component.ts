@@ -17,11 +17,14 @@ import { InteractiveDialogComponent } from './interactive-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { UploadConfigDialogComponent } from './upload-config-dialog.component';
+import { MatDialogModule } from '@angular/material/dialog';
+import { mapConfToPrefill } from './dynamic-form/conf-parser';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, NgIf, NgFor, DynamicForm, SubmissionsViewerComponent, MatIconModule, MatTooltipModule, MatButtonModule, FormsModule, MatTabsModule, MatExpansionModule, TemplateHistoryComponent, AnimatedPopupComponent, MatListModule, MatFormFieldModule, MatInputModule],
+  imports: [CommonModule, NgIf, NgFor, DynamicForm, SubmissionsViewerComponent, MatIconModule, MatTooltipModule, MatButtonModule, FormsModule, MatTabsModule, MatExpansionModule, TemplateHistoryComponent, AnimatedPopupComponent, MatListModule, MatFormFieldModule, MatInputModule, MatDialogModule, UploadConfigDialogComponent],
   template: `
     <div class="container">
       
@@ -39,6 +42,10 @@ import { MatInputModule } from '@angular/material/input';
             <p class="subtitle" *ngIf="isFrameworkTeam">Manage, edit, and create templates for the framework team.</p>
           </div>
           <div style="flex: 0 0 auto; margin-right: 5px; display: flex; gap: 0.5rem; align-items: center;">
+            <button *ngIf="!isFrameworkTeam" mat-stroked-button color="accent" (click)="openUploadConfigDialogCommon()">
+              <mat-icon>upload_file</mat-icon>
+              Upload Config File
+            </button>
             <button *ngIf="!isFrameworkTeam" mat-stroked-button color="accent" (click)="navigate.emit({ view: 'search-by-filler' })">
               <mat-icon>search</mat-icon>
               Search Submitted Forms by User
@@ -221,7 +228,7 @@ import { MatInputModule } from '@angular/material/input';
                         </div>
                       </div>
                       <div class="actions">
-                        <!-- Application team: view, fill, submissions -->
+                        <!-- Application team: view, fill, submissions, upload config -->
                         <button mat-icon-button (click)="previewTemplate(version.name)" matTooltip="Preview Form" *ngIf="!isFrameworkTeam">
                           <mat-icon fontIcon="visibility" class="action-icon"></mat-icon>
                         </button>
@@ -298,7 +305,7 @@ import { MatInputModule } from '@angular/material/input';
                     <div class="list-cell">{{ version.audit_pipeline || '-' }}</div>
                     <div class="list-cell date-cell">{{ version.created_at ? (version.created_at | date:'mediumDate') : '-' }}</div>
                     <div class="list-cell actions-cell">
-                      <!-- Application team: view, fill, submissions -->
+                      <!-- Application team: view, fill, submissions, upload config -->
                       <button mat-icon-button (click)="previewTemplate(version.name)" matTooltip="Preview Form" *ngIf="!isFrameworkTeam">
                         <mat-icon fontIcon="visibility" class="action-icon"></mat-icon>
                       </button>
@@ -1533,5 +1540,46 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnChanges {
 
   onNavigate(event: any) {
     this.navigate.emit(event);
+  }
+
+  openUploadConfigDialog(version: any) {
+    this.schemaService.getTemplate(version.name).subscribe(templateResp => {
+      const dialogRef = this.dialog.open(UploadConfigDialogComponent, {
+        width: '500px',
+        data: { template: templateResp }
+      });
+      dialogRef.afterClosed().subscribe(result => {
+        if (!result) return;
+        if (result.action === 'validate') {
+          // TODO: Validate result.parsedData against templateResp.schema and show result
+          alert('Validation logic coming soon!');
+        } else if (result.action === 'updateAndEdit') {
+          // Map parsed config to prefill structure
+          this.selectedTemplate = version.name;
+          this.prefillSubmissionData = mapConfToPrefill(result.parsedData, templateResp.schema);
+          this.mode = 'use'; // Use the correct mode for form editing
+        }
+      });
+    });
+  }
+
+  openUploadConfigDialogCommon() {
+    // Open dialog in generic mode (no template/version preselected)
+    const dialogRef = this.dialog.open(UploadConfigDialogComponent, {
+      width: '500px',
+      data: { template: null }
+    });
+    dialogRef.afterClosed().subscribe(result => {
+      if (!result) return;
+      if (result.action === 'validate') {
+        // TODO: Validate result.parsedData against selected schema and show result
+        alert('Validation logic coming soon!');
+      } else if (result.action === 'updateAndEdit') {
+        // Use the full versioned template name for the form
+        this.selectedTemplate = result.selectedVersionTag;
+        this.prefillSubmissionData = result.prefillData;
+        this.mode = 'use';
+      }
+    });
   }
 }

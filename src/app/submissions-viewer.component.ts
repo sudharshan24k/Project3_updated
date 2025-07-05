@@ -131,6 +131,9 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
               if (pair.key !== undefined) obj[pair.key] = pair.value !== undefined ? pair.value : '';
             });
             confContent += `${key}=${JSON.stringify(obj)}\n`;
+          } else if (Array.isArray(envVal) && envVal.length && typeof envVal[0] === 'string') {
+            // MCQ multiple for env-specific
+            confContent += `${key}={${envVal.map((v: string) => `"${v}"`).join(",")}}\n`;
           } else if (Array.isArray(envVal) && envVal.length === 0) {
             confContent += `${key}={}\n`;
           } else if (envVal === undefined || envVal === null) {
@@ -153,6 +156,9 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges {
             if (pair.key !== undefined) obj[pair.key] = pair.value !== undefined ? pair.value : '';
           });
           confContent += `${key}=${JSON.stringify(obj)}\n`;
+        } else if (Array.isArray(value) && value.length && typeof value[0] === 'string') {
+          // MCQ multiple (non-env)
+          confContent += `${key}={${value.map((v: string) => `"${v}"`).join(",")}}\n`;
         } else if (Array.isArray(value) && value.length === 0) {
           confContent += `${key}={}\n`;
         }
