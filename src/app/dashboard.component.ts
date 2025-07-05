@@ -145,7 +145,7 @@ import { MatInputModule } from '@angular/material/input';
                 <mat-icon>calendar_today</mat-icon>
               </button>
               <button mat-icon-button tabindex="-1" class="calendar-btn" matTooltip="Clear start date" type="button"
-                *ngIf="filterStartDate" (click)="filterStartDate=''; applyFilters()">
+                *ngIf="filterStartDate" (click)="filterStartDate=''; applyFilters()" tabindex="-1">
                 <mat-icon>close</mat-icon>
               </button>
             </div>
@@ -157,7 +157,7 @@ import { MatInputModule } from '@angular/material/input';
                 <mat-icon>calendar_today</mat-icon>
               </button>
               <button mat-icon-button tabindex="-1" class="calendar-btn" matTooltip="Clear end date" type="button"
-                *ngIf="filterEndDate" (click)="filterEndDate=''; applyFilters()">
+                *ngIf="filterEndDate" (click)="filterEndDate=''; applyFilters()" tabindex="-1">
                 <mat-icon>close</mat-icon>
               </button>
             </div>
@@ -337,8 +337,7 @@ import { MatInputModule } from '@angular/material/input';
       <div *ngIf="isFormMode()">
         <app-dynamic-form
           [templateName]="selectedTemplate"
-          [prefillVersion]="duplicatedVersion"
-          [prefillSubmissionName]="prefillSubmissionName"
+          [prefillSubmissionData]="prefillSubmissionData"
           (formClose)="onFormClose()">
         </app-dynamic-form>
       </div>
@@ -1174,6 +1173,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnChanges {
   selectedTemplate: string | null = null;
   duplicatedVersion: number | null = null;
   prefillSubmissionName: string | null = null;
+  prefillSubmissionData: any = null;
   displayMode: 'list' | 'grid' | 'tabcard' = 'tabcard';
   tabPage = 0;
   searchText: string = '';
@@ -1452,8 +1452,10 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnChanges {
     return t ? t.created_at : null;
   }
 
-  onDuplicateEdit(event: { template: string, submissionName: string }) {
-    this.navigate.emit({ view: 'form', mode: 'use', templateName: event.template, submissionName: event.submissionName });
+  onDuplicateEdit(event: { template: string, prefillSubmissionData: any }) {
+    this.mode = 'use';
+    this.selectedTemplate = event.template;
+    this.prefillSubmissionData = event.prefillSubmissionData;
   }
 
   openDatePicker(input: HTMLInputElement) {

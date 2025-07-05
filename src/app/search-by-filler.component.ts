@@ -106,7 +106,7 @@ import { Router } from '@angular/router';
 })
 export class SearchByFillerComponent {
   @Output() back = new EventEmitter<void>();
-  @Output() duplicateEdit = new EventEmitter<{ template: string, submissionName: string }>();
+  @Output() duplicateEdit = new EventEmitter<{ template: string, prefillSubmissionData: any }>();
   searchFillerName: string = '';
   searchResults: any[] = [];
   isSearching: boolean = false;
@@ -242,15 +242,60 @@ export class SearchByFillerComponent {
     if (!this.selectedSubmission) return;
     const templateName = this.selectedSubmission.template_name;
     const submissionName = this.selectedSubmission.submission_name;
-    this.popupMessage = '';
-    this.schemaService.duplicateSubmissionByName(templateName, submissionName).subscribe({
-      next: (res: any) => {
-        const newSubmissionName = res.submission_name;
-        this.duplicateEdit.emit({ template: templateName, submissionName: newSubmissionName });
-      },
-      error: (err) => {
-        this.popupMessage = 'Failed to duplicate submission. Please try again.';
+    // Instead of duplicating on backend, emit prefill data for duplicate and edit
+    const data = this.selectedSubmission.data?.data || this.selectedSubmission.data;
+    // Fetch template schema for robust mapping
+    this.schemaService.getTemplate(templateName).subscribe(templateResp => {
+      const schema = templateResp.schema;
+      const prefillSubmissionData: any = {};
+      if (schema && Array.isArray(schema.fields)) {
+        schema.fields.forEach((field: any) => {
+          const fieldKey = field.key;
+          const fieldType = field.type;
+          const fieldValue = data ? data[fieldKey] : undefined;
+          if (field.environmentSpecific) {
+            prefillSubmissionData[fieldKey] = { PROD: null, DEV: null, COB: null };
+            ['PROD', 'DEV', 'COB'].forEach(env => {
+              if (fieldValue && fieldValue[env] !== undefined) {
+                if (fieldType === 'keyvalue' && Array.isArray(fieldValue[env])) {
+                  prefillSubmissionData[fieldKey][env] = fieldValue[env].map((pair: any) => ({
+                    key: pair.key || '',
+                    value: pair.value || ''
+                  }));
+                } else if (fieldType === 'mcq_multiple' && Array.isArray(fieldValue[env])) {
+                  prefillSubmissionData[fieldKey][env] = [...fieldValue[env]];
+                } else {
+                  prefillSubmissionData[fieldKey][env] = fieldValue[env];
+                }
+              } else {
+                if (fieldType === 'keyvalue') prefillSubmissionData[fieldKey][env] = [];
+                else if (fieldType === 'mcq_multiple') prefillSubmissionData[fieldKey][env] = [];
+                else prefillSubmissionData[fieldKey][env] = '';
+              }
+            });
+          } else if (fieldType === 'keyvalue' && Array.isArray(fieldValue)) {
+            prefillSubmissionData[fieldKey] = fieldValue.map((pair: any) => ({
+              key: pair.key || '',
+              value: pair.value || ''
+            }));
+          } else if (fieldType === 'mcq_multiple' && Array.isArray(fieldValue)) {
+            prefillSubmissionData[fieldKey] = [...fieldValue];
+          } else if (fieldValue !== undefined) {
+            prefillSubmissionData[fieldKey] = fieldValue;
+          } else {
+            if (fieldType === 'keyvalue') prefillSubmissionData[fieldKey] = [];
+            else if (fieldType === 'mcq_multiple') prefillSubmissionData[fieldKey] = [];
+            else prefillSubmissionData[fieldKey] = '';
+          }
+        });
       }
+      if ('fillerName' in prefillSubmissionData) prefillSubmissionData.fillerName = '';
+      if ('name' in prefillSubmissionData) prefillSubmissionData.name = '';
+      // Emit to parent (app)
+      this.duplicateEdit.emit({
+        template: templateName,
+        prefillSubmissionData
+      });
     });
   }
-} 
+}

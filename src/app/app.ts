@@ -39,7 +39,7 @@ import { SearchByFillerComponent } from './search-by-filler.component';
       <ng-container [ngSwitch]="currentView">
         <app-launchpad *ngSwitchCase="'launchpad'" (navigate)="onNavigate($event)"></app-launchpad>
         <app-dashboard *ngSwitchCase="'dashboard'" [team]="dashboardTeam" (navigate)="onNavigate($event)" (back)="onBackNavigation()"></app-dashboard>
-        <app-dynamic-form *ngSwitchCase="'form'" [mode]="formMode" [templateName]="formTemplateName" [prefillSubmissionName]="prefillSubmissionName" (formClose)="onBackNavigation()"></app-dynamic-form>
+        <app-dynamic-form *ngSwitchCase="'form'" [mode]="formMode" [templateName]="formTemplateName" [prefillSubmissionData]="prefillSubmissionData" (formClose)="onBackNavigation()"></app-dynamic-form>
         <app-template-history *ngSwitchCase="'history'" [templateName]="formTemplateName" (close)="onBackNavigation()"></app-template-history>
         <app-submissions-viewer *ngSwitchCase="'submissions'" [templateName]="formTemplateName" (close)="onBackNavigation()" (duplicateEdit)="onDuplicateEdit($event)"></app-submissions-viewer>
         <app-helpdesk *ngSwitchCase="'helpdesk'" (close)="onBackNavigation()"></app-helpdesk>
@@ -158,7 +158,7 @@ export class AppComponent implements OnDestroy {
   dashboardTeam: 'application' | 'framework' = 'application';
   formMode: 'create' | 'edit' | 'use' | 'preview' = 'use';
   formTemplateName: string | null = null;
-  prefillSubmissionName: string | null = null;
+  prefillSubmissionData: any = null;
 
   constructor() {
     this.intervalId = setInterval(() => {
@@ -210,9 +210,9 @@ export class AppComponent implements OnDestroy {
     this.formTemplateName = null;
   }
 
-  onDuplicateEdit(event: { template: string, submissionName: string }) {
+  onDuplicateEdit(event: { template: string, prefillSubmissionData: any }) {
     this.formTemplateName = event.template;
-    this.prefillSubmissionName = event.submissionName;
+    this.prefillSubmissionData = event.prefillSubmissionData;
     this.formMode = 'use';
     this.currentView = 'form';
   }

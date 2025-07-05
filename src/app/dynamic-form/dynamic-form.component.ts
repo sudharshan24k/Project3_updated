@@ -37,6 +37,7 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
   @Input() templateName: string | null = null;
   @Input() prefillVersion: number | null = null;
   @Input() prefillSubmissionName: string | null = null;
+  @Input() prefillSubmissionData: any = null;
   @Output() formClose = new EventEmitter<void>();
 
   form: FormGroup;
@@ -281,6 +282,12 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
         this.setupComponent();
       }
     }
+    // Remove duplicate-and-edit logic here
+    if (changes['prefillSubmissionData'] && this.prefillSubmissionData) {
+      if (this.form) {
+        this.form.patchValue(this.prefillSubmissionData);
+      }
+    }
   }
 
   ngAfterViewInit() {
@@ -317,15 +324,7 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       this.schema = { name: '', description: '', fields: [], version: '', team_name: '', audit_pipeline: '' };
       this.buildForm();
     } else if (this.templateName) {
-      if (this.prefillSubmissionName) {
-        // This is a "Duplicate & Edit" from a submission
-        this.loadTemplateWithSubmissionPrefill();
-      } else if (this.prefillVersion) {
-        // This is a "Duplicate & Edit" from a template version
-        this.loadTemplateWithPrefill();
-      } else {
-        this.loadTemplate();
-      }
+      this.loadTemplate();
     }
     // Set default button text for other modes
     if (!this.submitButtonText) {
@@ -389,132 +388,6 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
         this.cdr.detectChanges();
       }
     });
-  }
-
-  loadTemplateWithPrefill() {
-    if (!this.templateName || !this.submissionVersion) return;
-    this.isLoading = true;
-    this.schemaService.getTemplate(this.templateName).subscribe(data => {
-      this.schema = data.schema;
-      this.schema.name = data.name;
-      this.normalizeFieldBooleans(this.schema);
-      this.schemaService.getSubmission(this.templateName!, this.submissionVersion!).subscribe(sub => {
-        this.buildForm();
-        this.form.patchValue(sub.data);
-        this.isLoading = false;
-      });
-    });
-  }
-
-  loadTemplateWithSubmissionPrefill() {
-    if (!this.templateName || !this.prefillSubmissionName || this.isLoading || this.hasLoadedPrefill) {
-      return;
-    }
-    this.isLoading = true;
-    const currentTemplateName = this.templateName;
-    const currentSubmissionName = this.prefillSubmissionName;
-    this.schemaService.getTemplate(currentTemplateName).subscribe(schema => {
-      this.schema = schema.schema;
-      this.schema.name = schema.name;
-      this.normalizeFieldBooleans(this.schema);
-      this.title = `Editing Submission for: ${currentTemplateName}`;
-      this.submitButtonText = 'Submit as New';
-      setTimeout(() => {
-        this.schemaService.getSubmissionByName(currentTemplateName, currentSubmissionName).subscribe({
-          next: (submission) => {
-            this.buildForm();
-            let submissionData = submission.data;
-            if (submissionData && submissionData.data) {
-              submissionData = submissionData.data;
-            }
-            this.patchFormWithSubmissionData(submissionData || {});
-            this.isLoading = false;
-            this.hasLoadedPrefill = true;
-            this.prefillSubmissionName = null; // Prevent further reloads
-            this.cdr.detectChanges();
-          },
-          error: (err) => {
-            console.error('Error loading duplicated submission:', err);
-            this.isLoading = false;
-            this.cdr.detectChanges();
-          }
-        });
-      }, 150);
-    }, error => {
-      console.error('Error loading template for duplicated submission:', error);
-      this.isLoading = false;
-      this.cdr.detectChanges();
-    });
-  }
-
-  // Enhanced method to patch form with submission data
-  private patchFormWithSubmissionData(submissionData: any) {
-    if (!this.form || !submissionData) return;
-
-    // First, do a basic patch
-    this.form.patchValue(submissionData);
-
-    // Then handle complex field types that need special treatment
-    this.schema.fields.forEach((field: any) => {
-      const fieldKey = field.key;
-      const fieldValue = submissionData[fieldKey];
-      
-      if (fieldValue !== undefined && fieldValue !== null) {
-        if (field.environmentSpecific) {
-          // Handle environment-specific fields
-          const envControl = this.form.get(fieldKey) as FormGroup;
-          if (envControl && typeof fieldValue === 'object') {
-            // Patch each environment
-            ['PROD', 'DEV', 'COB'].forEach(env => {
-              if (fieldValue[env] !== undefined) {
-                const envFieldControl = envControl.get(env);
-                if (envFieldControl) {
-                  if (field.type === 'keyvalue' && Array.isArray(fieldValue[env])) {
-                    // Handle keyvalue arrays for environment-specific fields
-                    const keyValueArray = envFieldControl as FormArray;
-                    keyValueArray.clear();
-                    fieldValue[env].forEach((pair: any) => {
-                      keyValueArray.push(this.fb.group({ key: pair.key || '', value: pair.value || '' }));
-                    });
-                  } else if (field.type === 'mcq_multiple' && Array.isArray(fieldValue[env])) {
-                    // Handle MCQ multiple arrays for environment-specific fields
-                    const mcqArray = envFieldControl as FormArray;
-                    mcqArray.clear();
-                    fieldValue[env].forEach((value: any) => {
-                      mcqArray.push(this.fb.control(value));
-                    });
-                  } else {
-                    envFieldControl.patchValue(fieldValue[env]);
-                  }
-                }
-              }
-            });
-          }
-        } else if (field.type === 'keyvalue' && Array.isArray(fieldValue)) {
-          // Handle regular keyvalue arrays
-          const keyValueArray = this.form.get(fieldKey) as FormArray;
-          if (keyValueArray) {
-            keyValueArray.clear();
-            fieldValue.forEach((pair: any) => {
-              keyValueArray.push(this.fb.group({ key: pair.key || '', value: pair.value || '' }));
-            });
-          }
-        } else if (field.type === 'mcq_multiple' && Array.isArray(fieldValue)) {
-          // Handle regular MCQ multiple arrays
-          const mcqArray = this.form.get(fieldKey) as FormArray;
-          if (mcqArray) {
-            mcqArray.clear();
-            fieldValue.forEach((value: any) => {
-              mcqArray.push(this.fb.control(value));
-            });
-          }
-        }
-      }
-    });
-
-    // Trigger change detection
-    this.form.updateValueAndValidity();
-    this.cdr.detectChanges();
   }
 
   buildForm() {
@@ -598,6 +471,45 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       }
     });
     this.updateDynamicValidators();
+    // Patch form with prefillSubmissionData if present
+    if (this.prefillSubmissionData) {
+      // Dynamically adjust form controls for arrays/objects to match prefill data
+      this.schema.fields.forEach((field: any) => {
+        const key = field.key;
+        const fieldType = field.type;
+        const prefill = this.prefillSubmissionData[key];
+        if (field.environmentSpecific && prefill) {
+          const envGroup = this.form.get(key);
+          if (envGroup && typeof prefill === 'object') {
+            ['PROD', 'DEV', 'COB'].forEach(env => {
+              const envVal = prefill[env];
+              const envCtrl = envGroup.get(env);
+              if (fieldType === 'keyvalue' && Array.isArray(envVal) && envCtrl instanceof FormArray) {
+                while (envCtrl.length < envVal.length) envCtrl.push(this.fb.group({ key: '', value: '' }));
+                while (envCtrl.length > envVal.length) envCtrl.removeAt(envCtrl.length - 1);
+              } else if (fieldType === 'mcq_multiple' && Array.isArray(envVal) && envCtrl instanceof FormArray) {
+                while (envCtrl.length < envVal.length) envCtrl.push(this.fb.control(''));
+                while (envCtrl.length > envVal.length) envCtrl.removeAt(envCtrl.length - 1);
+              }
+            });
+          }
+        } else if (fieldType === 'keyvalue' && Array.isArray(prefill)) {
+          const arrCtrl = this.form.get(key);
+          if (arrCtrl instanceof FormArray) {
+            while (arrCtrl.length < prefill.length) arrCtrl.push(this.fb.group({ key: '', value: '' }));
+            while (arrCtrl.length > prefill.length) arrCtrl.removeAt(arrCtrl.length - 1);
+          }
+        } else if (fieldType === 'mcq_multiple' && Array.isArray(prefill)) {
+          const arrCtrl = this.form.get(key);
+          if (arrCtrl instanceof FormArray) {
+            while (arrCtrl.length < prefill.length) arrCtrl.push(this.fb.control(''));
+            while (arrCtrl.length > prefill.length) arrCtrl.removeAt(arrCtrl.length - 1);
+          }
+        }
+      });
+      // Now patch values
+      this.form.patchValue(this.prefillSubmissionData);
+    }
   }
 
   updateDynamicValidators() {
@@ -759,6 +671,7 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
           this.showPopup('Name is required to submit.', 'error');
           return;
         }
+        // Always submit as a new submission, even if prefilled (duplicate/edit)
         this.schemaService.submitForm(this.templateName!, {
           data: this.form.getRawValue(),
           fillerName: fillerName.trim()
