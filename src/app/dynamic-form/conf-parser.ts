@@ -114,7 +114,7 @@ function validateLineFormat(line: string, lineNumber: number, fieldTypes: Record
     errors.push(`Line ${lineNumber}: Invalid key format '${key}'. Keys should contain only letters, numbers, and underscores.`);
   }
   
-  // **NEW: Check for duplicate field definitions**
+  // Check for duplicate field definitions
   if (seenFields.has(key)) {
     errors.push(`Line ${lineNumber}: Duplicate field '${key}'. Field already defined earlier in the config.`);
   } else {
@@ -164,7 +164,7 @@ export function strictParseConfFile(confContent: string, schema: any): { parsed:
   const syntaxErrors: string[] = [];
   const lines = confContent.split(/\r?\n/);
   const fieldTypes: Record<string, string> = {};
-  const seenFields = new Set<string>(); // **NEW: Track seen fields for duplicate detection**
+  const seenFields = new Set<string>(); // Track seen fields for duplicate detection
   
   if (schema && Array.isArray(schema.fields)) {
     for (const field of schema.fields) {
@@ -371,6 +371,70 @@ function getDefaultValue(field: any): any {
   if (field.defaultValue !== undefined) return field.defaultValue;
   if (field.default !== undefined) return field.default;
   return null;
+}
+
+// **UPDATED: Simple equality-based conditional logic evaluator**
+function evalVisibleIf(condition: any, data: any): boolean {
+  try {
+    // Handle object-based conditions (recommended format)
+    if (typeof condition === 'object' && condition !== null && condition.key) {
+      const { key, value } = condition;
+      
+      if (!key) return false;
+      
+      const fieldValue = data[key];
+      
+      // Handle quoted values in config data
+      let actualFieldValue = fieldValue;
+      if (typeof fieldValue === 'string' && fieldValue.startsWith('"') && fieldValue.endsWith('"')) {
+        actualFieldValue = fieldValue.slice(1, -1);
+      }
+      
+      // Handle quoted expected values
+      let expectedValue = value;
+      if (typeof value === 'string' && value.startsWith('"') && value.endsWith('"')) {
+        expectedValue = value.slice(1, -1);
+      }
+      
+      // Simple equality check
+      return actualFieldValue == expectedValue;
+    }
+    
+    // Handle string-based conditions (legacy format)
+    if (typeof condition === 'string') {
+      // Parse simple equality expressions like "q1 === '45'" or "q1 == \"45\""
+      const equalityMatch = condition.match(/(\w+)\s*(===|==)\s*['"]?([^'"]+)['"]?/);
+      if (equalityMatch) {
+        const [, fieldKey, , expectedValue] = equalityMatch;
+        const fieldValue = data[fieldKey];
+        
+        // Handle quoted values
+        let actualFieldValue = fieldValue;
+        if (typeof fieldValue === 'string' && fieldValue.startsWith('"') && fieldValue.endsWith('"')) {
+          actualFieldValue = fieldValue.slice(1, -1);
+        }
+        
+        return actualFieldValue == expectedValue;
+      }
+      
+      // Fallback to JavaScript evaluation for complex expressions
+      const keys = Object.keys(data);
+      const args = keys.map(k => {
+        let val = data[k];
+        // Unquote values for JavaScript evaluation
+        if (typeof val === 'string' && val.startsWith('"') && val.endsWith('"')) {
+          val = val.slice(1, -1);
+        }
+        return val;
+      });
+      return Function(...keys, `return (${condition});`)(...args);
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Error evaluating condition:', condition, error);
+    return false;
+  }
 }
 
 // Validate parsed config data against the template schema
@@ -856,16 +920,4 @@ export function getConfigValidationFieldResults(parsedData: any, schema: any, ex
   }
   
   return results;
-}
-
-// Simple JS expression evaluator for visibleIf/mandatoryIf
-function evalVisibleIf(expr: string, data: any): boolean {
-  try {
-    const keys = Object.keys(data);
-    const args = keys.map(k => data[k]);
-    // eslint-disable-next-line no-new-func
-    return Function(...keys, `return (${expr});`)(...args);
-  } catch {
-    return false;
-  }
 }
