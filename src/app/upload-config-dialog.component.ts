@@ -242,7 +242,7 @@ export class UploadConfigDialogComponent {
     const schemaKeys = (this.schema.fields || []).map((f: any) => f.key);
     const extraFields = configKeys.filter(k => !schemaKeys.includes(k));
     const missingFields = schemaKeys.filter((k: string) => !(configKeys.includes(k)));
-    this.validationResult = validateConfAgainstSchema(this.parsedData, this.schema, syntaxErrors);
+    this.validationResult = validateConfAgainstSchema(this.parsedData, this.schema);
     this.validationResult.extraFields = extraFields;
     this.validationResult.missingFields = missingFields;
     // Prepare data for validator box
