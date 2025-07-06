@@ -63,35 +63,141 @@ function fieldTypeRequiresQuoting(type: string): boolean {
   );
 }
 
+// Enhanced function to validate keyvalue format
+function isValidKeyValueFormat(value: string): boolean {
+  // Allow empty object
+  if (value === '{}') return true;
+  
+  // Reject square bracket formats immediately
+  if (value.startsWith('[') && value.endsWith(']')) return false;
+  
+  // Must start with { and end with }
+  if (!value.startsWith('{') || !value.endsWith('}')) return false;
+  
+  // Check for proper JSON format: {"key1":"value1","key2":"value2"}
+  try {
+    const parsed = JSON.parse(value);
+    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+      // Ensure all keys and values are strings
+      return Object.entries(parsed).every(([k, v]) => 
+        typeof k === 'string' && typeof v === 'string'
+      );
+    }
+  } catch {}
+  
+  return false;
+}
+
+// Enhanced function to detect invalid lines, unexpected characters, and duplicate fields
+function validateLineFormat(line: string, lineNumber: number, fieldTypes: Record<string, string>, seenFields: Set<string>): string[] {
+  const errors: string[] = [];
+  const trimmed = line.trim();
+  
+  // Skip empty lines and comments
+  if (!trimmed || trimmed.startsWith('#')) return errors;
+  
+  // Check for lines without '=' (invalid field definitions)
+  const eqIdx = trimmed.indexOf('=');
+  if (eqIdx === -1) {
+    // Check if it's just random text/characters
+    if (trimmed.match(/^[^=]*$/)) {
+      errors.push(`Line ${lineNumber}: Invalid line format. Expected 'key=value' but found: '${trimmed}'`);
+    }
+    return errors;
+  }
+  
+  const key = trimmed.substring(0, eqIdx).trim();
+  const value = trimmed.substring(eqIdx + 1).trim();
+  
+  // Validate key format (should be alphanumeric with underscores)
+  if (!key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/)) {
+    errors.push(`Line ${lineNumber}: Invalid key format '${key}'. Keys should contain only letters, numbers, and underscores.`);
+  }
+  
+  // **NEW: Check for duplicate field definitions**
+  if (seenFields.has(key)) {
+    errors.push(`Line ${lineNumber}: Duplicate field '${key}'. Field already defined earlier in the config.`);
+  } else {
+    seenFields.add(key);
+  }
+  
+  // Check for unknown keys
+  if (!fieldTypes[key]) {
+    errors.push(`Line ${lineNumber}: Unknown key '${key}'.`);
+  }
+  
+  // Check for incomplete JSON objects
+  if (value.startsWith('{') && !value.endsWith('}')) {
+    errors.push(`Line ${lineNumber}: Incomplete JSON object for key '${key}'. Missing closing brace.`);
+  }
+  
+  // Check for incomplete MCQ arrays
+  if (value.startsWith('{') && value.includes('"') && !value.endsWith('}')) {
+    errors.push(`Line ${lineNumber}: Incomplete MCQ array for key '${key}'. Missing closing brace.`);
+  }
+  
+  // Check for trailing characters after the value
+  const fullLine = line;
+  const valueEndIndex = fullLine.indexOf(value) + value.length;
+  const afterValue = fullLine.substring(valueEndIndex).trim();
+  
+  if (afterValue && !afterValue.startsWith('#')) {
+    errors.push(`Line ${lineNumber}: Unexpected characters after value: '${afterValue}'`);
+  }
+  
+  // Validate keyvalue format specifically
+  const fieldType = fieldTypes[key];
+  if (fieldType === 'keyvalue' && value && !isValidKeyValueFormat(value)) {
+    if (value.startsWith('[') && value.endsWith(']')) {
+      errors.push(`Line ${lineNumber}: Invalid keyvalue format for '${key}'. Use {"key1":"value1"} instead of square brackets.`);
+    } else {
+      errors.push(`Line ${lineNumber}: Invalid keyvalue format for '${key}'. Must be {"key1":"value1","key2":"value2"} or {}.`);
+    }
+  }
+  
+  return errors;
+}
+
 // Strict parser for config validation: keep all values as raw strings for validation
 export function strictParseConfFile(confContent: string, schema: any): { parsed: any, syntaxErrors: string[] } {
   const result: any = {};
   const syntaxErrors: string[] = [];
   const lines = confContent.split(/\r?\n/);
   const fieldTypes: Record<string, string> = {};
+  const seenFields = new Set<string>(); // **NEW: Track seen fields for duplicate detection**
+  
   if (schema && Array.isArray(schema.fields)) {
     for (const field of schema.fields) {
       fieldTypes[field.key] = field.type;
     }
   }
+  
   for (let i = 0; i < lines.length; i++) {
-    let line = lines[i].trim();
-    if (!line || line.startsWith('#')) continue;
-    const eqIdx = line.indexOf('=');
-    if (eqIdx === -1) {
-      syntaxErrors.push(`Line ${i+1}: Missing '=' in line.`);
-      continue;
+    const line = lines[i];
+    const lineNumber = i + 1;
+    
+    // Validate each line format and collect errors (pass seenFields for duplicate detection)
+    const lineErrors = validateLineFormat(line, lineNumber, fieldTypes, seenFields);
+    syntaxErrors.push(...lineErrors);
+    
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) continue; // Already handled in validateLineFormat
+    
+    const key = trimmed.substring(0, eqIdx).trim();
+    const value = trimmed.substring(eqIdx + 1).trim();
+    
+    // Only add valid key-value pairs to result (avoid duplicates)
+    if (fieldTypes[key] && key.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/)) {
+      // Only add if not already present (first occurrence wins)
+      if (!(key in result)) {
+        result[key] = value;
+      }
     }
-    const key = line.substring(0, eqIdx).trim();
-    let value = line.substring(eqIdx + 1).trim();
-    const type = fieldTypes[key];
-    if (!type) {
-      syntaxErrors.push(`Line ${i+1}: Unknown key '${key}'.`);
-      continue;
-    }
-    // For strict validation, keep all values as raw strings (do not parse JSON/arrays)
-    result[key] = value;
   }
+  
   return { parsed: result, syntaxErrors };
 }
 
@@ -99,13 +205,16 @@ export function strictParseConfFile(confContent: string, schema: any): { parsed:
 export function mapConfToPrefill(parsedData: any, schema: any): any {
   const prefill: any = {};
   if (!schema || !Array.isArray(schema.fields)) return parsedData;
+  
   for (const field of schema.fields) {
     const key = field.key;
     const type = field.type;
     const value = parsedData[key];
+    
     if (field.environmentSpecific) {
       prefill[key] = { PROD: '', DEV: '', COB: '' };
       const defaultKeys = Array.isArray(field.default) ? field.default : [];
+      
       ['PROD', 'DEV', 'COB'].forEach(env => {
         if (type === 'keyvalue') {
           let envValue = (value && typeof value === 'object' && value[env] !== undefined) ? value[env] : undefined;
@@ -115,12 +224,14 @@ export function mapConfToPrefill(parsedData: any, schema: any): any {
           } else if (!envValue && value !== undefined && typeof value !== 'object') {
             envValue = value;
           }
+          
           let keyValueArr: any[] = [];
           if (envValue && typeof envValue === 'object' && !Array.isArray(envValue)) {
             keyValueArr = Object.entries(envValue).map(([k, v]) => ({ key: k, value: v }));
           } else if (Array.isArray(envValue)) {
             keyValueArr = envValue;
           }
+          
           // If no config data, just use default keys
           if ((!envValue || keyValueArr.length === 0) && defaultKeys.length > 0) {
             prefill[key][env] = defaultKeys.map((k: string) => ({ key: k, value: '' }));
@@ -158,12 +269,14 @@ export function mapConfToPrefill(parsedData: any, schema: any): any {
           }
         }
       });
+      
       // If type is keyvalue and value is undefined or empty, always set default keys for all envs
       if (type === 'keyvalue' && (value === undefined || value === null || value === '')) {
         ['PROD', 'DEV', 'COB'].forEach(env => {
           prefill[key][env] = defaultKeys.map((k: string) => ({ key: k, value: '' }));
         });
       }
+      
       // After filling from config, ensure all envs have at least default keys for keyvalue type
       if (type === 'keyvalue' && defaultKeys.length > 0) {
         ['PROD', 'DEV', 'COB'].forEach(env => {
@@ -177,15 +290,18 @@ export function mapConfToPrefill(parsedData: any, schema: any): any {
       // Convert {k:v,...} to [{key:k,value:v},...], ensure default keys
       const defaultKeys = Array.isArray(field.default) ? field.default : [];
       let keyValueArr = Object.entries(value).map(([k, v]) => ({ key: k, value: v }));
+      
       // Ensure all default keys are present
       const mergedArr = defaultKeys.map((k: string) => {
         const found = keyValueArr.find((kv: any) => kv.key === k);
         return found ? found : { key: k, value: '' };
       });
+      
       // Add any extra keys from config not in default
       keyValueArr.forEach((kv: any) => {
         if (!mergedArr.find((m: any) => m.key === kv.key)) mergedArr.push(kv);
       });
+      
       prefill[key] = mergedArr;
     } else if (type === 'mcq_multiple' && Array.isArray(value)) {
       prefill[key] = [...value];
@@ -197,8 +313,10 @@ export function mapConfToPrefill(parsedData: any, schema: any): any {
       else prefill[key] = '';
     }
   }
+  
   return prefill;
 }
+
 // Helper function to check if a value is empty (handles all quote variations)
 function isEmptyValue(value: any): boolean {
   if (value === undefined || value === null || value === '') {
@@ -208,24 +326,28 @@ function isEmptyValue(value: any): boolean {
     const trimmed = value.trim();
     // Handle empty string
     if (trimmed === '') return true;
-    // Handle various quote patterns that represent empty values
-    // This covers: "", \", \", \\\"\\\" etc.
+    
+    // Handle quoted empty values
+    if (trimmed === '""' || trimmed === "''") return true;
+    
+    // Handle escaped quotes and null values
     const unescapedValue = trimmed.replace(/\\"/g, '"').replace(/\\'/g, "'");
-    // Treat 'null', '"null"', "'null'" as empty
     if (
       unescapedValue === 'null' ||
       unescapedValue === '"null"' ||
       unescapedValue === "'null'" ||
       unescapedValue === '""' ||
-      unescapedValue === "''" ||
-      unescapedValue === ''
+      unescapedValue === "''"
     ) {
       return true;
     }
-    // Also check if it's just quotes with nothing inside
-    if (/^["']*$/ .test(unescapedValue) && unescapedValue.length <= 4) {
+    
+    // Check if it's a quoted empty string
+    if ((trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length === 2) ||
+        (trimmed.startsWith("'") && trimmed.endsWith("'") && trimmed.length === 2)) {
       return true;
     }
+    
     return false;
   }
   return false;
@@ -238,6 +360,18 @@ function getLabelForKey(schema: any, key: string): string {
   return field ? (field.label || key) : key;
 }
 
+// Helper to get field by key
+function getFieldByKey(schema: any, key: string): any {
+  if (!schema || !Array.isArray(schema.fields)) return null;
+  return schema.fields.find((f: any) => f.key === key);
+}
+
+// Helper to get default value for a field
+function getDefaultValue(field: any): any {
+  if (field.defaultValue !== undefined) return field.defaultValue;
+  if (field.default !== undefined) return field.default;
+  return null;
+}
 
 // Validate parsed config data against the template schema
 export function validateConfAgainstSchema(parsedData: any, schema: any): { valid: boolean, errors: string[], warnings: string[] } {
@@ -255,43 +389,72 @@ export function validateConfAgainstSchema(parsedData: any, schema: any): { valid
     const type = field.type;
     const value = parsedData[key];
     
-    // Check if field is entirely missing from config (regardless of mandatory status)
+    // Check if field is entirely missing from config
     if (!(key in parsedData)) {
       errors.push(`Missing field: ${field.label || key}`);
       continue; // Skip further validation for missing fields
     }
     
-    // Evaluate visibleIf and mandatoryIf
+    // Evaluate visibleIf and mandatoryIf with proper boolean normalization
     let visible = true;
-    let isMandatory = !!field.mandatory;
+    let isMandatory = !!(field.mandatory || field.required); // Handle both properties
     
     if (field.visibleIf) {
       try {
-        visible = evalVisibleIf(field.visibleIf, parsedData);
-      } catch {}
+        visible = !!evalVisibleIf(field.visibleIf, parsedData);
+      } catch {
+        visible = true; // Default to visible if evaluation fails
+      }
     }
     
     if (field.mandatoryIf) {
       try {
-        isMandatory = evalVisibleIf(field.mandatoryIf, parsedData);
-      } catch {}
+        isMandatory = !!evalVisibleIf(field.mandatoryIf, parsedData);
+      } catch {
+        isMandatory = !!(field.mandatory || field.required); // Fall back to field properties
+      }
     }
     
     if (!visible) continue;
     
-    // Required check - if field is mandatory and has empty value
-    if (isMandatory && isEmptyValue(value)) {
+    // Check if value is empty
+    const isEmpty = isEmptyValue(value);
+    
+    // Required check - ONLY show error if field is mandatory AND empty
+    if (isMandatory && isEmpty) {
       errors.push(`Missing required field: ${field.label || key}`);
       continue; // Skip type validation for empty mandatory fields
     }
     
-    // User editable check
-    if (field.userEditable === false && value !== undefined) {
-      warnings.push(`Field '${field.label || key}' is not user editable but present in config.`);
+    // If field is empty but not mandatory, skip all other validations
+    if (isEmpty && !isMandatory) {
+      continue; // No error/warning for optional empty fields
     }
     
-    // Only enforce quoting for types that require it
-    if (!isEmptyValue(value) && fieldTypeRequiresQuoting(type)) {
+    // User editable check - if field is not editable, it must have the default value
+    if (field.userEditable === false || field.editable === false) {
+      const defaultValue = getDefaultValue(field);
+      if (defaultValue !== null) {
+        // Compare the actual value with default value (handle quoted strings)
+        let actualValue = value;
+        if (typeof value === 'string' && value.startsWith('"') && value.endsWith('"')) {
+          actualValue = value.slice(1, -1);
+        }
+        
+        let expectedValue = defaultValue;
+        if (typeof defaultValue === 'string' && !defaultValue.startsWith('"')) {
+          expectedValue = `"${defaultValue}"`;
+        }
+        
+        if (value !== expectedValue && actualValue !== defaultValue) {
+          errors.push(`Field '${field.label || key}' is not user editable and must have default value: ${defaultValue}`);
+          continue;
+        }
+      }
+    }
+    
+    // Only enforce quoting for types that require it and only for non-empty values
+    if (!isEmpty && fieldTypeRequiresQuoting(type)) {
       if (!(typeof value === 'string' && value.startsWith('"') && value.endsWith('"'))) {
         errors.push(`Field '${field.label || key}' must be quoted (e.g. "value").`);
         continue;
@@ -299,7 +462,7 @@ export function validateConfAgainstSchema(parsedData: any, schema: any): { valid
     }
     
     // Type check - only validate if value is not empty
-    if (!isEmptyValue(value)) {
+    if (!isEmpty) {
       let unquotedValue = value;
       if (typeof value === 'string' && value.startsWith('"') && value.endsWith('"')) {
         unquotedValue = value.slice(1, -1);
@@ -322,24 +485,57 @@ export function validateConfAgainstSchema(parsedData: any, schema: any): { valid
           allowedOptions = field.options;
         }
       }
+      
       if (type === 'dropdown' && allowedOptions.length && !allowedOptions.includes(unquotedValue)) {
         errors.push(`Field '${field.label || key}' has invalid value '${unquotedValue}'. Allowed: ${allowedOptions.join(', ')}`);
       }
+      
       if (type === 'mcq_single' && allowedOptions.length && !allowedOptions.includes(unquotedValue)) {
         errors.push(`Field '${field.label || key}' has invalid value '${unquotedValue}'. Allowed: ${allowedOptions.join(', ')}`);
       }
       
-      if (type === 'keyvalue' && value && typeof value === 'object' && !Array.isArray(value)) {
-        // Accepts object, but error if empty and mandatory
-        if (Object.keys(value).length === 0 && isMandatory) {
-          errors.push(`Field '${field.label || key}' is required and cannot be empty.`);
+      // Enhanced keyvalue validation
+      if (type === 'keyvalue') {
+        if (typeof value === 'string') {
+          if (!isValidKeyValueFormat(value)) {
+            if (value.startsWith('[') && value.endsWith(']')) {
+              errors.push(`Field '${field.label || key}' has invalid format. Use {"key1":"value1","key2":"value2"} instead of square brackets.`);
+            } else {
+              errors.push(`Field '${field.label || key}' must be in format {"key1":"value1","key2":"value2"} or {}.`);
+            }
+          }
+        } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+          // Accepts object, but error if empty and mandatory
+          if (Object.keys(value).length === 0 && isMandatory) {
+            errors.push(`Field '${field.label || key}' is required and cannot be empty.`);
+          }
         }
       }
       
       if (type === 'mcq_multiple' && value) {
-        // Only accept {"a","b"} format (raw string)
-        if (!/^\{\s*("[^"]*"\s*(,\s*"[^"]*"))*\s*\}$/.test(value)) {
+        // Check format first
+        if (!/^\{\s*("[^"]*"\s*(,\s*"[^"]*")*)\s*\}$/.test(value)) {
           errors.push(`Field '${field.label || key}' must be in {"a","b"} format.`);
+        } else {
+          // Extract the selected options and validate against allowed options
+          const mcqArrayMatch = value.match(/^\{\s*("[^"]*"\s*(,\s*"[^"]*")*)\s*\}$/);
+          if (mcqArrayMatch && field.options && Array.isArray(field.options)) {
+            const selectedOptions = value.slice(1, -1).split(',').map((v: string) => v.trim().replace(/^"|"$/g, ''));
+            
+            // Get allowed options (handle both string arrays and object arrays)
+            let allowedMcqOptions: string[] = [];
+            if (typeof field.options[0] === 'object' && field.options[0] !== null) {
+              allowedMcqOptions = field.options.map((opt: any) => opt.label || opt.value || String(opt));
+            } else {
+              allowedMcqOptions = field.options;
+            }
+            
+            // Check if all selected options are valid
+            const invalidOptions = selectedOptions.filter((opt: string) => !allowedMcqOptions.includes(opt));
+            if (invalidOptions.length > 0) {
+              errors.push(`Field '${field.label || key}' has invalid options: ${invalidOptions.join(', ')}. Allowed: ${allowedMcqOptions.join(', ')}`);
+            }
+          }
         }
       }
       
@@ -371,55 +567,148 @@ export function getConfigValidationFieldResults(parsedData: any, schema: any, ex
   const results: any[] = [];
   const dataKeys = Object.keys(parsedData || {});
   const schemaKeys = schema.fields.map((f: any) => f.key);
-  // Track missing fields for per-field cross
+  
   for (const field of schema.fields) {
     const key = field.key;
     const label = field.label || key;
     const type = field.type;
     const value = parsedData[key];
-    // Evaluate visibleIf and mandatoryIf
+    
+    // Check if field is entirely missing from config
+    if (!(key in parsedData)) {
+      results.push({ 
+        key, 
+        label, 
+        status: 'missing', 
+        message: `Missing field: ${label}`, 
+        error: true 
+      });
+      continue;
+    }
+    
+    // Evaluate visibleIf and mandatoryIf with proper boolean normalization
     let visible = true;
-    let mandatory = !!field.mandatory;
+    let mandatory = !!(field.mandatory || field.required); // Handle both properties
+    
     if (field.visibleIf) {
       try {
-        visible = evalVisibleIf(field.visibleIf, parsedData);
-      } catch {}
+        visible = !!evalVisibleIf(field.visibleIf, parsedData);
+      } catch {
+        visible = true;
+      }
     }
+    
     if (field.mandatoryIf) {
       try {
-        mandatory = evalVisibleIf(field.mandatoryIf, parsedData);
-      } catch {}
+        mandatory = !!evalVisibleIf(field.mandatoryIf, parsedData);
+      } catch {
+        mandatory = !!(field.mandatory || field.required);
+      }
     }
+    
     if (!visible) {
       results.push({ key, label, status: 'hidden', message: 'Field not visible.' });
       continue;
     }
-    // Required check: Use helper function for comprehensive empty checking
+    
+    // Check if value is empty
     const isEmpty = isEmptyValue(value);
-    if (isEmpty) {
-      // Mark any empty value as invalid, regardless of mandatory
-      results.push({ key, label, status: 'invalid', message: 'This field cannot be empty.', error: true });
+    
+    // Required check: ONLY show error if field is mandatory AND empty
+    if (isEmpty && mandatory) {
+      results.push({ 
+        key, 
+        label, 
+        status: 'invalid', 
+        message: `Missing required field: ${label}`, 
+        error: true 
+      });
       continue;
     }
-    // User editable check
-    if (field.userEditable === false && value !== undefined) {
-      results.push({ key, label, status: 'invalid', message: 'Field is not user editable but present in config.', error: true });
+    
+    // If field is empty but not mandatory, mark as valid (no error/warning)
+    if (isEmpty && !mandatory) {
+      results.push({ 
+        key, 
+        label, 
+        status: 'valid', 
+        message: 'Optional field (empty).' 
+      });
       continue;
     }
+    
+    // User editable check - if field is not editable, it must have the default value
+    if (field.userEditable === false || field.editable === false) {
+      const defaultValue = getDefaultValue(field);
+      if (defaultValue !== null) {
+        // Compare the actual value with default value (handle quoted strings)
+        let actualValue = value;
+        if (typeof value === 'string' && value.startsWith('"') && value.endsWith('"')) {
+          actualValue = value.slice(1, -1);
+        }
+        
+        let expectedValue = defaultValue;
+        if (typeof defaultValue === 'string' && !defaultValue.startsWith('"')) {
+          expectedValue = `"${defaultValue}"`;
+        }
+        
+        if (value !== expectedValue && actualValue !== defaultValue) {
+          results.push({ 
+            key, 
+            label, 
+            status: 'invalid', 
+            message: `Field is not user editable and must have default value: ${defaultValue}`, 
+            error: true 
+          });
+          continue;
+        }
+      }
+    }
+    
     // Only enforce quoting for types that require it - and only for non-empty values
     if (!isEmpty && fieldTypeRequiresQuoting(type)) {
       if (!(typeof value === 'string' && value.startsWith('"') && value.endsWith('"'))) {
-        results.push({ key, label, status: 'invalid', message: 'Value must be quoted (e.g. "value").', error: true });
+        results.push({ 
+          key, 
+          label, 
+          status: 'invalid', 
+          message: 'Value must be quoted (e.g. "value").', 
+          error: true 
+        });
         continue;
       }
     }
+    
     // Type check - only validate non-empty values
     if (!isEmpty) {
       let unquotedValue = value;
       if (typeof value === 'string' && value.startsWith('"') && value.endsWith('"')) {
         unquotedValue = value.slice(1, -1);
       }
-        // Support options as array of strings or array of objects with 'value' property
+      
+      if (type === 'number' && isNaN(Number(unquotedValue))) {
+        results.push({ 
+          key, 
+          label, 
+          status: 'invalid', 
+          message: 'Should be a number.', 
+          error: true 
+        });
+        continue;
+      }
+      
+      if (type === 'boolean' && !(unquotedValue === 'true' || unquotedValue === 'false')) {
+        results.push({ 
+          key, 
+          label, 
+          status: 'invalid', 
+          message: 'Should be a boolean (true or false).', 
+          error: true 
+        });
+        continue;
+      }
+      
+      // Support options as array of strings or array of objects with 'value' property
       let allowedOptions: string[] = [];
       if (Array.isArray(field.options)) {
         if (typeof field.options[0] === 'object' && field.options[0] !== null) {
@@ -428,41 +717,128 @@ export function getConfigValidationFieldResults(parsedData: any, schema: any, ex
           allowedOptions = field.options;
         }
       }
+      
       if (type === 'dropdown' && allowedOptions.length && !allowedOptions.includes(unquotedValue)) {
-        results.push({ key, label, status: 'invalid', message: `Invalid value. Allowed: ${allowedOptions.join(', ')}`, error: true });
+        results.push({ 
+          key, 
+          label, 
+          status: 'invalid', 
+          message: `Invalid value. Allowed: ${allowedOptions.join(', ')}`, 
+          error: true 
+        });
         continue;
       }
+      
       if (type === 'mcq_single' && allowedOptions.length && !allowedOptions.includes(unquotedValue)) {
-        results.push({ key, label, status: 'invalid', message: `Invalid value. Allowed: ${allowedOptions.join(', ')}`, error: true });
+        results.push({ 
+          key, 
+          label, 
+          status: 'invalid', 
+          message: `Invalid value. Allowed: ${allowedOptions.join(', ')}`, 
+          error: true 
+        });
         continue;
       }
-      if (type === 'keyvalue' && value && typeof value === 'object' && !Array.isArray(value)) {
-        if (Object.keys(value).length === 0 && mandatory) {
-          results.push({ key, label, status: 'invalid', message: 'Required and cannot be empty.', error: true });
-          continue;
+      
+      // Enhanced keyvalue validation
+      if (type === 'keyvalue') {
+        if (typeof value === 'string') {
+          if (!isValidKeyValueFormat(value)) {
+            if (value.startsWith('[') && value.endsWith(']')) {
+              results.push({ 
+                key, 
+                label, 
+                status: 'invalid', 
+                message: 'Invalid format. Use {"key1":"value1"} instead of square brackets.', 
+                error: true 
+              });
+            } else {
+              results.push({ 
+                key, 
+                label, 
+                status: 'invalid', 
+                message: 'Must be in format {"key1":"value1","key2":"value2"} or {}.', 
+                error: true 
+              });
+            }
+            continue;
+          }
+        } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+          if (Object.keys(value).length === 0 && mandatory) {
+            results.push({ 
+              key, 
+              label, 
+              status: 'invalid', 
+              message: 'Required and cannot be empty.', 
+              error: true 
+            });
+            continue;
+          }
         }
       }
+      
       if (type === 'mcq_multiple' && value) {
-        // Only accept {"a","b"} format (raw string)
-        if (!/^\{\s*("[^"]*"\s*(,\s*"[^"]*"))*\s*\}$/.test(value)) {
-          results.push({ key, label, status: 'invalid', message: 'Value must be in {"a","b"} format.', error: true });
+        // Check format first
+        if (!/^\{\s*("[^"]*"\s*(,\s*"[^"]*")*)\s*\}$/.test(value)) {
+          results.push({ 
+            key, 
+            label, 
+            status: 'invalid', 
+            message: 'Value must be in {"a","b"} format.', 
+            error: true 
+          });
           continue;
+        } else {
+          // Extract the selected options and validate against allowed options
+          const mcqArrayMatch = value.match(/^\{\s*("[^"]*"\s*(,\s*"[^"]*")*)\s*\}$/);
+          if (mcqArrayMatch && field.options && Array.isArray(field.options)) {
+            const selectedOptions = value.slice(1, -1).split(',').map((v: string) => v.trim().replace(/^"|"$/g, ''));
+            
+            // Get allowed options (handle both string arrays and object arrays)
+            let allowedMcqOptions: string[] = [];
+            if (typeof field.options[0] === 'object' && field.options[0] !== null) {
+              allowedMcqOptions = field.options.map((opt: any) => opt.label || opt.value || String(opt));
+            } else {
+              allowedMcqOptions = field.options;
+            }
+            
+            // Check if all selected options are valid
+            const invalidOptions = selectedOptions.filter((opt: string) => !allowedMcqOptions.includes(opt));
+            if (invalidOptions.length > 0) {
+              results.push({ 
+                key, 
+                label, 
+                status: 'invalid', 
+                message: `Invalid options: ${invalidOptions.join(', ')}. Allowed: ${allowedMcqOptions.join(', ')}`, 
+                error: true 
+              });
+              continue;
+            }
+          }
         }
       }
+      
       if (field.regex && typeof unquotedValue === 'string') {
         try {
           const re = new RegExp(field.regex);
           if (!re.test(unquotedValue)) {
-            results.push({ key, label, status: 'invalid', message: 'Does not match required format.', error: true });
+            results.push({ 
+              key, 
+              label, 
+              status: 'invalid', 
+              message: 'Does not match required format.', 
+              error: true 
+            });
             continue;
           }
         } catch {}
       }
     }
+    
     // Only push a tick (valid) if there were no errors for this field
-    // Criteria for tick: visible, not missing, not invalid, not empty, passes all checks above
     results.push({ key, label, status: 'valid', message: 'Valid.' });
   }
+  
   // Add extra fields that exist in config but not in schema
   const extraFieldsInConfig = dataKeys.filter(key => !schemaKeys.includes(key));
   // Add extra fields from parameter (if provided) and from config comparison
@@ -473,10 +849,12 @@ export function getConfigValidationFieldResults(parsedData: any, schema: any, ex
         key: fieldKey, 
         label: getLabelForKey(schema, fieldKey), 
         status: 'extra', 
-        message: 'This field is extra in config file and not present in the template schema.', error: true 
+        message: 'This field is extra in config file and not present in the template schema.', 
+        error: true 
       });
     });
   }
+  
   return results;
 }
 

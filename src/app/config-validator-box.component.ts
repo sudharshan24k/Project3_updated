@@ -26,15 +26,19 @@ export class ConfigValidatorBoxComponent implements OnInit {
   @Input() syntaxErrors: string[] = [];
   @Input() validationErrors: string[] = [];
   @Input() warnings: string[] = [];
-  @Output() close = new EventEmitter<void>();
+  @Output() close = new EventEmitter();
 
   ngOnInit() {
     if (this.data) {
       this.formName = this.data.formName;
-      // If there are any warnings or errors, force fail status
-      const hasErrors = (this.data.validationErrors && this.data.validationErrors.length > 0) || (this.data.syntaxErrors && this.data.syntaxErrors.length > 0);
-      const hasWarnings = this.data.warnings && this.data.warnings.length > 0;
-      this.overallStatus = (hasErrors || hasWarnings) ? 'fail' : this.data.overallStatus;
+      
+      // Only errors should cause validation failure, NOT warnings
+      const hasErrors = (this.data.validationErrors && this.data.validationErrors.length > 0) || 
+                        (this.data.syntaxErrors && this.data.syntaxErrors.length > 0);
+      
+      // Set status based on errors only (warnings should not cause failure)
+      this.overallStatus = hasErrors ? 'fail' : 'success';
+      
       this.fieldResults = this.data.fieldResults;
       this.extraFields = this.data.extraFields || [];
       this.missingFields = this.data.missingFields || [];

@@ -232,33 +232,44 @@ export class UploadConfigDialogComponent {
   }
 
   onValidate() {
-    if (!this.schema) return;
-    // Use strict parser result
-    const strictResult = strictParseConfFile(this.rawConfigContent, this.schema);
-    this.parsedData = strictResult.parsed;
-    const syntaxErrors = strictResult.syntaxErrors;
-    // Compute extra/missing fields
-    const configKeys = Object.keys(this.parsedData || {});
-    const schemaKeys = (this.schema.fields || []).map((f: any) => f.key);
-    const extraFields = configKeys.filter(k => !schemaKeys.includes(k));
-    const missingFields = schemaKeys.filter((k: string) => !(configKeys.includes(k)));
-    this.validationResult = validateConfAgainstSchema(this.parsedData, this.schema);
-    this.validationResult.extraFields = extraFields;
-    this.validationResult.missingFields = missingFields;
-    // Prepare data for validator box
-    const fieldResults: ConfigValidationFieldResult[] = getConfigValidationFieldResults(this.parsedData, this.schema);
-    this.validatorBoxData = {
-      formName: this.selectedTemplateName,
-      overallStatus: this.validationResult.valid ? 'success' : 'fail',
-      fieldResults,
-      extraFields,
-      missingFields,
-      syntaxErrors: syntaxErrors || [],
-      validationErrors: this.validationResult.errors || [],
-      warnings: this.validationResult.warnings || []
-    };
-    this.showValidatorBox = true;
-  }
+  if (!this.schema) return;
+  
+  // Use strict parser result
+  const strictResult = strictParseConfFile(this.rawConfigContent, this.schema);
+  this.parsedData = strictResult.parsed;
+  const syntaxErrors = strictResult.syntaxErrors;
+  
+  // Compute extra/missing fields
+  const configKeys = Object.keys(this.parsedData || {});
+  const schemaKeys = (this.schema.fields || []).map((f: any) => f.key);
+  const extraFields = configKeys.filter(k => !schemaKeys.includes(k));
+  const missingFields = schemaKeys.filter((k: string) => !(configKeys.includes(k)));
+  
+  this.validationResult = validateConfAgainstSchema(this.parsedData, this.schema);
+  this.validationResult.extraFields = extraFields;
+  this.validationResult.missingFields = missingFields;
+  
+  // Prepare data for validator box
+  const fieldResults: ConfigValidationFieldResult[] = getConfigValidationFieldResults(this.parsedData, this.schema);
+  
+  // ✅ CRITICAL FIX: Consider BOTH syntax errors AND validation errors
+  const hasSyntaxErrors = syntaxErrors && syntaxErrors.length > 0;
+  const hasValidationErrors = this.validationResult.errors && this.validationResult.errors.length > 0;
+  const overallValid = !hasSyntaxErrors && !hasValidationErrors;
+  
+  this.validatorBoxData = {
+    formName: this.selectedTemplateName,
+    overallStatus: overallValid ? 'success' : 'fail', // ✅ Now considers both error types
+    fieldResults,
+    extraFields,
+    missingFields,
+    syntaxErrors: syntaxErrors || [],
+    validationErrors: this.validationResult.errors || [],
+    warnings: this.validationResult.warnings || []
+  };
+  
+  this.showValidatorBox = true;
+}
 
   onUpdateAndEdit() {
     if (!this.schema || !this.selectedTemplateName || !this.selectedVersionTag || !this.selectedEnvironment) return;

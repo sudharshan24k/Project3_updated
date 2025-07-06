@@ -1,12 +1,16 @@
 .validator-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0; 
+  left: 0; 
+  right: 0; 
+  bottom: 0;
   background: rgba(0,0,0,0.3);
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
 .validator-box {
   background: #fff;
   border-radius: 8px;
@@ -18,6 +22,7 @@
   padding: 0 0 24px 0;
   position: relative;
 }
+
 .close-btn {
   position: absolute;
   top: 12px;
@@ -27,7 +32,12 @@
   font-size: 2rem;
   color: #888;
   cursor: pointer;
+  
+  &:hover {
+    color: #000;
+  }
 }
+
 .status-banner {
   padding: 18px 0;
   font-size: 1.2rem;
@@ -35,48 +45,143 @@
   text-align: center;
   border-radius: 8px 8px 0 0;
 }
+
 .status-success {
   background: #e6f9e6;
   color: #1a7f1a;
 }
+
 .status-fail {
   background: #ffeaea;
   color: #c00;
 }
+
 .form-title {
   font-size: 1.1rem;
   font-weight: 500;
   margin: 18px 0 10px 0;
   text-align: center;
 }
+
+// Additional sections for validation errors, warnings, and extra fields
+.extra-missing-fields {
+  margin: 15px 24px;
+  
+  div {
+    font-weight: bold;
+    margin-top: 1em;
+    
+    &:first-child {
+      margin-top: 0;
+    }
+  }
+  
+  ul {
+    margin: 5px 0;
+    padding-left: 20px;
+    
+    li {
+      margin: 2px 0;
+    }
+  }
+}
+
 .fields-list {
   padding: 0 24px;
 }
+
 .field-row {
   display: flex;
   align-items: center;
   border-bottom: 1px solid #eee;
   padding: 10px 0;
+  
+  &:last-child {
+    border-bottom: none;
+  }
 }
+
 .field-label {
   flex: 1 1 0;
   font-weight: 500;
+  color: #333;
 }
-.field-status .icon {
-  font-size: 1.3rem;
-  margin-left: 10px;
+
+.field-status {
+  margin: 0 10px;
+  
+  .icon {
+    font-size: 1.3rem;
+    margin-left: 10px;
+  }
 }
-.icon.valid {
-  color: #1a7f1a;
+
+.icon {
+  &.valid {
+    color: #1a7f1a;
+  }
+  
+  &.missing {
+    color: #c00;
+  }
+  
+  &.invalid {
+    color: #c00;
+  }
+  
+  &.warning {
+    color: #e6a700;
+  }
+  
+  &.hidden {
+    color: #999;
+  }
 }
-.icon.missing {
-  color: #c00;
-}
-.icon.invalid {
-  color: #e6a700;
-}
+
 .violation-msg {
-  color: #e6a700;
+  flex: 2;
   margin-left: 12px;
   font-size: 0.98rem;
+  
+  &.valid-msg {
+    color: #1a7f1a;
+  }
+  
+  &.error-msg {
+    color: #c00;
+  }
+  
+  &.warning-msg {
+    color: #e6a700;
+  }
+  
+  &.hidden-msg {
+    color: #999;
+    font-style: italic;
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .validator-box {
+    width: 95vw;
+    margin: 10px;
+  }
+  
+  .field-row {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 12px 0;
+  }
+  
+  .field-status {
+    margin: 5px 0;
+    align-self: flex-end;
+  }
+  
+  .violation-msg {
+    margin-left: 0;
+    margin-top: 5px;
+    width: 100%;
+  }
 }

@@ -3,51 +3,67 @@
     <button class="close-btn" (click)="onClose()">&times;</button>
     <div class="status-banner" [ngClass]="statusClass">{{ statusText }}</div>
     <div class="form-title">Form: {{ formName }}</div>
+    
     <div *ngIf="extraFields && extraFields.length" class="extra-missing-fields">
       <div style="color: #d32f2f; font-weight: bold; margin-top: 1em;">Extra fields in config (not in template):</div>
       <ul>
         <li *ngFor="let ef of extraFields" style="color: #d32f2f;">{{ ef }}</li>
       </ul>
     </div>
+    
     <div *ngIf="missingFields && missingFields.length" class="extra-missing-fields">
       <div style="color: #d32f2f; font-weight: bold; margin-top: 1em;">Missing fields required by template:</div>
       <ul>
         <li *ngFor="let mf of missingFields" style="color: #d32f2f;">{{ mf }}</li>
       </ul>
     </div>
-    <div *ngIf="(validationErrors && validationErrors.length) || (syntaxErrors && syntaxErrors.length)" class="extra-missing-fields">
-      <div style="color: #d32f2f; font-weight: bold; margin-top: 1em;">Validation errors:</div>
+    
+    <!-- Show syntax errors separately -->
+    <div *ngIf="syntaxErrors && syntaxErrors.length" class="extra-missing-fields">
+      <div style="color: #d32f2f; font-weight: bold; margin-top: 1em;">Syntax errors:</div>
       <ul>
-        <li *ngFor="let ve of (validationErrors?.length ? validationErrors : syntaxErrors)" style="color: #d32f2f;">{{ ve }}</li>
+        <li *ngFor="let se of syntaxErrors" style="color: #d32f2f;">{{ se }}</li>
       </ul>
     </div>
+
+    <!-- Show validation errors separately -->
+    <div *ngIf="validationErrors && validationErrors.length" class="extra-missing-fields">
+      <div style="color: #d32f2f; font-weight: bold; margin-top: 1em;">Validation errors:</div>
+      <ul>
+        <li *ngFor="let ve of validationErrors" style="color: #d32f2f;">{{ ve }}</li>
+      </ul>
+    </div>
+    
     <div *ngIf="warnings && warnings.length" class="extra-missing-fields">
       <div style="color: #fbc02d; font-weight: bold; margin-top: 1em;">Warnings:</div>
       <ul>
         <li *ngFor="let w of warnings" style="color: #fbc02d;">{{ w }}</li>
       </ul>
     </div>
+    
     <div class="fields-list">
       <div class="field-row" *ngFor="let field of fieldResults">
         <span class="field-label">{{ field.label }}</span>
         <span class="field-status">
           <ng-container [ngSwitch]="field.status">
-            <ng-container *ngSwitchCase="'valid'">
-              <span *ngIf="!(missingFields?.includes(field.key) || extraFields?.includes(field.key))" class="icon valid">&#10003;</span>
-              <span *ngIf="missingFields?.includes(field.key) || extraFields?.includes(field.key)" class="icon missing">&#10007;</span>
-            </ng-container>
+            <span *ngSwitchCase="'valid'" class="icon valid">&#10003;</span>
             <span *ngSwitchCase="'missing'" class="icon missing">&#10007;</span>
-            <span *ngSwitchCase="'invalid'" class="icon invalid">&#9888;</span>
+            <span *ngSwitchCase="'invalid'" class="icon invalid">&#10007;</span>
             <span *ngSwitchCase="'extra'" class="icon invalid">&#9888;</span>
-            <span *ngSwitchCase="'warning'" class="icon warning" style="color: #fbc02d;">&#9888;</span>
+            <span *ngSwitchCase="'warning'" class="icon warning">&#9888;</span>
+            <span *ngSwitchCase="'hidden'" class="icon hidden" style="color: #999;">&#8722;</span>
           </ng-container>
         </span>
-        <!-- Only show green 'Valid.' if ticked -->
-        <span *ngIf="field.status === 'valid' && !(missingFields?.includes(field.key) || extraFields?.includes(field.key))" class="violation-msg" style="color: #388e3c;">Valid.</span>
-        <!-- Show error message in red and a red cross for all other cases -->
-        <span *ngIf="field.status !== 'valid' || missingFields?.includes(field.key) || extraFields?.includes(field.key)" class="violation-msg" style="color: #d32f2f;">{{ field.message }}</span>
-        <!-- Show warning message in yellow if field.status is 'warning' -->
-        <span *ngIf="field.status === 'warning'" class="violation-msg" style="color: #fbc02d;">{{ field.message }}</span>
+        
+        <!-- Message display with proper color coding -->
+        <span class="violation-msg" [ngClass]="{
+          'valid-msg': field.status === 'valid',
+          'error-msg': field.status === 'invalid' || field.status === 'missing' || field.status === 'extra',
+          'warning-msg': field.status === 'warning',
+          'hidden-msg': field.status === 'hidden'
+        }">
+          {{ field.message }}
+        </span>
       </div>
     </div>
   </div>
