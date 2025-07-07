@@ -1,5 +1,5 @@
 import { CommonModule, NgIf, NgFor } from '@angular/common';
-import { Component, OnInit, AfterViewInit, Input, Output, EventEmitter, SimpleChanges, OnChanges } from '@angular/core';
+import { Component, OnInit, AfterViewInit, Input, Output, EventEmitter, SimpleChanges, OnChanges, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatExpansionModule } from '@angular/material/expansion';
@@ -20,6 +20,8 @@ import { MatInputModule } from '@angular/material/input';
 import { UploadConfigDialogComponent } from './upload-config-dialog.component';
 import { MatDialogModule } from '@angular/material/dialog';
 import { mapConfToPrefill } from './dynamic-form/conf-parser';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 @Component({
   selector: 'app-dashboard',
@@ -42,9 +44,15 @@ import { mapConfToPrefill } from './dynamic-form/conf-parser';
             <p class="subtitle" *ngIf="isFrameworkTeam">Manage, edit, and create templates for the framework team.</p>
           </div>
           <div style="flex: 0 0 auto; margin-right: 5px; display: flex; gap: 0.5rem; align-items: center;">
-            <button *ngIf="!isFrameworkTeam" mat-stroked-button color="accent" (click)="openUploadConfigDialogCommon()">
-              <mat-icon>upload_file</mat-icon>
-              Upload Config File
+            <button *ngIf="!isFrameworkTeam" 
+                    mat-raised-button 
+                    color="accent" 
+                    class="upload-config-btn"
+                    (click)="openUploadConfigDialogCommon()"
+                    matTooltip="Upload and validate a configuration file"
+                    style="background: linear-gradient(90deg, #1976d2 0%, #21ba45 100%); color: #fff; font-weight: 700; font-size: 1.08rem; box-shadow: 0 4px 16px rgba(33,186,69,0.10); border-radius: 999px; padding: 0.85rem 2.2rem; display: flex; align-items: center; gap: 0.7rem; letter-spacing: 0.01em; transition: background 0.18s, box-shadow 0.18s, transform 0.13s;">
+              <mat-icon style="font-size: 2rem; margin-right: 0.7rem;">upload_file</mat-icon>
+              <span>Upload Config File</span>
             </button>
             <button *ngIf="!isFrameworkTeam" mat-stroked-button color="accent" (click)="navigate.emit({ view: 'search-by-filler' })">
               <mat-icon>search</mat-icon>
@@ -1165,7 +1173,7 @@ import { mapConfToPrefill } from './dynamic-form/conf-parser';
 }
   `]
 })
-export class DashboardComponent implements OnInit, AfterViewInit, OnChanges {
+export class DashboardComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   @Input() team: 'application' | 'framework' = 'application';
   @Output() navigate = new EventEmitter<any>();
   @Output() back = new EventEmitter<void>();
@@ -1202,6 +1210,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnChanges {
   selectedTabIndexInWindow = 0;
   buttonHover = false;
   isFrameworkTeam = false;
+  private destroy$ = new Subject<void>();
 
   constructor(private schemaService: SchemaService, private router: Router, private dialog: MatDialog, private route: ActivatedRoute) {}
 
@@ -1343,17 +1352,19 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnChanges {
   loadTemplates() {
     if (this.isLoading) return; // Prevent multiple simultaneous loads
     this.isLoading = true;
-    this.schemaService.listTemplates().subscribe({
-      next: (templates) => {
-        this.allTemplates = templates;
-        this.applyFilters();
-        this.isLoading = false;
-      },
-      error: (error) => {
-        console.error('Error loading templates:', error);
-        this.isLoading = false;
-      }
-    });
+    this.schemaService.listTemplates()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (templates) => {
+          this.allTemplates = templates;
+          this.applyFilters();
+          this.isLoading = false;
+        },
+        error: (error) => {
+          console.error('Error loading templates:', error);
+          this.isLoading = false;
+        }
+      });
   }
 
   applyFilters() {
@@ -1581,5 +1592,10 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnChanges {
         this.mode = 'use';
       }
     });
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

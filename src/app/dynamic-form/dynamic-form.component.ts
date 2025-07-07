@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, Output, EventEmitter, OnChanges, SimpleChanges, ChangeDetectorRef, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, OnInit, Input, Output, EventEmitter, OnChanges, SimpleChanges, ChangeDetectorRef, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ValidatorFn, ReactiveFormsModule, FormArray, FormControl, AbstractControl } from '@angular/forms';
 import { CommonModule, NgIf, NgFor } from '@angular/common';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -32,7 +32,7 @@ import { FillerNameDialogComponent } from './filler-name-dialog.component';
   templateUrl: './dynamic-form.component.html',
   styleUrls: ['./dynamic-form.component.scss']
 })
-export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
+export class DynamicForm implements OnInit, OnChanges, AfterViewInit, OnDestroy {
   @Input() mode: 'create' | 'edit' | 'use' | 'preview' | 'list' | 'submissions' | 'history' = 'use';
   @Input() templateName: string | null = null;
   @Input() prefillVersion: number | null = null;
@@ -227,22 +227,22 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
       this.prefillVersion = history.state.version;
     }
 
-    this.route.data.subscribe(data => {
+    this.route.data.pipe(takeUntil(this.destroy$)).subscribe(data => {
       this.mode = data['mode'] || this.mode; // Set mode from route data first
 
       // Now, proceed with the original logic, which will use the correct mode
       if (this.mode === 'create') {
-        this.schemaService.listTemplates().subscribe(templates => {
+        this.schemaService.listTemplates().pipe(takeUntil(this.destroy$)).subscribe(templates => {
           this.importTemplates = templates;
         });
       }
 
-      this.route.paramMap.subscribe(params => {
+      this.route.paramMap.pipe(takeUntil(this.destroy$)).subscribe(params => {
         const versionParam = params.get('version');
         this.submissionVersion = versionParam ? +versionParam : null;
         this.templateName = params.get('templateName') || this.templateName;
 
-        this.route.queryParamMap.subscribe(qp => {
+        this.route.queryParamMap.pipe(takeUntil(this.destroy$)).subscribe(qp => {
           this.isDuplicatedEdit = qp.get('duplicated') === 'true';
           this.setupComponent();
         });
@@ -250,7 +250,7 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
     });
 
     // --- Fix for boolean visibleIf glitch: subscribe to all boolean fields and trigger change detection ---
-    this.form?.valueChanges?.subscribe(() => {
+    this.form?.valueChanges?.pipe(takeUntil(this.destroy$)).subscribe(() => {
       this.cdr.markForCheck();
       this.cdr.detectChanges();
     });
@@ -261,7 +261,7 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit {
     }
 
     if (this.form) {
-      this.form.valueChanges.subscribe(() => {
+      this.form.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
         this.form.markAllAsTouched();
       });
     }
@@ -1071,5 +1071,10 @@ loadTemplate() {
     if (control instanceof FormArray) {
       control.removeAt(index);
     }
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }
