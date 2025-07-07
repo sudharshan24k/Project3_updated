@@ -24,6 +24,9 @@ import { ConfigValidatorBoxComponent, ConfigValidationFieldResult } from './conf
       <div class="upload-dialog-container">
         <!-- Header -->
         <div class="dialog-header">
+         <button mat-icon-button class="close-button enhanced-close" (click)="onCancel()" aria-label="Close dialog">
+            <mat-icon fontIcon="close" class="close-x-icon"></mat-icon>
+          </button>
           <div class="header-content">
             <mat-icon class="header-icon">cloud_upload</mat-icon>
             <div class="header-text">
@@ -31,9 +34,7 @@ import { ConfigValidatorBoxComponent, ConfigValidationFieldResult } from './conf
               <p class="header-subtitle">Validate or create submissions from existing config files</p>
             </div>
           </div>
-          <button mat-icon-button class="close-button enhanced-close" (click)="onCancel()" aria-label="Close dialog">
-            <mat-icon fontIcon="close" class="close-x-icon"></mat-icon>
-          </button>
+         
         </div>
 
         <!-- GitHub Integration Button -->
@@ -220,6 +221,7 @@ import { ConfigValidatorBoxComponent, ConfigValidationFieldResult } from './conf
                     </div>
                   </mat-option>
                 </mat-autocomplete>
+                 <mat-icon matSuffix>dns</mat-icon>
               </mat-form-field>
 
               <!-- Version Selection -->
@@ -228,7 +230,7 @@ import { ConfigValidatorBoxComponent, ConfigValidationFieldResult } from './conf
                 <mat-select [(ngModel)]="selectedVersionTag" (selectionChange)="onVersionSelected()">
                   <mat-option *ngFor="let v of availableVersions" [value]="v">
                     <div class="version-option">
-                      <mat-icon>version</mat-icon>
+                  
                       <span>{{ v }}</span>
                     </div>
                   </mat-option>
@@ -242,24 +244,21 @@ import { ConfigValidatorBoxComponent, ConfigValidationFieldResult } from './conf
                 <mat-select [(ngModel)]="selectedEnvironment">
                   <mat-option value="PROD">
                     <div class="env-option prod">
-                      <span class="env-letter prod">P</span>
-                      <span>(PROD)</span>
+                      <span>PROD</span>
                     </div>
                   </mat-option>
                   <mat-option value="DEV">
                     <div class="env-option dev">
-                      <span class="env-letter dev">D</span>
-                      <span>(DEV)</span>
+                      <span>DEV</span>
                     </div>
                   </mat-option>
                   <mat-option value="COB">
                     <div class="env-option cob">
-                      <span class="env-letter cob">B</span>
-                      <span>(COB)</span>
+                      <span>COB</span>
                     </div>
                   </mat-option>
                 </mat-select>
-                <mat-icon matSuffix>environment</mat-icon>
+                <mat-icon matSuffix>settings</mat-icon>
               </mat-form-field>
 
               <!-- Action Buttons -->
@@ -369,12 +368,12 @@ import { ConfigValidatorBoxComponent, ConfigValidationFieldResult } from './conf
         display: flex;
         justify-content: center;
         align-items: center;
-        margin-top: 1rem;
         padding: 2rem 2.5rem 1.5rem 2.5rem;
         background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
         border-bottom: 1px solid #dee2e6;
         border-radius: 16px 16px 0 0;
         position: relative;
+      
       }
 
       /* Header content - centered */
@@ -561,11 +560,43 @@ import { ConfigValidatorBoxComponent, ConfigValidationFieldResult } from './conf
       background: #36d399;
     }
 
-    .dialog-content {
-      flex: 1;
-      padding: 2rem;
-      overflow-y: auto;
-    }
+  .dialog-content {
+  flex: 1;
+  padding: 0.75rem !important; /* Significantly reduced */
+  overflow-y: auto;
+  max-height: 400px;
+}
+
+/* Compress all form fields */
+.dialog-content mat-form-field {
+  margin: 0 0 2px 0 !important;
+  
+  .mat-form-field-wrapper {
+    padding-bottom: 0.1em !important;
+    margin: 0 !important;
+  }
+  
+  .mat-form-field-flex {
+    padding: 0.3em 0.5em 0 0.5em !important;
+  }
+}
+
+/* Reduce text spacing */
+.dialog-content h3,
+.dialog-content p {
+  margin: 0 0 4px 0 !important;
+  line-height: 1.2 !important;
+}
+
+/* Compress buttons */
+.dialog-content .action-buttons {
+  margin: 4px 0 0 0 !important;
+  padding: 0 !important;
+}
+
+.dialog-content button {
+  margin: 2px 0 !important;
+}
 
     .step-content {
       animation: fadeIn 0.3s ease;
@@ -726,18 +757,30 @@ import { ConfigValidatorBoxComponent, ConfigValidationFieldResult } from './conf
     }
     .card-content {
       text-align: center;
-      padding: 1.2rem 1.2rem 1.2rem 1.2rem;
+      padding: 1.5rem 1.2rem; /* Increased top/bottom padding */
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      height: 100%;
+      justify-content: flex-start; /* Changed from center to flex-start */
+      min-height: 300px; /* Use min-height instead of height: 100% */
+      position: relative;
+      gap: 1rem; /* Add space between elements */
     }
+
     .card-icon {
-      font-size: 2.2rem;
-      margin-bottom: 0.7rem;
-      color: #3b82f6;
+      position: relative;
+      z-index: 20;
+      flex-shrink: 0;
+      font-size: 2.5rem !important;
+      width: 2.5rem !important; /* Explicit width */
+      height: 2.5rem !important; /* Explicit height */
+      margin-bottom: 0.5rem; /* Add bottom margin */
+      display: flex; /* Ensure proper icon rendering */
+      align-items: center;
+      justify-content: center;
     }
+
+
     .card-content h4 {
       margin: 0 0 0.7rem 0;
       color: #222;
@@ -750,31 +793,47 @@ import { ConfigValidatorBoxComponent, ConfigValidationFieldResult } from './conf
       font-size: 1rem;
       font-weight: 400;
     }
+      /* Horizontal feature chips layout */
     .card-features {
+
       display: flex;
-      flex-direction: column;
-      gap: 0.3rem;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 0.5rem;
       width: 100%;
-      align-items: center;
+      justify-content: center;
     }
+
     .feature-chip {
       display: flex;
       align-items: center;
-      gap: 0.4rem;
-      background: #f8fafc;
-      border-radius: 6px;
-      padding: 0.25rem 0.7rem;
-      font-size: 0.97rem;
-      color: #3b82f6;
-      font-weight: 400;
-      box-shadow: none;
+      gap: 0.5rem;
+      padding: 0.4rem 0.8rem;
+      background: #f8f9fa;
+      border-radius: 16px;
+      font-size: 0.75rem;
+      color: #555;
+      border: 1px solid #e9ecef;
+      width: auto;
+      min-width: auto;
+      flex-shrink: 0;
     }
+
     .feature-chip mat-icon {
-      font-size: 1rem;
-      width: 1rem;
-      height: 1rem;
-      color: #36d399;
+      font-size: 1rem !important;
+      width: 1rem !important;
+      height: 1rem !important;
+      
     }
+      .configuration-form mat-form-field {
+        margin-bottom: 8px !important;
+  }
+
+    .configuration-form .action-buttons {
+      margin-top: 8px;
+    }
+
+
     .configuration-form h3 {
       text-align: center;
       margin-bottom: 2rem;
@@ -795,28 +854,9 @@ import { ConfigValidatorBoxComponent, ConfigValidationFieldResult } from './conf
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      font-weight: bold;
       font-size: 1.05rem;
     }
-    .env-option.prod {
-      color: #21ba45 !important; /* vivid green */
-      font-weight: bold;
-    }
-    .env-option.dev {
-      color: #2185d0 !important; /* vivid blue */
-      font-weight: bold;
-    }
-    .env-option.cob {
-      color: #f2711c !important; /* vivid orange */
-      font-weight: bold;
-    }
-    /* Make sure selected and hovered options are also bold and visible */
-    .mat-option.mat-selected .env-option,
-    .mat-option:hover .env-option {
-      filter: brightness(0.85);
-      text-shadow: 0 1px 2px rgba(0,0,0,0.08);
-      background: rgba(0,0,0,0.02);
-    }
+
     .action-buttons {
       display: flex;
       gap: 1rem;

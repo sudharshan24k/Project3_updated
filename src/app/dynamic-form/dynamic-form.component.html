@@ -1,13 +1,6 @@
 <div class="dynamic-form-container">
       <header class="page-header">
-        <button *ngIf="mode === 'create'" (click)="goBack()" class="back-button">
-          <mat-icon>arrow_back</mat-icon>
-          <span>Back</span>
-        </button>
-        <button (click)="goBack()" class="back-button" *ngIf="mode !== 'create'">
-          <mat-icon>arrow_back</mat-icon>
-          <span>Back</span>
-        </button>
+       
         <div>
           <h1 class="form-title">{{ title }}</h1>
           <p class="form-subtitle" *ngIf="schema.description">{{ schema.description }}</p>

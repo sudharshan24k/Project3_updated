@@ -1,6 +1,8 @@
 :host {
   display: block;
+  padding-top: 25px; /* Add this line */
 }
+
 .dynamic-form-container {
   max-width: 1600px;
   margin: 0 auto;
@@ -9,17 +11,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 5rem;
   padding: 0 1rem;
 }
-.back-button {
-  background: none; border: none; padding: 0; display: flex;
-  align-items: center; gap: 0.5rem; color: var(--primary-color);
-  font-size: 1rem; font-weight: 700; cursor: pointer;
-}
-.back-button:hover {
-  text-decoration: underline;
-}
+
+
 .form-title { margin: 0; font-size: 1.8rem; }
 .form-subtitle { margin: 0.25rem 0 0; color: var(--text-muted-color); }
 .header-actions button {

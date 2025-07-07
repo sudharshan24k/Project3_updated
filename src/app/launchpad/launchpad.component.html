@@ -1,28 +1,72 @@
 <div class="launchpad-container">
   <div class="launchpad-content">
+    <!-- Modern Header Section -->
     <div class="header">
-      <mat-icon class="header-icon">launch</mat-icon>
-      <h1>Configuration Template Generator and Management</h1>
-      <p>Your central hub for creating and managing form templates for all teams</p>
+      <div class="header-icon-wrapper">
+        <mat-icon class="header-icon">rocket_launch</mat-icon>
+      </div>
+      <h1>Configuration Template Generator</h1>
+      <p class="subtitle">Your central hub for creating and managing form templates for all teams</p>
+      <div class="header-decoration"></div>
     </div>
 
-    <div class="button-grid">
-      <mat-card class="action-card" (click)="navigateToDashboard()">
-        <mat-card-content>
-          <mat-icon class="card-icon">dashboard</mat-icon>
-          <h2>View Dashboard</h2>
-          <p>See all existing templates, view submissions, and manage versions.</p>
-        </mat-card-content>
-      </mat-card>
+    <!-- Modern Action Cards Grid -->
+    <div class="action-grid">
+      <div class="action-card dashboard-card" (click)="navigateToDashboard()">
+        <div class="card-background"></div>
+        <div class="card-content">
+          <div class="icon-wrapper">
+            <mat-icon class="card-icon">dashboard</mat-icon>
+          </div>
+          <h2>Application Team Dashboard</h2>
+          <div class="team-badge application-badge">
+            <mat-icon>apps</mat-icon>
+            <span>Application Team</span>
+          </div>
+          <p>Access existing templates, view submissions, and manage configurations for your applications.</p>
+          <div class="card-arrow">
+            <mat-icon>arrow_forward</mat-icon>
+          </div>
+        </div>
+        <div class="card-glow"></div>
+      </div>
 
-      <mat-card class="action-card" (click)="navigateToCreateTemplate()">
-        <mat-card-content>
-          <mat-icon class="card-icon">add_circle_outline</mat-icon>
-          <h2>Master Template Management</h2>
-          <p class="note">NOTE: Only for FRAMEWORK TEAM</p>
-          <p>Design a new form from scratch using the powerful schema editor.</p>
-        </mat-card-content>
-      </mat-card>
+      <div class="action-card template-card" (click)="navigateToCreateTemplate()">
+        <div class="card-background"></div>
+        <div class="card-content">
+          <div class="icon-wrapper">
+            <mat-icon class="card-icon">design_services</mat-icon>
+          </div>
+          <h2>Framework Team Dashboard</h2>
+          <div class="team-badge framework-badge">
+            <mat-icon>verified</mat-icon>
+            <span>Framework Team</span>
+          </div>
+          <p>Design and create new form templates using our advanced schema editor and management tools.</p>
+          <div class="card-arrow">
+            <mat-icon>arrow_forward</mat-icon>
+          </div>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+    </div>
+
+    <!-- Modern Footer -->
+    <div class="footer">
+      <div class="feature-highlights">
+        <div class="feature">
+          <mat-icon>security</mat-icon>
+          <span>Secure</span>
+        </div>
+        <div class="feature">
+          <mat-icon>speed</mat-icon>
+          <span>Fast</span>
+        </div>
+        <div class="feature">
+          <mat-icon>cloud</mat-icon>
+          <span>Cloud-Based</span>
+        </div>
+      </div>
     </div>
   </div>
-</div> 
+</div>

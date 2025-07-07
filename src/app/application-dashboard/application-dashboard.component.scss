@@ -211,36 +211,3 @@
 .group-content .template-row:nth-child(even) {
   background: linear-gradient(135deg, var(--background-color) 0%, var(--surface-color) 100%);
 }
-
-.upload-config-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  background: transparent;
-  border: 2px solid #667eea;
-  color: #667eea;
-  border-radius: 20px;
-  padding: 1.1rem 2rem;
-  font-size: 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
-  margin-left: 1.5rem;
-  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.08);
-  outline: none;
-}
-.upload-config-btn mat-icon {
-  font-size: 1.4rem;
-  color: #667eea;
-}
-.upload-config-btn:hover, .upload-config-btn:focus {
-  background: #f3f6fd;
-  color: #4f46e5;
-  border-color: #4f46e5;
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.13);
-}
-.upload-config-btn span {
-  font-weight: 600;
-  font-size: 1.08rem;
-  letter-spacing: 0.01em;
-} 

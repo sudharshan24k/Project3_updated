@@ -33,15 +33,15 @@ import { takeUntil } from 'rxjs/operators';
       <div *ngIf="mode === 'list'">
         <header class="dashboard-header" style="display: flex; align-items: center; width: 100%; max-width: 100vw; overflow-x: hidden; box-sizing: border-box;">
           <div style="flex: 0 0 auto; margin-left: 5px;">
-            <button mat-stroked-button color="primary" (click)="goToLaunchpad()">
+            <button mat-stroked-button color="primary"   class="upload-config-btn" (click)="goToLaunchpad()">
               <mat-icon>arrow_back</mat-icon>
               Back to Launchpad
             </button>
           </div>
-          <div style="flex: 1 1 0; text-align: center; min-width: 0;">
+          <div style="flex: 1 1 0; text-align: center; margin-left: 15em; min-width: 0;">
             <h1 style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ isFrameworkTeam ? 'Configuration Template Generator and Management' : 'Configuration File Generator' }}</h1>
             <p class="subtitle" *ngIf="!isFrameworkTeam">Use and Fill out your Configuration files.</p>
-            <p class="subtitle" *ngIf="isFrameworkTeam">Manage, edit, and create templates for the framework team.</p>
+            <p class="subtitle" *ngIf="isFrameworkTeam">Manage, edit, and create templates for the framework team</p>
           </div>
           <div style="flex: 0 0 auto; margin-right: 5px; display: flex; gap: 0.5rem; align-items: center;">
             <button *ngIf="!isFrameworkTeam" 
@@ -49,14 +49,14 @@ import { takeUntil } from 'rxjs/operators';
                     color="accent" 
                     class="upload-config-btn"
                     (click)="openUploadConfigDialogCommon()"
-                    matTooltip="Upload and validate a configuration file"
-                    style="background: linear-gradient(90deg, #1976d2 0%, #21ba45 100%); color: #fff; font-weight: 700; font-size: 1.08rem; box-shadow: 0 4px 16px rgba(33,186,69,0.10); border-radius: 999px; padding: 0.85rem 2.2rem; display: flex; align-items: center; gap: 0.7rem; letter-spacing: 0.01em; transition: background 0.18s, box-shadow 0.18s, transform 0.13s;">
-              <mat-icon style="font-size: 2rem; margin-right: 0.7rem;">upload_file</mat-icon>
+                    matTooltip="Upload and validate a configuration file">
+              <mat-icon>upload_file</mat-icon>
               <span>Upload Config File</span>
             </button>
-            <button *ngIf="!isFrameworkTeam" mat-stroked-button color="accent" (click)="navigate.emit({ view: 'search-by-filler' })">
+
+            <button *ngIf="!isFrameworkTeam"  class="upload-config-btn" mat-stroked-button color="accent" (click)="navigate.emit({ view: 'search-by-filler' })">
               <mat-icon>search</mat-icon>
-              Search Submitted Forms by User
+              config by User
             </button>
             <button *ngIf="isFrameworkTeam" mat-raised-button color="primary" class="big-create-btn" (click)="showCreateTemplate()" style="height: 52px; min-width: 220px; border-radius: 28px; box-shadow: 0 2px 12px rgba(23,78,166,0.10); display: flex; align-items: center; gap: 0.7rem; font-size: 1.18rem; font-weight: 600; letter-spacing: 0.01em;">
               <mat-icon style="font-size: 2.2rem;">add</mat-icon>
@@ -95,7 +95,7 @@ import { takeUntil } from 'rxjs/operators';
           </div>
           <button
             mat-stroked-button
-            class="advanced-toggle"
+              class="upload-config-btn"
             (click)="toggleAdvancedSearch()"
             [class.active]="advancedSearch"
           >
@@ -395,30 +395,66 @@ import { takeUntil } from 'rxjs/operators';
     </div>
   `,
   styles: [`
-    .dashboard-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 2.5rem;
-      background: linear-gradient(90deg, var(--primary-color-light) 0%, var(--primary-color) 100%);
-      border-radius: 1rem;
-      padding: 2rem 2.5rem 1.5rem 2.5rem;
-      box-shadow: 0 4px 24px var(--shadow-color-dark);
-      background-color: var(--surface-color);
-    }
-    .dashboard-header h1 {
-        margin-bottom: 0.25rem;
-    }
-    .subtitle {
-        margin: 0;
-        color: var(--text-muted-color);
-        font-size: 1.1rem;
-    }
-    .dashboard-header button {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2.5rem;
+  background: linear-gradient(90deg, var(--primary-color-light) 0%, var(--primary-color) 100%);
+  border-radius: 1rem;
+  padding: 2rem 2.5rem;
+  box-shadow: 0 4px 24px var(--shadow-color-dark);
+  background-color: var(--surface-color);
+  position: relative;
+  height: 160px; /* Increased fixed height for better spacing */
+  overflow: hidden; /* Prevent any scrolling */
+  box-sizing: border-box; /* Ensure padding is included in height */
+}
+
+.dashboard-header h1 {
+  margin-bottom: 0;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 40px; /* Positioned from top */
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: calc(100% - 400px);
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--text-muted-color);
+  font-size: 1.1rem;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 95px; /* Increased gap - 55px below h1 for more vertical space */
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: calc(100% - 400px);
+  line-height: 1.2;
+}
+
+.dashboard-header button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Ensure the middle div doesn't interfere with centering */
+.dashboard-header > div:nth-child(2) {
+  position: static;
+}
+
     .templates-list {
       margin-top: 1.5rem;
     }
@@ -1102,20 +1138,22 @@ import { takeUntil } from 'rxjs/operators';
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 16px var(--shadow-color-light);
+  box-shadow: 0 4px 16px rgba(106, 170, 223, 0.2);
   margin-left: 1.5rem;
   margin-top: 0.5rem;
   padding: 0;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3d1e6 100%);
+  background: linear-gradient(135deg, rgb(106, 170, 223) 0%, rgb(86, 150, 203) 100%);
   position: relative;
   overflow: hidden;
   transition: background 0.22s, box-shadow 0.18s;
 }
+
 .big-create-btn mat-icon {
   display: none;
 }
+
 .big-create-btn span {
-  color: #111;
+  color: white;
   font-size: 1.3rem;
   font-weight: 600;
   margin-left: 0.5rem;
@@ -1126,6 +1164,7 @@ import { takeUntil } from 'rxjs/operators';
   transform: translateY(0);
   display: inline-block;
 }
+
 .big-create-btn::after {
   content: '+';
   position: absolute;
@@ -1133,44 +1172,54 @@ import { takeUntil } from 'rxjs/operators';
   left: 50%;
   transform: translate(-50%, -50%) scale(0.7);
   font-size: 2.5rem;
-  color: #1976d2;
+  color: white;
   opacity: 0;
   pointer-events: none;
   z-index: 1;
   transition: font-size 0.22s, opacity 0.22s, color 0.22s;
 }
+
 .big-create-btn:hover, .big-create-btn:focus {
-  background: linear-gradient(135deg, #e3f0ff 0%, #b0c4de 100%);
+  background: linear-gradient(135deg, rgb(96, 160, 213) 0%, rgb(76, 140, 193) 100%);
+  box-shadow: 0 6px 20px rgba(106, 170, 223, 0.4);
   outline: none;
 }
+
 .big-create-btn:hover span, .big-create-btn:focus span {
   opacity: 0;
   transform: translateY(40px);
   pointer-events: none;
 }
+
 .big-create-btn:hover::after, .big-create-btn:focus::after {
   font-size: 5.5rem;
   opacity: 1;
-  color: #1976d2;
+  color: white;
 }
 
 /* Dark mode styles */
 .dark-theme .big-create-btn {
-  background: linear-gradient(135deg, #232b36 0%, #2d3a4a 100%);
-  box-shadow: 0 4px 24px #0a1922;
+  background: linear-gradient(135deg, rgb(86, 150, 203) 0%, rgb(66, 130, 183) 100%);
+  box-shadow: 0 4px 24px rgba(106, 170, 223, 0.3);
 }
+
 .dark-theme .big-create-btn span {
-  color: #fff;
+  color: white;
 }
+
 .dark-theme .big-create-btn::after {
-  color: #90caf9;
+  color: white;
 }
+
 .dark-theme .big-create-btn:hover, .dark-theme .big-create-btn:focus {
-  background: linear-gradient(135deg, #1a2330 0%, #22304a 100%);
+  background: linear-gradient(135deg, rgb(76, 140, 193) 0%, rgb(56, 120, 173) 100%);
+  box-shadow: 0 6px 24px rgba(106, 170, 223, 0.4);
 }
+
 .dark-theme .big-create-btn:hover::after, .dark-theme .big-create-btn:focus::after {
-  color: #90caf9;
+  color: white;
 }
+
   `]
 })
 export class DashboardComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy {
@@ -1557,7 +1606,7 @@ openUploadConfigDialogCommon() {
   // Open dialog in generic mode (no template/version preselected)
   const dialogRef = this.dialog.open(UploadConfigDialogComponent, {
     width: '60vw',
-    maxWidth: '95vw',
+    maxWidth: '65vw',
     height: 'auto',
     panelClass: ['centered-dialog', 'transparent-dialog'], // Add transparent class
     disableClose: true,

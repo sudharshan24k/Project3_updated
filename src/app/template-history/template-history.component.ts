@@ -17,10 +17,7 @@ import { InteractiveDialogComponent } from '../interactive-dialog.component';
   template: `
     <div class="container">
       <header class="page-header">
-        <button (click)="goBack()" class="back-button">
-          <mat-icon>arrow_back</mat-icon>
-          <span>Back</span>
-        </button>
+        
         <h1>Version History for "{{ templateName }}"</h1>
       </header>
 
@@ -90,23 +87,7 @@ import { InteractiveDialogComponent } from '../interactive-dialog.component';
     /* Basic styles, similar to dashboard */
     .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
     .page-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; }
-    .back-button { 
-      background: none; 
-      border: none; 
-      cursor: pointer; 
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      color: var(--primary-color);
-      font-size: 1rem;
-      font-weight: 700;
-      padding: 0.5rem 1rem;
-      border-radius: 8px;
-      transition: background-color 0.2s;
-    }
-    .back-button:hover {
-      background-color: rgba(0, 0, 0, 0.05);
-    }
+    
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 1rem; border-bottom: 1px solid var(--border-color); text-align: left; }
 
