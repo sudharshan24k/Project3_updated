@@ -12,6 +12,7 @@ from pydantic import BaseModel
 import os
 from bson import ObjectId
 from pymongo.errors import DuplicateKeyError
+import requests
 
 from database import template_collection, submission_collection, response_collection, template_version_collection, app_team_template_collection, fillername_submission_collection
 from models import TemplateModel, SubmissionModel, ResponseModel, TemplateVersionModel
@@ -25,7 +26,7 @@ app = FastAPI(title="Form Template & Submission API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Adjust for production!
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -707,4 +708,26 @@ async def delete_app_team_template(name: str):
     if delete_result.deleted_count == 0:
         raise HTTPException(status_code=404, detail=f"App Team Template {name} not found")
     return JSONResponse(status_code=status.HTTP_200_OK, content={"message": f"App Team Template '{name}' deleted."})
+
+GITHUB_CLIENT_ID = os.environ.get("GITHUB_CLIENT_ID", "YOUR_CLIENT_ID")
+GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET", "YOUR_CLIENT_SECRET")
+
+@app.post("/github/oauth/callback")
+async def github_oauth_callback(request: Request):
+    data = await request.json()
+    code = data.get("code")
+    if not code:
+        return {"error": "Missing code"}
+    # Exchange code for access token
+    resp = requests.post(
+        "https://github.com/login/oauth/access_token",
+        headers={"Accept": "application/json"},
+        data={
+            "client_id": GITHUB_CLIENT_ID,
+            "client_secret": GITHUB_CLIENT_SECRET,
+            "code": code,
+        },
+    )
+    token_data = resp.json()
+    return token_data
 

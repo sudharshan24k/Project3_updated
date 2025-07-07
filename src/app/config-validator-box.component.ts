@@ -29,7 +29,6 @@ export class ConfigValidatorBoxComponent implements OnInit, OnChanges {
   @Input() parsedData: any = {};
   @Input() schema: any = {};
   @Input() extraFields: string[] = [];
-  @Input() debugMode: boolean = false;
   @Output() close = new EventEmitter();
 
   validationResults: any[] = [];
@@ -51,20 +50,22 @@ export class ConfigValidatorBoxComponent implements OnInit, OnChanges {
       this.validationErrors = this.data.validationErrors || [];
       this.warnings = this.data.warnings || [];
     }
+    if (this.syntaxErrors && this.syntaxErrors.length > 0) {
+      this.overallStatus = 'fail';
+    }
     this.updateValidation();
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['parsedData'] || changes['schema'] || changes['extraFields']) {
+    if (changes['parsedData'] || changes['schema'] || changes['extraFields'] || changes['syntaxErrors']) {
+      if (this.syntaxErrors && this.syntaxErrors.length > 0) {
+        this.overallStatus = 'fail';
+      }
       this.updateValidation();
     }
   }
 
   updateValidation() {
-    if (this.debugMode) {
-      this.debugInfo = debugFieldVisibility(this.parsedData, this.schema);
-    }
-    
     this.validationResults = getConfigValidationFieldResults(
       this.parsedData, 
       this.schema, 
@@ -129,11 +130,6 @@ export class ConfigValidatorBoxComponent implements OnInit, OnChanges {
       case 'hidden': return 'status-hidden';
       default: return 'status-unknown';
     }
-  }
-
-  toggleDebugMode() {
-    this.debugMode = !this.debugMode;
-    this.updateValidation();
   }
 
   getHiddenFields() {

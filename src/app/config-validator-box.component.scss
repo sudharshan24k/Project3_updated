@@ -523,27 +523,32 @@
 }
 
 .config-validator-modal {
-  background: var(--surface-color);
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  max-width: 90vw;
+  max-width: 700px;
+  width: 90vw;
   max-height: 90vh;
-  width: 800px;
+  overflow-y: auto;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.18);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  animation: slideIn 0.3s ease-out;
+  position: relative;
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+// Make the main content area scrollable if it overflows
+.config-validator-modal > *:not(.validator-footer) {
+  flex-shrink: 0;
+}
+
+.summary-section,
+.error-section,
+.warning-section,
+.field-results-section,
+.debug-section,
+.debug-info {
+  overflow-y: auto;
+  max-height: 40vh;
 }
 
 .validator-header {
@@ -1032,4 +1037,90 @@
 :host-context(.dark-theme) .error-text,
 :host-context(.dark-theme) .warning-text {
   color: var(--text-muted-color);
+}
+
+.centered-header {
+  justify-content: center;
+  text-align: center;
+}
+
+.centered-title {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.status-text.status-success {
+  color: #2ecc40;
+  font-weight: bold;
+  font-size: 1.5rem;
+}
+
+.status-text.status-fail {
+  color: #ff4136;
+  font-weight: bold;
+  font-size: 1.5rem;
+}
+
+.syntax-error-item .error-text {
+  color: #ff4136;
+  font-weight: bold;
+}
+
+.overall-syntax-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffeaea;
+  border: 2px solid #ff4136;
+  color: #ff4136;
+  font-weight: bold;
+  font-size: 1.1rem;
+  padding: 0.75rem 1.5rem;
+  margin: 1rem auto 0.5rem auto;
+  border-radius: 8px;
+  max-width: 90%;
+}
+
+.overall-syntax-error mat-icon {
+  margin-right: 0.5rem;
+}
+
+.syntax-error-list-container {
+  margin: 1rem 0 1.5rem 0;
+  background: #fff6f6;
+  border: 1px solid #ff4136;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.syntax-error-list-label {
+  font-weight: bold;
+  color: #ff4136;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.syntax-error-list {
+  max-height: 140px;
+  overflow-y: auto;
+}
+.syntax-error-item .error-text {
+  color: #ff4136;
+  font-weight: bold;
+  font-size: 0.98rem;
+}
+.summary-section.disabled-section {
+  opacity: 0.5;
+  pointer-events: none;
+  filter: grayscale(0.7);
+}
+.summary-disabled-msg {
+  color: #888;
+  font-style: italic;
+  text-align: center;
+  margin-bottom: 1rem;
 }

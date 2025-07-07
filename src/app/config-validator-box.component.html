@@ -1,26 +1,57 @@
 <div class="config-validator-overlay" (click)="onOverlayClick($event)">
   <div class="config-validator-modal" (click)="$event.stopPropagation()">
+    <!-- Syntax Errors Section (show at the very top if any) -->
+    <div class="syntax-error-section" *ngIf="syntaxErrors && syntaxErrors.length > 0">
+      <div class="syntax-error-alert">
+        <mat-icon color="warn">error</mat-icon>
+        <span><strong>Syntax Error{{ syntaxErrors.length > 1 ? 's' : '' }}:</strong></span>
+        <ul>
+          <li *ngFor="let err of syntaxErrors">{{ err }}</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Overall Syntax Error Indicator and List -->
+    <div *ngIf="syntaxErrors && syntaxErrors.length > 0">
+      <div class="overall-syntax-error">
+        <mat-icon color="warn">error</mat-icon>
+        <span class="overall-syntax-error-text">
+          Syntax error(s) detected in the configuration file. Please fix them before proceeding.
+        </span>
+      </div>
+      <div class="syntax-error-list-container">
+        <div class="syntax-error-list-label">
+          <mat-icon color="warn">report_problem</mat-icon>
+          {{ syntaxErrors.length }} Syntax Error{{ syntaxErrors.length > 1 ? 's' : '' }}:
+        </div>
+        <div class="syntax-error-list">
+          <div class="syntax-error-item" *ngFor="let err of syntaxErrors">
+            <span class="error-text">{{ err }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Header -->
     <div class="validator-header">
-      <div class="header-content">
-        <div class="title-section">
+      <div class="header-content centered-header">
+        <div class="title-section centered-title">
           <h2 class="validator-title">
-            <span class="status-icon" [class]="'status-' + overallStatus">
-              {{ overallStatus === 'success' ? '✓' : '✗' }}
+            <span class="status-text" [ngClass]="statusClass">
+              {{ syntaxErrors && syntaxErrors.length > 0 ? 'Config file has syntax errors.' : statusText }}
             </span>
-            Configuration Validation Results
           </h2>
           <p class="form-name">{{ formName }}</p>
         </div>
-        <button class="close-button" (click)="onClose()" aria-label="Close">
-          <span class="close-icon">×</span>
-        </button>
       </div>
     </div>
 
     <!-- Summary Cards -->
-    <div class="summary-section">
-      <div class="summary-cards">
+    <div class="summary-section" [class.disabled-section]="syntaxErrors && syntaxErrors.length > 0">
+      <div *ngIf="syntaxErrors && syntaxErrors.length > 0" class="summary-disabled-msg">
+        Validation skipped due to syntax errors.
+      </div>
+      <div class="summary-cards" *ngIf="!syntaxErrors || syntaxErrors.length === 0">
         <div class="summary-card total">
           <div class="card-number">{{ summary.total }}</div>
           <div class="card-label">Total Fields</div>
@@ -44,16 +75,8 @@
       </div>
     </div>
 
-    <!-- Debug Mode Toggle -->
-    <div class="debug-section" *ngIf="parsedData && schema">
-      <button class="debug-toggle" (click)="toggleDebugMode()" [class.active]="debugMode">
-        <span class="debug-icon">🐛</span>
-        {{ debugMode ? 'Hide' : 'Show' }} Debug Info
-      </button>
-    </div>
-
-    <!-- Debug Information -->
-    <div class="debug-info" *ngIf="debugMode && debugInfo.length > 0">
+    <!-- Debug Information (always visible if present) -->
+    <div class="debug-info" *ngIf="debugInfo.length > 0">
       <h3>Debug Information</h3>
       <div class="debug-table">
         <div class="debug-row header">
@@ -78,8 +101,8 @@
       </div>
     </div>
 
-    <!-- Error Messages -->
-    <div class="error-section" *ngIf="validationErrors.length > 0">
+    <!-- Error Messages (Validation only, if no syntax errors) -->
+    <div class="error-section" *ngIf="validationErrors.length > 0 && (!syntaxErrors || syntaxErrors.length === 0)">
       <h3 class="section-title error-title">
         <span class="error-icon">✗</span>
         Validation Errors ({{ validationErrors.length }})
@@ -91,8 +114,8 @@
       </div>
     </div>
 
-    <!-- Warning Messages -->
-    <div class="warning-section" *ngIf="warnings.length > 0">
+    <!-- Warning Messages (only if no syntax errors) -->
+    <div class="warning-section" *ngIf="warnings.length > 0 && (!syntaxErrors || syntaxErrors.length === 0)">
       <h3 class="section-title warning-title">
         <span class="warning-icon">⚠</span>
         Warnings ({{ warnings.length }})
@@ -104,8 +127,8 @@
       </div>
     </div>
 
-    <!-- Field Validation Results -->
-    <div class="field-results-section" *ngIf="validationResults.length > 0">
+    <!-- Field Validation Results (only if no syntax errors) -->
+    <div class="field-results-section" *ngIf="(!syntaxErrors || syntaxErrors.length === 0) && validationResults.length > 0">
       <!-- Tabs for different field types -->
       <div class="results-tabs">
         <button class="tab-button" 

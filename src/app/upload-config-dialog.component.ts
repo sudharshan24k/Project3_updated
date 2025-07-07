@@ -35,6 +35,36 @@ import { ConfigValidatorBoxComponent, ConfigValidationFieldResult } from './conf
         </button>
       </div>
 
+      <!-- GitHub Integration Button -->
+      <button mat-stroked-button color="primary" (click)="connectToGitHub()" style="margin-bottom: 1.5rem;">
+        <mat-icon svgIcon="github"></mat-icon>
+        Get Config from GitHub
+      </button>
+
+      <!-- GitHub Repo/File Browser -->
+      <div *ngIf="githubStep === 'repos'">
+        <h3>Select a GitHub Repository</h3>
+        <ul>
+          <li *ngFor="let repo of githubRepos" (click)="listGitHubFiles(repo)">
+            {{ repo.full_name }}
+          </li>
+        </ul>
+      </div>
+      <div *ngIf="githubStep === 'files'">
+        <h3>Select a Config File</h3>
+        <ul>
+          <li *ngFor="let file of githubFiles" (click)="file.type === 'dir' ? listGitHubFiles(selectedRepo, getSafePath(file)) : fetchGitHubFile(file)">
+            <mat-icon>{{ file.type === 'dir' ? 'folder' : 'description' }}</mat-icon>
+            {{ file.name }}
+          </li>
+        </ul>
+      </div>
+      <div *ngIf="githubStep === 'preview'">
+        <h3>Preview: {{ selectedFile.name }}</h3>
+        <textarea [value]="githubFileContent" readonly style="width:100%;height:200px;"></textarea>
+        <button mat-raised-button color="primary" (click)="importGitHubFile()">Import as Submission</button>
+      </div>
+
       <!-- Progress Steps -->
       <div class="progress-steps" *ngIf="!showValidatorBox">
         <div class="step" [class.active]="currentStep >= 1" [class.completed]="currentStep > 1">
@@ -288,6 +318,16 @@ import { ConfigValidatorBoxComponent, ConfigValidationFieldResult } from './conf
                   class="next-btn">
             <mat-icon>arrow_forward</mat-icon>
             Next
+          </button>
+
+          <!-- Always show Submit button in step 3 -->
+          <button mat-raised-button
+                  color="accent"
+                  (click)="onSubmitConfig()"
+                  *ngIf="currentStep === 3"
+                  class="submit-btn">
+            <mat-icon>check_circle</mat-icon>
+            Submit
           </button>
         </div>
     </mat-dialog-actions>
@@ -779,6 +819,14 @@ export class UploadConfigDialogComponent {
   currentStep: number = 1;
   isDragOver: boolean = false;
 
+  githubToken: string | null = null;
+  githubRepos: any[] = [];
+  githubFiles: any[] = [];
+  githubFileContent: string = '';
+  githubStep: 'repos' | 'files' | 'preview' | null = null;
+  selectedRepo: any = null;
+  selectedFile: any = null;
+
   constructor(
     public dialogRef: MatDialogRef<UploadConfigDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { template: any },
@@ -1045,5 +1093,92 @@ export class UploadConfigDialogComponent {
 
   onCancel() {
     this.dialogRef.close();
+  }
+
+  connectToGitHub() {
+    const clientId = 'YOUR_CLIENT_ID'; // Replace with your GitHub OAuth app client ID
+    const redirectUri = window.location.origin + '/github-callback';
+    const scope = 'repo read:org';
+    const state = Math.random().toString(36).substring(2);
+    sessionStorage.setItem('github_oauth_state', state);
+    window.location.href =
+      `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&state=${state}`;
+  }
+
+  // Call this in ngOnInit if code is present in URL
+  exchangeCodeForToken(code: string, state: string) {
+    if (state !== sessionStorage.getItem('github_oauth_state')) {
+      alert('OAuth state mismatch!');
+      return;
+    }
+    fetch('http://localhost:8000/github/oauth/callback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.access_token) {
+          this.githubToken = data.access_token;
+          sessionStorage.setItem('github_token', this.githubToken || '');
+          this.listGitHubRepos();
+        } else {
+          alert('GitHub auth failed');
+        }
+      });
+  }
+
+  listGitHubRepos() {
+    fetch('https://api.github.com/user/repos', {
+      headers: { Authorization: `token ${this.githubToken}` },
+    })
+      .then(res => res.json())
+      .then(repos => {
+        this.githubRepos = repos;
+        this.githubStep = 'repos';
+      });
+  }
+
+  listGitHubFiles(repo: any, path?: string | null) {
+    this.selectedRepo = repo;
+    const safePath = path ?? '';
+    fetch(`https://api.github.com/repos/${repo.owner.login}/${repo.name}/contents/${safePath}`, {
+      headers: { Authorization: `token ${this.githubToken}` },
+    })
+      .then(res => res.json())
+      .then(files => {
+        this.githubFiles = files;
+        this.githubStep = 'files';
+      });
+  }
+
+  fetchGitHubFile(file: any) {
+    this.selectedFile = file;
+    fetch(file.url, {
+      headers: { Authorization: `token ${this.githubToken}` },
+    })
+      .then(res => res.json())
+      .then(data => {
+        this.githubFileContent = atob(data.content.replace(/\n/g, ''));
+        this.githubStep = 'preview';
+      });
+  }
+
+  importGitHubFile() {
+    // Use this.githubFileContent as if it was uploaded from local
+    // Call your existing import/validation logic here
+    this.rawConfigContent = this.githubFileContent;
+    // Optionally, trigger validation or move to next step
+    this.currentStep = 2; // or whatever is appropriate
+    this.githubStep = null;
+  }
+
+  getSafePath(file: any): string {
+    return file && file.path ? file.path : '';
+  }
+
+  onSubmitConfig() {
+    // TODO: Implement submission logic for config step
+    console.log('Submit button clicked in Configure step');
   }
 }
