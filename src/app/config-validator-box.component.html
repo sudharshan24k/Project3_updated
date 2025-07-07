@@ -1,183 +1,128 @@
-<div class="config-validator-overlay" (click)="onOverlayClick($event)">
-  <div class="config-validator-modal" (click)="$event.stopPropagation()">
-    <!-- Syntax Errors Section (show at the very top if any) -->
-    <div class="syntax-error-section" *ngIf="syntaxErrors && syntaxErrors.length > 0">
-      <div class="syntax-error-alert">
-        <mat-icon color="warn">error</mat-icon>
-        <span><strong>Syntax Error{{ syntaxErrors.length > 1 ? 's' : '' }}:</strong></span>
-        <ul>
-          <li *ngFor="let err of syntaxErrors">{{ err }}</li>
-        </ul>
-      </div>
-    </div>
-
-    <!-- Overall Syntax Error Indicator and List -->
-    <div *ngIf="syntaxErrors && syntaxErrors.length > 0">
-      <div class="overall-syntax-error">
-        <mat-icon color="warn">error</mat-icon>
-        <span class="overall-syntax-error-text">
-          Syntax error(s) detected in the configuration file. Please fix them before proceeding.
-        </span>
-      </div>
-      <div class="syntax-error-list-container">
-        <div class="syntax-error-list-label">
-          <mat-icon color="warn">report_problem</mat-icon>
-          {{ syntaxErrors.length }} Syntax Error{{ syntaxErrors.length > 1 ? 's' : '' }}:
-        </div>
-        <div class="syntax-error-list">
-          <div class="syntax-error-item" *ngFor="let err of syntaxErrors">
-            <span class="error-text">{{ err }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
+<div class="config-validator-overlay fullscreen">
+  <div class="config-validator-modal fullscreen-modal">
+    <!-- Close X Button -->
+    <button class="validator-close-x always-on-top" (click)="onClose()" aria-label="Close">
+      <span class="close-x-icon">&#10005;</span>
+    </button>
 
     <!-- Header -->
-    <div class="validator-header">
-      <div class="header-content centered-header">
-        <div class="title-section centered-title">
-          <h2 class="validator-title">
-            <span class="status-text" [ngClass]="statusClass">
-              {{ syntaxErrors && syntaxErrors.length > 0 ? 'Config file has syntax errors.' : statusText }}
-            </span>
-          </h2>
-          <p class="form-name">{{ formName }}</p>
-        </div>
+    <div class="validator-main-header">
+      <div class="main-title-row">
+        <span class="main-title fail">Config file validation failed</span>
+      </div>
+      <div class="file-name-row" *ngIf="formName">
+        <span class="file-name">{{ formName }}</span>
       </div>
     </div>
 
-    <!-- Summary Cards -->
-    <div class="summary-section" [class.disabled-section]="syntaxErrors && syntaxErrors.length > 0">
-      <div *ngIf="syntaxErrors && syntaxErrors.length > 0" class="summary-disabled-msg">
-        Validation skipped due to syntax errors.
+    <!-- Syntax Errors or No Syntax Error Message -->
+    <div *ngIf="syntaxErrors && syntaxErrors.length > 0" class="syntax-errors-section">
+      <div class="syntax-errors-header collapsible-header" (click)="showSyntaxErrors = !showSyntaxErrors">
+        <mat-icon class="error-icon">error</mat-icon>
+        <span class="syntax-errors-title">Syntax Errors ({{ syntaxErrors.length }})</span>
+        <span class="collapsible-arrow">
+          {{ showSyntaxErrors ? '▲' : '▼' }}
+          <span class="collapse-expand-label">{{ showSyntaxErrors ? 'Collapse' : 'Expand' }}</span>
+        </span>
       </div>
-      <div class="summary-cards" *ngIf="!syntaxErrors || syntaxErrors.length === 0">
+      <div class="syntax-errors-list" *ngIf="showSyntaxErrors">
+        <div class="syntax-error-message" *ngFor="let err of syntaxErrors">
+          {{ err }}
+        </div>
+      </div>
+    </div>
+    <div *ngIf="syntaxErrors && syntaxErrors.length === 0" class="no-syntax-error-msg">
+      <mat-icon class="success-icon">check_circle</mat-icon>
+      <span>No syntax errors found.</span>
+    </div>
+
+    <!-- Scrollable Content Area -->
+    <div class="modal-scrollable-content">
+      <!-- Summary Cards -->
+      <div class="summary-cards-row">
         <div class="summary-card total">
-          <div class="card-number">{{ summary.total }}</div>
-          <div class="card-label">Total Fields</div>
+          <mat-icon>list_alt</mat-icon>
+          <div class="summary-card-label">Total Fields</div>
+          <div class="summary-card-value">{{ summary.total }}</div>
         </div>
         <div class="summary-card valid">
-          <div class="card-number">{{ summary.valid }}</div>
-          <div class="card-label">Valid</div>
+          <mat-icon>check_circle</mat-icon>
+          <div class="summary-card-label">Valid</div>
+          <div class="summary-card-value">{{ summary.valid }}</div>
         </div>
         <div class="summary-card invalid">
-          <div class="card-number">{{ summary.invalid }}</div>
-          <div class="card-label">Invalid</div>
+          <mat-icon>cancel</mat-icon>
+          <div class="summary-card-label">Invalid</div>
+          <div class="summary-card-value">{{ summary.invalid }}</div>
         </div>
         <div class="summary-card missing">
-          <div class="card-number">{{ summary.missing }}</div>
-          <div class="card-label">Missing</div>
+          <mat-icon>help</mat-icon>
+          <div class="summary-card-label">Missing</div>
+          <div class="summary-card-value">{{ summary.missing }}</div>
         </div>
         <div class="summary-card hidden">
-          <div class="card-number">{{ summary.hidden }}</div>
-          <div class="card-label">Hidden</div>
+          <mat-icon>visibility_off</mat-icon>
+          <div class="summary-card-label">Hidden</div>
+          <div class="summary-card-value">{{ summary.hidden }}</div>
         </div>
       </div>
-    </div>
 
-    <!-- Debug Information (always visible if present) -->
-    <div class="debug-info" *ngIf="debugInfo.length > 0">
-      <h3>Debug Information</h3>
-      <div class="debug-table">
-        <div class="debug-row header">
-          <div class="debug-cell">Field</div>
-          <div class="debug-cell">Value</div>
-          <div class="debug-cell">Visible</div>
-          <div class="debug-cell">Condition</div>
+      <!-- Collapsible Validation Errors Section -->
+      <div *ngIf="validationErrors.length > 0" class="validation-errors-section">
+        <div class="validation-errors-header collapsible-header" (click)="showValidationErrors = !showValidationErrors">
+          <mat-icon class="error-icon">cancel</mat-icon>
+          <span class="validation-errors-title">Validation Errors ({{ validationErrors.length }})</span>
+          <span class="collapsible-arrow">
+            {{ showValidationErrors ? '▲' : '▼' }}
+            <span class="collapse-expand-label">{{ showValidationErrors ? 'Collapse' : 'Expand' }}</span>
+          </span>
         </div>
-        <div class="debug-row" *ngFor="let item of debugInfo">
-          <div class="debug-cell">{{ item.label }}</div>
-          <div class="debug-cell">{{ item.value || '(empty)' }}</div>
-          <div class="debug-cell" [class]="item.visible ? 'visible' : 'hidden'">
-            {{ item.visible ? 'Yes' : 'No' }}
-          </div>
-          <div class="debug-cell">
-            <span *ngIf="item.hasVisibleIf" class="condition-info">
-              {{ item.visibleIf | json }}
-            </span>
-            <span *ngIf="!item.hasVisibleIf" class="no-condition">No condition</span>
+        <div class="validation-errors-list" *ngIf="showValidationErrors">
+          <div class="validation-error-message" *ngFor="let error of validationErrors">
+            {{ error }}
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Error Messages (Validation only, if no syntax errors) -->
-    <div class="error-section" *ngIf="validationErrors.length > 0 && (!syntaxErrors || syntaxErrors.length === 0)">
-      <h3 class="section-title error-title">
-        <span class="error-icon">✗</span>
-        Validation Errors ({{ validationErrors.length }})
-      </h3>
-      <div class="error-list">
-        <div class="error-item" *ngFor="let error of validationErrors">
-          <span class="error-text">{{ error }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Warning Messages (only if no syntax errors) -->
-    <div class="warning-section" *ngIf="warnings.length > 0 && (!syntaxErrors || syntaxErrors.length === 0)">
-      <h3 class="section-title warning-title">
-        <span class="warning-icon">⚠</span>
-        Warnings ({{ warnings.length }})
-      </h3>
-      <div class="warning-list">
-        <div class="warning-item" *ngFor="let warning of warnings">
-          <span class="warning-text">{{ warning }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Field Validation Results (only if no syntax errors) -->
-    <div class="field-results-section" *ngIf="(!syntaxErrors || syntaxErrors.length === 0) && validationResults.length > 0">
-      <!-- Tabs for different field types -->
-      <div class="results-tabs">
-        <button class="tab-button" 
-                [class.active]="activeTab === 'all'"
-                (click)="activeTab = 'all'">
+      <!-- Tabs for filtering -->
+      <div class="results-tabs modern-tabs">
+        <button class="tab-button" [class.active]="activeTab === 'all'" (click)="activeTab = 'all'">
           All Fields ({{ validationResults.length }})
         </button>
-        <button class="tab-button" 
-                [class.active]="activeTab === 'visible'"
-                (click)="activeTab = 'visible'">
+        <button class="tab-button" [class.active]="activeTab === 'visible'" (click)="activeTab = 'visible'">
           Visible Fields ({{ getVisibleFields().length }})
         </button>
-        <button class="tab-button" 
-                [class.active]="activeTab === 'hidden'"
-                (click)="activeTab = 'hidden'">
+        <button class="tab-button" [class.active]="activeTab === 'hidden'" (click)="activeTab = 'hidden'">
           Hidden Fields ({{ getHiddenFields().length }})
         </button>
-        <button class="tab-button" 
-                [class.active]="activeTab === 'errors'"
-                (click)="activeTab = 'errors'">
+        <button class="tab-button" [class.active]="activeTab === 'errors'" (click)="activeTab = 'errors'">
           Errors ({{ getErrorFields().length }})
         </button>
       </div>
 
-      <!-- Field Results -->
-      <div class="field-results">
-        <div class="field-item" 
-             *ngFor="let result of getFilteredResults()"
-             [class]="getStatusClass(result.status)">
-          <div class="field-header">
-            <span class="status-icon" [class]="getStatusClass(result.status)">
-              {{ getStatusIcon(result.status) }}
-            </span>
-            <span class="field-name">{{ result.label }}</span>
-            <span class="field-key">({{ result.key }})</span>
-          </div>
-          <div class="field-message">{{ result.message }}</div>
-          <div class="field-value" *ngIf="result.key && parsedData[result.key] !== undefined">
-            <strong>Value:</strong> {{ parsedData[result.key] }}
+      <!-- Field Validation Results (scrollable section) -->
+      <div class="field-results-scroll-wrapper">
+        <div class="field-card-grid modern-field-grid">
+          <div class="field-card modern-field-card" *ngFor="let result of getFilteredResults()" [ngClass]="getStatusClass(result.status)">
+            <div class="field-card-header">
+              <span class="field-status-icon">
+                <mat-icon *ngIf="result.status === 'valid'">check_circle</mat-icon>
+                <mat-icon *ngIf="result.status === 'invalid'">cancel</mat-icon>
+                <mat-icon *ngIf="result.status === 'missing'">help</mat-icon>
+                <mat-icon *ngIf="result.status === 'hidden'">visibility_off</mat-icon>
+                <mat-icon *ngIf="result.status === 'extra'">info</mat-icon>
+                <mat-icon *ngIf="result.status === 'warning'">warning</mat-icon>
+              </span>
+              <span class="field-label">{{ result.label }}</span>
+              <span class="field-key">({{ result.key }})</span>
+            </div>
+            <div class="field-card-message">{{ result.message }}</div>
+            <div class="field-card-value" *ngIf="result.key && parsedData[result.key] !== undefined">
+              <span class="value-label">Value:</span> <span class="value-content">{{ parsedData[result.key] }}</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- Footer -->
-    <div class="validator-footer">
-      <button class="close-btn" (click)="onClose()">
-        Close
-      </button>
     </div>
   </div>
 </div>

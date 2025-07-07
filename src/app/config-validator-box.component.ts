@@ -42,6 +42,11 @@ export class ConfigValidatorBoxComponent implements OnInit, OnChanges {
     hidden: 0
   };
 
+  showSyntaxErrors = true;
+  showSummary = true;
+  showResults = true;
+  showValidationErrors = true;
+
   ngOnInit() {
     if (this.data) {
       this.formName = this.data.formName || '';
@@ -50,9 +55,10 @@ export class ConfigValidatorBoxComponent implements OnInit, OnChanges {
       this.validationErrors = this.data.validationErrors || [];
       this.warnings = this.data.warnings || [];
     }
-    if (this.syntaxErrors && this.syntaxErrors.length > 0) {
-      this.overallStatus = 'fail';
-    }
+    this.showSyntaxErrors = this.syntaxErrors && this.syntaxErrors.length > 0;
+    this.showSummary = !this.showSyntaxErrors;
+    this.showResults = true;
+    this.showValidationErrors = this.validationErrors && this.validationErrors.length > 0;
     this.updateValidation();
   }
 
@@ -60,7 +66,14 @@ export class ConfigValidatorBoxComponent implements OnInit, OnChanges {
     if (changes['parsedData'] || changes['schema'] || changes['extraFields'] || changes['syntaxErrors']) {
       if (this.syntaxErrors && this.syntaxErrors.length > 0) {
         this.overallStatus = 'fail';
+        this.showSyntaxErrors = true;
+        this.showSummary = false;
+      } else {
+        this.showSyntaxErrors = false;
+        this.showSummary = true;
       }
+      this.showResults = true;
+      this.showValidationErrors = this.validationErrors && this.validationErrors.length > 0;
       this.updateValidation();
     }
   }
