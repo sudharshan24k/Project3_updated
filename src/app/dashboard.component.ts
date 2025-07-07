@@ -1553,54 +1553,33 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnChanges, OnD
     this.navigate.emit(event);
   }
 
-  openUploadConfigDialog(version: any) {
-    this.schemaService.getTemplate(version.name).subscribe(templateResp => {
-      const dialogRef = this.dialog.open(UploadConfigDialogComponent, {
-        width: '60vw',
-        maxWidth: '95vw',
-        height: 'auto',
-        panelClass: 'centered-dialog',
-        disableClose: true,
-        data: { template: templateResp }
-      });
-      dialogRef.afterClosed().subscribe(result => {
-        if (!result) return;
-        if (result.action === 'validate') {
-          // TODO: Validate result.parsedData against templateResp.schema and show result
-          alert('Validation logic coming soon!');
-        } else if (result.action === 'updateAndEdit') {
-          // Map parsed config to prefill structure
-          this.selectedTemplate = version.name;
-          this.prefillSubmissionData = mapConfToPrefill(result.parsedData, templateResp.schema);
-          this.mode = 'use'; // Use the correct mode for form editing
-        }
-      });
-    });
-  }
+openUploadConfigDialogCommon() {
+  // Open dialog in generic mode (no template/version preselected)
+  const dialogRef = this.dialog.open(UploadConfigDialogComponent, {
+    width: '60vw',
+    maxWidth: '95vw',
+    height: 'auto',
+    panelClass: ['centered-dialog', 'transparent-dialog'], // Add transparent class
+    disableClose: true,
+    hasBackdrop: true,
+    backdropClass: 'transparent-backdrop', // Optional: customize backdrop
+    data: { template: null }
+  });
+  
+  dialogRef.afterClosed().subscribe(result => {
+    if (!result) return;
+    if (result.action === 'validate') {
+      // TODO: Validate result.parsedData against selected schema and show result
+      alert('Validation logic coming soon!');
+    } else if (result.action === 'updateAndEdit') {
+      // Use the full versioned template name for the form
+      this.selectedTemplate = result.selectedVersionTag;
+      this.prefillSubmissionData = result.prefillData;
+      this.mode = 'use';
+    }
+  });
+}
 
-  openUploadConfigDialogCommon() {
-    // Open dialog in generic mode (no template/version preselected)
-    const dialogRef = this.dialog.open(UploadConfigDialogComponent, {
-      width: '60vw',
-      maxWidth: '95vw',
-      height: 'auto',
-      panelClass: 'centered-dialog',
-      disableClose: true,
-      data: { template: null }
-    });
-    dialogRef.afterClosed().subscribe(result => {
-      if (!result) return;
-      if (result.action === 'validate') {
-        // TODO: Validate result.parsedData against selected schema and show result
-        alert('Validation logic coming soon!');
-      } else if (result.action === 'updateAndEdit') {
-        // Use the full versioned template name for the form
-        this.selectedTemplate = result.selectedVersionTag;
-        this.prefillSubmissionData = result.prefillData;
-        this.mode = 'use';
-      }
-    });
-  }
 
   ngOnDestroy() {
     this.destroy$.next();

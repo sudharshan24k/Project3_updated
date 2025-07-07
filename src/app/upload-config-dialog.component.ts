@@ -350,8 +350,9 @@ import { ConfigValidatorBoxComponent, ConfigValidationFieldResult } from './conf
   ],
   styles: [`
     .upload-dialog-container {
-      max-width: 900px;
+      max-width: 800px;
       width: 80vw;
+      height: 90vh;
       min-width: 320px;
       min-height: 600px;
       display: flex;
@@ -363,42 +364,111 @@ import { ConfigValidatorBoxComponent, ConfigValidationFieldResult } from './conf
       padding: 0 2.5rem 2rem 2.5rem;
     }
 
-    .dialog-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 1.5rem 2rem;
-      background: linear-gradient(90deg, #f8fafc 0%, #e3e8ee 100%);
-      box-shadow: 0 2px 12px rgba(36,41,47,0.07);
-      color: #222;
-      border-radius: 14px 14px 0 0;
-      min-height: 70px;
-      transition: box-shadow 0.2s;
-    }
+      /* Header container - centered layout */
+      .dialog-header {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-top: 1rem;
+        padding: 2rem 2.5rem 1.5rem 2.5rem;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-bottom: 1px solid #dee2e6;
+        border-radius: 16px 16px 0 0;
+        position: relative;
+      }
 
-    .header-content {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
+      /* Header content - centered */
+      .header-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 1rem;
+      }
 
-    .header-icon {
-      font-size: 2.5rem;
-      width: 2.5rem;
-      height: 2.5rem;
-    }
+      /* Header icon - larger size */
+      .header-icon {
+        font-size: 3rem !important;
+        width: 3rem !important;
+        height: 3rem !important;
+        color: #1976d2;
+        margin-bottom: 0.5rem;
+      }
 
-    .header-text h2 {
-      margin: 0;
-      font-size: 1.5rem;
-      font-weight: 600;
-    }
+      /* Header text container */
+      .header-text {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 0.5rem;
+      }
 
-    .header-subtitle {
-      margin: 0.25rem 0 0 0;
-      opacity: 0.9;
-      font-size: 0.9rem;
-    }
+      /* Main title styling */
+      .header-text h2 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin: 0;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+      }
+
+      /* Subtitle styling */
+      .header-subtitle {
+        font-size: 1rem;
+        color: #6c757d;
+        margin: 0;
+        font-weight: 400;
+        line-height: 1.4;
+        max-width: 400px;
+      }
+
+      /* Close button - remove circular background */
+      .close-button.enhanced-close {
+        position: absolute;
+        top: 16px;
+        right: 20px;
+        z-index: 1000;
+        background: transparent !important;
+        border: none;
+        color: #666;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        transition: color 0.2s ease, text-shadow 0.2s ease;
+        width: auto;
+        height: auto;
+      }
+
+      .close-button.enhanced-close:hover {
+        background: transparent !important;
+        color: #dc3545;
+        text-shadow: 0 0 8px rgba(220, 53, 69, 0.6);
+      }
+
+      .close-x-icon {
+        font-size: 1.8rem !important;
+        width: 1.8rem !important;
+        height: 1.8rem !important;
+        background: none !important;
+        border-radius: 0 !important;
+      }
+
+      /* Remove Material button styling */
+      .close-button.enhanced-close .mat-mdc-button-base,
+      .close-button.enhanced-close .mat-icon-button {
+        background: transparent !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+      }
+
+      .close-button.enhanced-close:hover .mat-mdc-button-base,
+      .close-button.enhanced-close:hover .mat-icon-button {
+        background: transparent !important;
+      }
+
 
     .close-button {
       color: white;
@@ -515,6 +585,7 @@ import { ConfigValidatorBoxComponent, ConfigValidationFieldResult } from './conf
       cursor: pointer;
       position: relative;
       background: #f8fafc;
+      
     }
     .upload-area:hover {
       border-color: #3b82f6;

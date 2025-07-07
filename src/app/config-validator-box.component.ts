@@ -29,6 +29,7 @@ export class ConfigValidatorBoxComponent implements OnInit, OnChanges {
   @Input() parsedData: any = {};
   @Input() schema: any = {};
   @Input() extraFields: string[] = [];
+  @Input() templateVersion: string = '';
   @Output() close = new EventEmitter();
 
   validationResults: any[] = [];
@@ -54,12 +55,25 @@ export class ConfigValidatorBoxComponent implements OnInit, OnChanges {
       this.syntaxErrors = this.data.syntaxErrors || [];
       this.validationErrors = this.data.validationErrors || [];
       this.warnings = this.data.warnings || [];
+      // Try to auto-detect template version from data or schema
+      if (!this.templateVersion) {
+        if (this.data?.version) {
+          this.templateVersion = this.data.version;
+        } else if (this.schema?.version) {
+          this.templateVersion = this.schema.version;
+        } else if (this.schema?.fields && this.schema?.fields.length > 0 && this.schema?.fields[0]?.version) {
+          this.templateVersion = this.schema.fields[0].version;
+        } else {
+          this.templateVersion = '1.0';
+        }
+      }
     }
     this.showSyntaxErrors = this.syntaxErrors && this.syntaxErrors.length > 0;
     this.showSummary = !this.showSyntaxErrors;
     this.showResults = true;
     this.showValidationErrors = this.validationErrors && this.validationErrors.length > 0;
     this.updateValidation();
+    
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -79,14 +93,23 @@ export class ConfigValidatorBoxComponent implements OnInit, OnChanges {
   }
 
   updateValidation() {
-    this.validationResults = getConfigValidationFieldResults(
-      this.parsedData, 
-      this.schema, 
-      this.extraFields
-    );
-    
-    this.calculateSummary();
-  }
+  this.validationResults = getConfigValidationFieldResults(
+    this.parsedData,
+    this.schema,
+    this.extraFields
+  );
+  this.calculateSummary();
+  
+  // Update overall status based on validation results
+  this.updateOverallStatus();
+}
+updateOverallStatus() {
+  const hasErrors = (this.syntaxErrors && this.syntaxErrors.length > 0) ||
+                   (this.validationErrors && this.validationErrors.length > 0) ||
+                   this.getInvalidCount() > 0;
+  
+  this.overallStatus = hasErrors ? 'fail' : 'success';
+}
 
   calculateSummary() {
     this.summary = {
@@ -135,15 +158,24 @@ export class ConfigValidatorBoxComponent implements OnInit, OnChanges {
     }
   }
 
-  getStatusClass(status: string): string {
-    switch (status) {
-      case 'valid': return 'status-valid';
-      case 'invalid': return 'status-invalid';
-      case 'missing': return 'status-missing';
-      case 'hidden': return 'status-hidden';
-      default: return 'status-unknown';
-    }
+getStatusClass(status: string): string {
+  switch (status) {
+    case 'valid':
+      return 'valid';
+    case 'invalid':
+      return 'invalid';
+    case 'missing':
+      return 'missing';
+    case 'warning':
+      return 'warning';
+    case 'hidden':
+      return 'hidden';
+    case 'extra':
+      return 'extra';
+    default:
+      return '';
   }
+}
 
   getHiddenFields() {
     return this.validationResults.filter(r => r.status === 'hidden');

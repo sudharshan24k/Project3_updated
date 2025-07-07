@@ -1,3 +1,43 @@
+.main-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 0.2rem;
+}
+
+.status-icon {
+  font-size: 2.5rem !important;
+  width: 2.5rem !important;
+  height: 2.5rem !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-icon.success-icon {
+  color: #28a745 !important;
+}
+
+.status-icon.fail-icon {
+  color: #dc3545 !important;
+}
+
+.main-title {
+  font-size: 2.1rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.main-title.success {
+  color: #28a745;
+}
+
+.main-title.fail {
+  color: #dc3545;
+}
+
 .validator-overlay {
   position: fixed;
   top: 0; 
@@ -429,10 +469,10 @@
 }
 
 .success-icon {
-  font-size: 4rem;
+  font-size: 1rem;
   width: 4rem;
   height: 4rem;
-  margin-bottom: 1rem;
+  padding-top: 40px;
 }
 
 .success-message h4 {
@@ -1327,16 +1367,16 @@
   background: rgba(0,0,0,0.7);
   z-index: 2000;
   display: flex;
-  align-items: stretch;
-  justify-content: center;
+  align-items: center; /* Center vertically */
+  justify-content: center; /* Center horizontally */
   overflow: hidden;
 }
+
 .config-validator-modal.fullscreen-modal {
-  width: 98vw;
-  height: 100%;
-  min-height: 0;
-  max-width: 1600px;
-  max-height: 100vh;
+  width: 85vw; /* Reduced from 98vw */
+  height: 90vh; /* Reduced from 100% */
+  max-width: 1200px; /* Reduced from 1600px */
+  max-height: 100vh; /* Added max height constraint */
   background: #fff;
   border-radius: 18px;
   box-shadow: 0 8px 48px rgba(0,0,0,0.25);
@@ -1344,47 +1384,56 @@
   flex-direction: column;
   position: relative;
   overflow-x: hidden;
+  margin: auto; /* Center the modal */
 }
+
 .validator-close-x.always-on-top {
   position: absolute;
   top: 24px;
   right: 32px;
   z-index: 10;
-  background: #fff;
-  color: #444;
+  background: transparent !important; /* Remove background */
+  color: #666;
   border: none;
-  border-radius: 50%;
-  width: 44px;
-  height: 44px;
+  border-radius: 0; /* Remove border radius */
+  width: auto; /* Remove fixed width */
+  height: auto; /* Remove fixed height */
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.7rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  box-shadow: none !important; /* Remove shadow */
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-  border: 1.5px solid #e0e0e0;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+  padding: 8px; /* Add some padding for better click area */
 }
+
 .validator-close-x.always-on-top:hover {
-  background: #e0e0e0;
-  color: #1976d2;
+  background: transparent !important; /* Keep background transparent on hover */
+  color: #dc3545; /* Red color on hover */
+  text-shadow: 0 0 8px rgba(220, 53, 69, 0.6); /* Red glow effect */
 }
+
 .close-x-icon {
   font-size: 2rem;
   font-weight: 700;
-  color: #444;
+  color: inherit;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
   height: 100%;
   background: none;
-  border-radius: 50%;
+  border-radius: 0; /* Remove border radius */
   user-select: none;
+  transition: inherit;
 }
+
 .validator-close-x.always-on-top:hover .close-x-icon {
-  color: #1976d2;
+  color: #dc3545; /* Red color on hover */
 }
+
+
 .validator-close-x.always-on-top mat-icon {
   color: inherit;
   font-size: 2rem;
@@ -1671,9 +1720,9 @@
 }
 
 .field-results-scroll-wrapper {
-  max-height: 45vh;
+  max-height: 40vh; /* Reduced from 45vh */
   min-height: 200px;
-  overflow-y: scroll;
+  overflow-y: auto;
   margin: 0.5rem 2.5rem 1.5rem 2.5rem;
   border-radius: 12px;
   background: transparent;
@@ -1683,8 +1732,15 @@
   background: #e3f0fc;
   border-radius: 18px 18px 0 0;
   padding: 2.2rem 2.5rem 1.2rem 2.5rem;
-  text-align: left;
+  text-align: center; // Center the header
   margin-bottom: 0.5rem;
+}
+
+.main-title.success {
+  color: #28a745;
+  font-size: 2.1rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
 }
 .main-title-row {
   margin-bottom: 0.2rem;
@@ -1703,10 +1759,19 @@
   margin-bottom: 0.2rem;
 }
 .file-name {
-  color: #b0b0b0;
+  color: #333;
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+.version-info {
+  color: #666;
   font-size: 1.1rem;
   font-weight: 500;
-  letter-spacing: 0.2px;
+  margin-left: 0.5rem;
+  background: #f0f0f0;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
 }
 .summary-cards-row {
   display: flex;
@@ -1845,12 +1910,13 @@
   gap: 1.3rem;
   align-items: stretch;
 }
+/* Base field card styling */
 .field-card.modern-field-card {
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.07);
   border-left: 5px solid #e0e0e0;
   background: #fff;
-  padding: 1.1rem 1.2rem 1.1rem 1.2rem;
+  padding: 1.1rem 1.2rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -1859,21 +1925,84 @@
   max-height: 180px;
   transition: box-shadow 0.18s, border 0.18s;
 }
+
+/* Valid fields - Light Green */
 .field-card.modern-field-card.valid {
   border-left: 5px solid #28a745;
-  background: #f6fff6;
+  background: #f0fff4 !important;
 }
+
+/* Invalid fields - Light Red */
 .field-card.modern-field-card.invalid {
   border-left: 5px solid #dc3545;
-  background: #fff6f6;
+  background: #fff5f5 !important;
 }
-.field-card.modern-field-card.missing,
-.field-card.modern-field-card.hidden,
-.field-card.modern-field-card.extra,
-.field-card.modern-field-card.warning {
+
+/* Missing fields - Light Yellow */
+.field-card.modern-field-card.missing {
   border-left: 5px solid #ffc107;
-  background: #fffbe6;
+  background: #fffef0 !important;
 }
+
+/* Additional status colors */
+.field-card.modern-field-card.warning {
+  border-left: 5px solid #ff9800;
+  background: #fff8e1 !important; /* Light orange */
+}
+
+.field-card.modern-field-card.hidden {
+  border-left: 5px solid #6f42c1;
+  background: #f8f5ff !important; /* Light purple */
+}
+
+.field-card.modern-field-card.extra {
+  border-left: 5px solid #17a2b8;
+  background: #f0f8ff !important; /* Light blue */
+}
+
+/* Hover effects */
+.field-card.modern-field-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+/* Status icon colors */
+.field-card.valid .field-status-icon mat-icon {
+  color: #28a745;
+}
+
+.field-card.invalid .field-status-icon mat-icon {
+  color: #dc3545;
+}
+
+.field-card.missing .field-status-icon mat-icon {
+  color: #ffc107;
+}
+
+.field-card.warning .field-status-icon mat-icon {
+  color: #ff9800;
+}
+
+.field-card.hidden .field-status-icon mat-icon {
+  color: #6f42c1;
+}
+
+.field-card.extra .field-status-icon mat-icon {
+  color: #17a2b8;
+}
+/* Message text colors for better contrast */
+.field-card.modern-field-card.valid .field-card-message {
+  color: #155724; /* Darker green for better readability */
+}
+
+.field-card.modern-field-card.invalid .field-card-message {
+  color: #721c24; /* Darker red for better readability */
+}
+
+.field-card.modern-field-card.missing .field-card-message {
+  color: #856404; /* Darker yellow/brown for better readability */
+}
+
+
 .field-card-header {
   display: flex;
   align-items: center;
@@ -1882,10 +2011,23 @@
   font-size: 1.08rem;
   margin-bottom: 0.2rem;
 }
-.field-status-icon mat-icon {
-  font-size: 1.3rem;
-  vertical-align: middle;
+.field-status-icon {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0; // Prevent icon from shrinking
 }
+
+.field-status-icon mat-icon {
+  font-size: 1.8rem; // Your desired size
+  width: 1.8rem;
+  height: 1.8rem;
+  position: relative;
+  z-index: 6;
+}
+
 .field-label {
   font-weight: 700;
   color: #232323;
@@ -1982,6 +2124,7 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  max-height: calc(80vh - 200px); /* Adjust based on header height */
 }
 
 .collapse-expand-label {
@@ -1993,20 +2136,3 @@
   letter-spacing: 0.02em;
 }
 
-.no-syntax-error-msg {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.6em;
-  color: #218838;
-  font-size: 1.13rem;
-  font-weight: 600;
-  margin: 1.1rem 0 1.2rem 0;
-  background: #f6fff6;
-  border-radius: 8px;
-  padding: 0.7rem 1.2rem;
-}
-.no-syntax-error-msg .success-icon {
-  color: #28a745;
-  font-size: 1.4rem;
-}

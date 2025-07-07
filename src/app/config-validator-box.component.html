@@ -5,36 +5,39 @@
       <span class="close-x-icon">&#10005;</span>
     </button>
 
-    <!-- Header -->
-    <div class="validator-main-header">
-      <div class="main-title-row">
-        <span class="main-title fail">Config file validation failed</span>
-      </div>
-      <div class="file-name-row" *ngIf="formName">
-        <span class="file-name">{{ formName }}</span>
-      </div>
-    </div>
+ <!-- Header -->
+<div class="validator-main-header">
+  <div class="main-title-row">
+    <mat-icon class="status-icon" [ngClass]="overallStatus === 'success' ? 'success-icon' : 'fail-icon'">
+      {{ overallStatus === 'success' ? 'check_circle' : 'cancel' }}
+    </mat-icon>
+    <span class="main-title" [ngClass]="overallStatus === 'success' ? 'success' : 'fail'">
+      {{ overallStatus === 'success' ? 'Config file validation successful' : 'Config file validation failed' }}
+    </span>
+  </div>
+  <div class="file-name-row" *ngIf="formName">
+    <span class="file-name">{{ formName }} <span class="version-info">v{{ templateVersion || '1.0' }}</span></span>
+  </div>
+</div>
 
-    <!-- Syntax Errors or No Syntax Error Message -->
-    <div *ngIf="syntaxErrors && syntaxErrors.length > 0" class="syntax-errors-section">
-      <div class="syntax-errors-header collapsible-header" (click)="showSyntaxErrors = !showSyntaxErrors">
-        <mat-icon class="error-icon">error</mat-icon>
-        <span class="syntax-errors-title">Syntax Errors ({{ syntaxErrors.length }})</span>
-        <span class="collapsible-arrow">
-          {{ showSyntaxErrors ? '▲' : '▼' }}
-          <span class="collapse-expand-label">{{ showSyntaxErrors ? 'Collapse' : 'Expand' }}</span>
-        </span>
-      </div>
-      <div class="syntax-errors-list" *ngIf="showSyntaxErrors">
-        <div class="syntax-error-message" *ngFor="let err of syntaxErrors">
-          {{ err }}
-        </div>
-      </div>
+
+<!-- Syntax Errors Section - Styled like Validation Errors -->
+<div *ngIf="syntaxErrors && syntaxErrors.length > 0" class="syntax-errors-section validation-errors-section">
+  <div class="syntax-errors-header validation-errors-header collapsible-header" (click)="showSyntaxErrors = !showSyntaxErrors">
+    <mat-icon class="error-icon">error</mat-icon>
+    <span class="syntax-errors-title validation-errors-title">Syntax Errors ({{ syntaxErrors.length }})</span>
+    <span class="collapsible-arrow">
+      {{ showSyntaxErrors ? '▲' : '▼' }}
+      <span class="collapse-expand-label">{{ showSyntaxErrors ? 'Collapse' : 'Expand' }}</span>
+    </span>
+  </div>
+  <div class="syntax-errors-list validation-errors-list" *ngIf="showSyntaxErrors">
+    <div class="syntax-error-message validation-error-message" *ngFor="let err of syntaxErrors">
+      {{ err }}
     </div>
-    <div *ngIf="syntaxErrors && syntaxErrors.length === 0" class="no-syntax-error-msg">
-      <mat-icon class="success-icon">check_circle</mat-icon>
-      <span>No syntax errors found.</span>
-    </div>
+  </div>
+</div>
+
 
     <!-- Scrollable Content Area -->
     <div class="modal-scrollable-content">
