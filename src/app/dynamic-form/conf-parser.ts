@@ -380,7 +380,7 @@ function evalVisibleIf(condition: any, data: any): boolean {
     if (typeof condition === 'object' && condition !== null && condition.key) {
       const { key, value } = condition;
       
-      if (!key) return false;
+      if (!key) return true; // Default to visible if no key specified
       
       const fieldValue = data[key];
       
@@ -396,8 +396,27 @@ function evalVisibleIf(condition: any, data: any): boolean {
         expectedValue = value.slice(1, -1);
       }
       
+      // Handle boolean values properly
+      if (typeof expectedValue === 'string') {
+        if (expectedValue.toLowerCase() === 'true') {
+          expectedValue = true;
+        } else if (expectedValue.toLowerCase() === 'false') {
+          expectedValue = false;
+        }
+      }
+      
+      if (typeof actualFieldValue === 'string') {
+        if (actualFieldValue.toLowerCase() === 'true') {
+          actualFieldValue = true;
+        } else if (actualFieldValue.toLowerCase() === 'false') {
+          actualFieldValue = false;
+        }
+      }
+      
       // Simple equality check
-      return actualFieldValue == expectedValue;
+      const result = actualFieldValue == expectedValue;
+      console.log(`Condition check: ${key} == ${expectedValue} (actual: ${actualFieldValue}) = ${result}`);
+      return result;
     }
     
     // Handle string-based conditions (legacy format)
@@ -414,7 +433,9 @@ function evalVisibleIf(condition: any, data: any): boolean {
           actualFieldValue = fieldValue.slice(1, -1);
         }
         
-        return actualFieldValue == expectedValue;
+        const result = actualFieldValue == expectedValue;
+        console.log(`String condition check: ${fieldKey} == ${expectedValue} (actual: ${actualFieldValue}) = ${result}`);
+        return result;
       }
       
       // Fallback to JavaScript evaluation for complex expressions
@@ -427,13 +448,17 @@ function evalVisibleIf(condition: any, data: any): boolean {
         }
         return val;
       });
-      return Function(...keys, `return (${condition});`)(...args);
+      const result = Function(...keys, `return (${condition});`)(...args);
+      console.log(`Complex condition check: ${condition} = ${result}`);
+      return result;
     }
     
-    return false;
+    // If no condition is specified, default to visible
+    return true;
   } catch (error) {
     console.error('Error evaluating condition:', condition, error);
-    return false;
+    // Default to visible if evaluation fails
+    return true;
   }
 }
 
@@ -653,25 +678,43 @@ export function getConfigValidationFieldResults(parsedData: any, schema: any, ex
     // Evaluate visibleIf and mandatoryIf with proper boolean normalization
     let visible = true;
     let mandatory = !!(field.mandatory || field.required); // Handle both properties
+    let visibilityReason = '';
     
     if (field.visibleIf) {
       try {
         visible = !!evalVisibleIf(field.visibleIf, parsedData);
-      } catch {
-        visible = true;
+        // Create a more descriptive message for hidden fields
+        if (!visible) {
+          if (typeof field.visibleIf === 'object' && field.visibleIf.key) {
+            const controllingValue = parsedData[field.visibleIf.key];
+            visibilityReason = `Hidden because ${field.visibleIf.key} is "${controllingValue}" but should be "${field.visibleIf.value}"`;
+          } else {
+            visibilityReason = `Hidden due to conditional logic: ${JSON.stringify(field.visibleIf)}`;
+          }
+        }
+      } catch (error) {
+        console.error(`Error evaluating visibleIf for field ${key}:`, error);
+        visible = true; // Default to visible if evaluation fails
+        visibilityReason = 'Error evaluating condition - defaulting to visible';
       }
     }
     
     if (field.mandatoryIf) {
       try {
         mandatory = !!evalVisibleIf(field.mandatoryIf, parsedData);
-      } catch {
+      } catch (error) {
+        console.error(`Error evaluating mandatoryIf for field ${key}:`, error);
         mandatory = !!(field.mandatory || field.required);
       }
     }
     
     if (!visible) {
-      results.push({ key, label, status: 'hidden', message: 'Field not visible.' });
+      results.push({ 
+        key, 
+        label, 
+        status: 'hidden', 
+        message: visibilityReason || 'Field not visible due to conditional logic.' 
+      });
       continue;
     }
     
@@ -899,8 +942,13 @@ export function getConfigValidationFieldResults(parsedData: any, schema: any, ex
       }
     }
     
-    // Only push a tick (valid) if there were no errors for this field
-    results.push({ key, label, status: 'valid', message: 'Valid.' });
+    // If we get here, the field is valid
+    results.push({ 
+      key, 
+      label, 
+      status: 'valid', 
+      message: 'Valid.' 
+    });
   }
   
   // Add extra fields that exist in config but not in schema
@@ -920,4 +968,61 @@ export function getConfigValidationFieldResults(parsedData: any, schema: any, ex
   }
   
   return results;
+}
+
+// Debug function to help understand conditional logic
+export function debugFieldVisibility(parsedData: any, schema: any): any[] {
+  if (!schema || !Array.isArray(schema.fields)) return [];
+  
+  const debugInfo: any[] = [];
+  
+  for (const field of schema.fields) {
+    const key = field.key;
+    const label = field.label || key;
+    const value = parsedData[key];
+    
+    const debug: any = {
+      key,
+      label,
+      value,
+      hasVisibleIf: !!field.visibleIf,
+      visibleIf: field.visibleIf,
+      hasMandatoryIf: !!field.mandatoryIf,
+      mandatoryIf: field.mandatoryIf,
+      isMandatory: !!(field.mandatory || field.required),
+      userEditable: field.userEditable !== false && field.editable !== false
+    };
+    
+    // Evaluate visibility
+    if (field.visibleIf) {
+      try {
+        debug.visible = !!evalVisibleIf(field.visibleIf, parsedData);
+        debug.visibilityEvaluation = 'success';
+      } catch (error) {
+        debug.visible = true; // Default to visible
+        debug.visibilityEvaluation = `error: ${error}`;
+      }
+    } else {
+      debug.visible = true;
+      debug.visibilityEvaluation = 'no condition';
+    }
+    
+    // Evaluate mandatory
+    if (field.mandatoryIf) {
+      try {
+        debug.mandatory = !!evalVisibleIf(field.mandatoryIf, parsedData);
+        debug.mandatoryEvaluation = 'success';
+      } catch (error) {
+        debug.mandatory = !!(field.mandatory || field.required);
+        debug.mandatoryEvaluation = `error: ${error}`;
+      }
+    } else {
+      debug.mandatory = !!(field.mandatory || field.required);
+      debug.mandatoryEvaluation = 'no condition';
+    }
+    
+    debugInfo.push(debug);
+  }
+  
+  return debugInfo;
 }

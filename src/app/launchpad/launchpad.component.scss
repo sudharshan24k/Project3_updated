@@ -1,11 +1,19 @@
 :host {
   --primary-color: #673ab7;
   --accent-color: #ff4081;
-  --background-start: #ede7f6;
-  --background-end: #d1c4e9;
+  --background-start: #e0f7fa; /* sky blue */
+  --background-end: #b3e5fc;   /* sky blue */
   --card-bg: #ffffff;
   --text-color: #333;
   --text-muted: #666;
+}
+
+:host-context(.dark-theme) {
+  --background-start: #183b56; /* deep blue */
+  --background-end: #22577a;   /* blue */
+  --card-bg: var(--surface-color);
+  --text-color: var(--text-color);
+  --text-muted: var(--text-muted-color);
 }
 
 .launchpad-container {
@@ -83,6 +91,13 @@
     color: var(--text-muted);
     line-height: 1.5;
   }
+}
+
+.header h1, .header p, .action-card h2, .action-card p {
+  color: var(--text-color);
+}
+:host-context(.dark-theme) .header h1, :host-context(.dark-theme) .header p, :host-context(.dark-theme) .action-card h2, :host-context(.dark-theme) .action-card p {
+  color: var(--text-color);
 }
 
 // Responsive adjustments

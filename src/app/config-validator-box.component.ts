@@ -1,5 +1,8 @@
-import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { getConfigValidationFieldResults, debugFieldVisibility } from './dynamic-form/conf-parser';
 
 export interface ConfigValidationFieldResult {
   key: string;
@@ -12,40 +15,73 @@ export interface ConfigValidationFieldResult {
 @Component({
   selector: 'app-config-validator-box',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule],
   templateUrl: './config-validator-box.component.html',
   styleUrls: ['./config-validator-box.component.scss']
 })
-export class ConfigValidatorBoxComponent implements OnInit {
+export class ConfigValidatorBoxComponent implements OnInit, OnChanges {
   @Input() formName = '';
   @Input() overallStatus: 'success' | 'fail' = 'success';
-  @Input() fieldResults: ConfigValidationFieldResult[] = [];
-  @Input() data: any;
-  @Input() extraFields: string[] = [];
-  @Input() missingFields: string[] = [];
+  @Input() data: any = {};
   @Input() syntaxErrors: string[] = [];
   @Input() validationErrors: string[] = [];
   @Input() warnings: string[] = [];
+  @Input() parsedData: any = {};
+  @Input() schema: any = {};
+  @Input() extraFields: string[] = [];
+  @Input() debugMode: boolean = false;
   @Output() close = new EventEmitter();
+
+  validationResults: any[] = [];
+  debugInfo: any[] = [];
+  activeTab: 'all' | 'visible' | 'hidden' | 'errors' = 'all';
+  summary = {
+    total: 0,
+    valid: 0,
+    invalid: 0,
+    missing: 0,
+    hidden: 0
+  };
 
   ngOnInit() {
     if (this.data) {
-      this.formName = this.data.formName;
-      
-      // Only errors should cause validation failure, NOT warnings
-      const hasErrors = (this.data.validationErrors && this.data.validationErrors.length > 0) || 
-                        (this.data.syntaxErrors && this.data.syntaxErrors.length > 0);
-      
-      // Set status based on errors only (warnings should not cause failure)
-      this.overallStatus = hasErrors ? 'fail' : 'success';
-      
-      this.fieldResults = this.data.fieldResults;
-      this.extraFields = this.data.extraFields || [];
-      this.missingFields = this.data.missingFields || [];
+      this.formName = this.data.formName || '';
+      this.overallStatus = this.data.overallStatus || 'success';
       this.syntaxErrors = this.data.syntaxErrors || [];
       this.validationErrors = this.data.validationErrors || [];
       this.warnings = this.data.warnings || [];
     }
+    this.updateValidation();
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['parsedData'] || changes['schema'] || changes['extraFields']) {
+      this.updateValidation();
+    }
+  }
+
+  updateValidation() {
+    if (this.debugMode) {
+      this.debugInfo = debugFieldVisibility(this.parsedData, this.schema);
+    }
+    
+    this.validationResults = getConfigValidationFieldResults(
+      this.parsedData, 
+      this.schema, 
+      this.extraFields
+    );
+    
+    this.calculateSummary();
+  }
+
+  calculateSummary() {
+    this.summary = {
+      total: this.validationResults.length,
+      valid: this.validationResults.filter(r => r.status === 'valid').length,
+      invalid: this.validationResults.filter(r => r.status === 'invalid').length,
+      missing: this.validationResults.filter(r => r.status === 'missing').length,
+      hidden: this.validationResults.filter(r => r.status === 'hidden').length
+    };
   }
 
   get statusText() {
@@ -54,6 +90,81 @@ export class ConfigValidatorBoxComponent implements OnInit {
 
   get statusClass() {
     return this.overallStatus === 'fail' ? 'status-fail' : 'status-success';
+  }
+
+  hasIssues(): boolean {
+    return (this.syntaxErrors && this.syntaxErrors.length > 0) ||
+           (this.validationErrors && this.validationErrors.length > 0) ||
+           (this.extraFields && this.extraFields.length > 0) ||
+           (this.warnings && this.warnings.length > 0);
+  }
+
+  getValidCount(): number {
+    return this.validationResults.filter(field => field.status === 'valid').length;
+  }
+
+  getInvalidCount(): number {
+    return this.validationResults.filter(field => 
+      field.status === 'invalid' || 
+      field.status === 'missing' || 
+      field.status === 'extra'
+    ).length;
+  }
+
+  getStatusIcon(status: string): string {
+    switch (status) {
+      case 'valid': return '✓';
+      case 'invalid': return '✗';
+      case 'missing': return '⚠';
+      case 'hidden': return '👁';
+      default: return '?';
+    }
+  }
+
+  getStatusClass(status: string): string {
+    switch (status) {
+      case 'valid': return 'status-valid';
+      case 'invalid': return 'status-invalid';
+      case 'missing': return 'status-missing';
+      case 'hidden': return 'status-hidden';
+      default: return 'status-unknown';
+    }
+  }
+
+  toggleDebugMode() {
+    this.debugMode = !this.debugMode;
+    this.updateValidation();
+  }
+
+  getHiddenFields() {
+    return this.validationResults.filter(r => r.status === 'hidden');
+  }
+
+  getVisibleFields() {
+    return this.validationResults.filter(r => r.status !== 'hidden');
+  }
+
+  getErrorFields() {
+    return this.validationResults.filter(r => r.error);
+  }
+
+  getFilteredResults() {
+    switch (this.activeTab) {
+      case 'visible':
+        return this.getVisibleFields();
+      case 'hidden':
+        return this.getHiddenFields();
+      case 'errors':
+        return this.getErrorFields();
+      default:
+        return this.validationResults;
+    }
+  }
+
+  onOverlayClick(event: Event) {
+    if (event.target === event.currentTarget) {
+      this.onClose();
+    }
   }
 
   onClose() {

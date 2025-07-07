@@ -8,75 +8,290 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatOptionModule } from '@angular/material/core';
-import { MatSelectModule } from '@angular/material/select'; // Add this import
+import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatCardModule } from '@angular/material/card';
+import { MatChipsModule } from '@angular/material/chips';
 import { Observable, of } from 'rxjs';
 import { ConfigValidatorBoxComponent, ConfigValidationFieldResult } from './config-validator-box.component';
 
 @Component({
   selector: 'app-upload-config-dialog',
   template: `
-    <h2 mat-dialog-title>Upload Config File</h2>
-    <mat-dialog-content>
-      <input type="file" accept=".conf" (change)="onFileSelected($event)" />
-      <div *ngIf="fileName" style="margin-top: 1rem;">Selected: <b>{{ fileName }}</b></div>
-      <div *ngIf="loading" style="margin: 1rem 0; color: #1976d2;">Loading...</div>
-      <div *ngIf="rawConfigContent && !actionChosen">
-        <div style="margin: 1.5rem 0;">
-          <b>Choose what you want to do with this config file:</b><br>
-          <button mat-stroked-button color="primary" style="margin-top: 1rem;" (click)="chooseAction('validate')">Validate Config File</button>
-          <button mat-raised-button color="accent" style="margin-left: 1rem; margin-top: 1rem;" (click)="chooseAction('edit')">Duplicate & Edit</button>
+    <div class="upload-dialog-container">
+      <!-- Header -->
+      <div class="dialog-header">
+        <div class="header-content">
+          <mat-icon class="header-icon">cloud_upload</mat-icon>
+          <div class="header-text">
+            <h2 mat-dialog-title>Upload Configuration File</h2>
+            <p class="header-subtitle">Validate or create submissions from existing config files</p>
+          </div>
+        </div>
+        <button mat-icon-button class="close-button" (click)="onCancel()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <!-- Progress Steps -->
+      <div class="progress-steps" *ngIf="!showValidatorBox">
+        <div class="step" [class.active]="currentStep >= 1" [class.completed]="currentStep > 1">
+          <div class="step-number">1</div>
+          <span class="step-label">Upload File</span>
+        </div>
+        <div class="step-connector" [class.completed]="currentStep > 1"></div>
+        <div class="step" [class.active]="currentStep >= 2" [class.completed]="currentStep > 2">
+          <div class="step-number">2</div>
+          <span class="step-label">Choose Action</span>
+        </div>
+        <div class="step-connector" [class.completed]="currentStep > 2"></div>
+        <div class="step" [class.active]="currentStep >= 3" [class.completed]="currentStep > 3">
+          <div class="step-number">3</div>
+          <span class="step-label">Configure</span>
         </div>
       </div>
-      <div *ngIf="actionChosen && parsedData">
-        <p style="color: #388e3c;">Config file parsed successfully.</p>
-        <pre style="background: #222; color: #e0e0e0; padding: 0.5rem; border-radius: 4px; max-height: 200px; overflow: auto;">{{ parsedData | json }}</pre>
-      </div>
-      <div *ngIf="actionChosen">
-        <mat-form-field *ngIf="filteredTemplates.length > 0" appearance="outline" style="width: 100%; margin-top: 1.5rem;">
+
+      <mat-dialog-content class="dialog-content">
+        <!-- Step 1: File Upload -->
+        <div class="step-content" *ngIf="currentStep === 1 && !showValidatorBox">
+          <div class="upload-area" 
+               [class.dragover]="isDragOver"
+               (dragover)="onDragOver($event)"
+               (dragleave)="onDragLeave($event)"
+               (drop)="onDrop($event)">
+            
+            <div class="upload-icon">
+              <mat-icon>cloud_upload</mat-icon>
+            </div>
+            
+            <div class="upload-text">
+              <h3>Drop your config file here</h3>
+              <p>or click to browse</p>
+            </div>
+            
+            <input 
+              type="file" 
+              accept=".conf" 
+              (change)="onFileSelected($event)"
+              class="file-input"
+              #fileInput
+            />
+            
+            <button mat-stroked-button class="browse-button" (click)="fileInput.click()">
+              <mat-icon>folder_open</mat-icon>
+              Browse Files
+            </button>
+          </div>
+
+          <!-- File Preview -->
+          <div class="file-preview" *ngIf="fileName">
+            <mat-card class="file-card">
+              <div class="file-info">
+                <mat-icon class="file-icon">description</mat-icon>
+                <div class="file-details">
+                  <h4>{{ fileName }}</h4>
+                  <p class="file-size">{{ fileSize }}</p>
+                </div>
+                <button mat-icon-button class="remove-file" (click)="removeFile()">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            </mat-card>
+          </div>
+
+          <!-- Loading State -->
+          <div class="loading-state" *ngIf="loading">
+            <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+            <p>Processing config file...</p>
+          </div>
+        </div>
+
+        <!-- Step 2: Action Selection -->
+        <div class="step-content" *ngIf="currentStep === 2 && !showValidatorBox">
+          <div class="action-selection">
+            <h3>What would you like to do with this config file?</h3>
+            
+            <div class="action-cards">
+              <mat-card class="action-card" (click)="chooseAction('validate')" [class.selected]="actionChosen === 'validate'">
+                <div class="card-content">
+                  <mat-icon class="card-icon">verified</mat-icon>
+                  <h4>Validate Configuration</h4>
+                  <p>Check if your config file matches the template schema and identify any issues.</p>
+                  <div class="card-features">
+                    <span class="feature-chip">
+                      <mat-icon>check_circle</mat-icon>
+                      Schema Validation
+                    </span>
+                    <span class="feature-chip">
+                      <mat-icon>error_outline</mat-icon>
+                      Error Detection
+                    </span>
+                    <span class="feature-chip">
+                      <mat-icon>warning</mat-icon>
+                      Warning Alerts
+                    </span>
+                  </div>
+                </div>
+              </mat-card>
+
+              <mat-card class="action-card" (click)="chooseAction('edit')" [class.selected]="actionChosen === 'edit'">
+                <div class="card-content">
+                  <mat-icon class="card-icon">edit</mat-icon>
+                  <h4>Duplicate & Edit</h4>
+                  <p>Create a new submission by importing data from your config file for editing.</p>
+                  <div class="card-features">
+                    <span class="feature-chip">
+                      <mat-icon>content_copy</mat-icon>
+                      Data Import
+                    </span>
+                    <span class="feature-chip">
+                      <mat-icon>edit_note</mat-icon>
+                      Form Editing
+                    </span>
+                    <span class="feature-chip">
+                      <mat-icon>save</mat-icon>
+                      Save Changes
+                    </span>
+                  </div>
+                </div>
+              </mat-card>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Configuration -->
+        <div class="step-content" *ngIf="currentStep === 3 && !showValidatorBox">
+          <div class="configuration-form">
+            <h3>Configure Settings</h3>
+            
+            <!-- Template Selection -->
+            <mat-form-field appearance="outline" class="full-width" *ngIf="filteredTemplates.length > 0">
           <mat-label>Template Name</mat-label>
-          <input matInput name="templateName" [(ngModel)]="selectedTemplateName" (input)="onTemplateInput()" [matAutocomplete]="auto" placeholder="Type or select template name">
+              <input matInput 
+                     name="templateName" 
+                     [(ngModel)]="selectedTemplateName" 
+                     (input)="onTemplateInput()" 
+                     [matAutocomplete]="auto" 
+                     placeholder="Type or select template name">
+              <mat-icon matSuffix>template</mat-icon>
           <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onTemplateSelected($event.option.value)">
-            <mat-option *ngFor="let t of filteredTemplates" [value]="t">{{ t }}</mat-option>
+                <mat-option *ngFor="let t of filteredTemplates" [value]="t">
+                  <div class="template-option">
+                    <mat-icon>description</mat-icon>
+                    <span>{{ t }}</span>
+                  </div>
+                </mat-option>
           </mat-autocomplete>
         </mat-form-field>
-        <mat-form-field *ngIf="selectedTemplateName && availableVersions.length > 0" appearance="outline" style="width: 100%; margin-top: 1rem;">
+
+            <!-- Version Selection -->
+            <mat-form-field appearance="outline" class="full-width" *ngIf="selectedTemplateName && availableVersions.length > 0">
           <mat-label>Version</mat-label>
           <mat-select [(ngModel)]="selectedVersionTag" (selectionChange)="onVersionSelected()">
-            <mat-option *ngFor="let v of availableVersions" [value]="v">{{ v }}</mat-option>
+                <mat-option *ngFor="let v of availableVersions" [value]="v">
+                  <div class="version-option">
+                    <mat-icon>version</mat-icon>
+                    <span>{{ v }}</span>
+                  </div>
+                </mat-option>
           </mat-select>
+              <mat-icon matSuffix>update</mat-icon>
         </mat-form-field>
-        <mat-form-field appearance="outline" style="width: 100%; margin-top: 1rem;">
+
+            <!-- Environment Selection -->
+            <mat-form-field appearance="outline" class="full-width">
           <mat-label>Environment</mat-label>
           <mat-select [(ngModel)]="selectedEnvironment">
-            <mat-option value="PROD">PROD</mat-option>
-            <mat-option value="DEV">DEV</mat-option>
-            <mat-option value="COB">COB</mat-option>
+                <mat-option value="PROD">
+                  <div class="env-option prod">
+                    <mat-icon>production</mat-icon>
+                    <span>Production (PROD)</span>
+                  </div>
+                </mat-option>
+                <mat-option value="DEV">
+                  <div class="env-option dev">
+                    <mat-icon>developer_mode</mat-icon>
+                    <span>Development (DEV)</span>
+                  </div>
+                </mat-option>
+                <mat-option value="COB">
+                  <div class="env-option cob">
+                    <mat-icon>business</mat-icon>
+                    <span>Business (COB)</span>
+                  </div>
+                </mat-option>
           </mat-select>
+              <mat-icon matSuffix>environment</mat-icon>
         </mat-form-field>
-        <div *ngIf="schema && actionChosen === 'validate'">
-          <button mat-stroked-button (click)="onValidate()">Validate</button>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+              <button mat-stroked-button 
+                      class="validate-btn" 
+                      (click)="onValidate()" 
+                      *ngIf="schema && actionChosen === 'validate'"
+                      [disabled]="!schema || !selectedVersionTag || !selectedEnvironment">
+                <mat-icon>verified</mat-icon>
+                Validate Configuration
+              </button>
+              
+              <button mat-raised-button 
+                      color="primary" 
+                      class="edit-btn" 
+                      (click)="onUpdateAndEdit()" 
+                      *ngIf="schema && actionChosen === 'edit'"
+                      [disabled]="!schema || !selectedVersionTag || !selectedEnvironment">
+                <mat-icon>edit</mat-icon>
+                Duplicate & Edit
+              </button>
+            </div>
         </div>
-        <div *ngIf="schema && actionChosen === 'edit'">
-          <button mat-raised-button color="primary" (click)="onUpdateAndEdit()" [disabled]="!schema || !selectedVersionTag || !selectedEnvironment">Duplicate & Edit</button>
         </div>
-      </div>
+
+        <!-- Validation Results -->
       <app-config-validator-box *ngIf="showValidatorBox"
         [formName]="validatorBoxData?.formName ?? ''"
         [overallStatus]="validatorBoxData?.overallStatus ?? 'fail'"
-        [fieldResults]="validatorBoxData?.fieldResults ?? []"
+          [data]="validatorBoxData"
+          [parsedData]="parsedData"
+          [schema]="schema"
         [extraFields]="validatorBoxData?.extraFields ?? []"
-        [missingFields]="validatorBoxData?.missingFields ?? []"
         [syntaxErrors]="validatorBoxData?.syntaxErrors ?? []"
         [validationErrors]="validatorBoxData?.validationErrors ?? []"
         [warnings]="validatorBoxData?.warnings ?? []"
         (close)="showValidatorBox = false">
       </app-config-validator-box>
     </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button (click)="onCancel()">Cancel</button>
+
+      <!-- Footer Actions -->
+      <mat-dialog-actions class="dialog-actions" *ngIf="!showValidatorBox">
+        <div class="action-buttons">
+          <button mat-button (click)="onCancel()" class="cancel-btn">
+            <mat-icon>cancel</mat-icon>
+            Cancel
+          </button>
+          
+          <button mat-stroked-button 
+                  (click)="previousStep()" 
+                  *ngIf="currentStep > 1"
+                  class="back-btn">
+            <mat-icon>arrow_back</mat-icon>
+            Back
+          </button>
+          
+          <button mat-raised-button 
+                  color="primary" 
+                  (click)="nextStep()" 
+                  *ngIf="currentStep < 3 && canProceedToNextStep()"
+                  class="next-btn">
+            <mat-icon>arrow_forward</mat-icon>
+            Next
+          </button>
+        </div>
     </mat-dialog-actions>
+    </div>
   `,
   standalone: true,
   imports: [
@@ -88,14 +303,446 @@ import { ConfigValidatorBoxComponent, ConfigValidationFieldResult } from './conf
     MatInputModule, 
     MatAutocompleteModule, 
     MatOptionModule, 
-    MatSelectModule, // Add this to the imports array
+    MatSelectModule,
     MatButtonModule, 
     MatIconModule,
-    ConfigValidatorBoxComponent // <-- Add this
-  ]
+    MatProgressBarModule,
+    MatCardModule,
+    MatChipsModule,
+    ConfigValidatorBoxComponent
+  ],
+  styles: [`
+    .upload-dialog-container {
+      max-width: 800px;
+      min-height: 600px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem 2rem;
+      background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+      color: white;
+      border-radius: 12px 12px 0 0;
+    }
+
+    .header-content {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .header-icon {
+      font-size: 2.5rem;
+      width: 2.5rem;
+      height: 2.5rem;
+    }
+
+    .header-text h2 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+
+    .header-subtitle {
+      margin: 0.25rem 0 0 0;
+      opacity: 0.9;
+      font-size: 0.9rem;
+    }
+
+    .close-button {
+      color: white;
+    }
+
+    .progress-steps {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem 2rem;
+      background: var(--background-color);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      opacity: 0.5;
+      transition: all 0.3s ease;
+    }
+
+    .step.active {
+      opacity: 1;
+    }
+
+    .step.completed {
+      opacity: 1;
+    }
+
+    .step-number {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      background: var(--border-color);
+      color: var(--text-muted-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .step.active .step-number {
+      background: var(--primary-color);
+      color: white;
+    }
+
+    .step.completed .step-number {
+      background: var(--success-color);
+      color: white;
+    }
+
+    .step-label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted-color);
+    }
+
+    .step.active .step-label {
+      color: var(--primary-color);
+    }
+
+    .step.completed .step-label {
+      color: var(--success-color);
+    }
+
+    .step-connector {
+      width: 3rem;
+      height: 2px;
+      background: var(--border-color);
+      margin: 0 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .step-connector.completed {
+      background: var(--success-color);
+    }
+
+    .dialog-content {
+      flex: 1;
+      padding: 2rem;
+      overflow-y: auto;
+    }
+
+    .step-content {
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .upload-area {
+      border: 2px dashed var(--border-color);
+      border-radius: 12px;
+      padding: 3rem 2rem;
+      text-align: center;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+      background: var(--surface-color);
+    }
+
+    .upload-area:hover {
+      border-color: var(--primary-color);
+      background: var(--background-color);
+    }
+
+    .upload-area.dragover {
+      border-color: var(--primary-color);
+      background: var(--secondary-color);
+      transform: scale(1.02);
+    }
+
+    .upload-icon {
+      margin-bottom: 1rem;
+    }
+
+    .upload-icon mat-icon {
+      font-size: 4rem;
+      width: 4rem;
+      height: 4rem;
+      color: var(--primary-color);
+    }
+
+    .upload-text h3 {
+      margin: 0 0 0.5rem 0;
+      color: var(--text-color);
+      font-size: 1.25rem;
+    }
+
+    .upload-text p {
+      margin: 0;
+      color: var(--text-muted-color);
+    }
+
+    .file-input {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .browse-button {
+      margin-top: 1.5rem;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+    }
+
+    .file-preview {
+      margin-top: 1.5rem;
+    }
+
+    .file-card {
+      border-radius: 8px;
+      box-shadow: 0 2px 8px var(--shadow-color-light);
+    }
+
+    .file-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+    }
+
+    .file-icon {
+      color: var(--primary-color);
+      font-size: 2rem;
+    }
+
+    .file-details h4 {
+      margin: 0;
+      color: var(--text-color);
+    }
+
+    .file-size {
+      margin: 0.25rem 0 0 0;
+      color: var(--text-muted-color);
+      font-size: 0.85rem;
+    }
+
+    .remove-file {
+      margin-left: auto;
+    }
+
+    .loading-state {
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .loading-state p {
+      margin: 1rem 0 0 0;
+      color: var(--text-muted-color);
+    }
+
+    .action-selection h3 {
+      text-align: center;
+      margin-bottom: 2rem;
+      color: var(--text-color);
+    }
+
+    .action-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .action-card {
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: 2px solid transparent;
+    }
+
+    .action-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px var(--shadow-color-dark);
+    }
+
+    .action-card.selected {
+      border-color: var(--primary-color);
+      background: var(--secondary-color);
+    }
+
+    .card-content {
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .card-icon {
+      font-size: 3rem;
+      width: 3rem;
+      height: 3rem;
+      color: var(--primary-color);
+      margin-bottom: 1rem;
+    }
+
+    .card-content h4 {
+      margin: 0 0 1rem 0;
+      color: var(--text-color);
+      font-size: 1.25rem;
+    }
+
+    .card-content p {
+      margin: 0 0 1.5rem 0;
+      color: var(--text-muted-color);
+      line-height: 1.5;
+    }
+
+    .card-features {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .feature-chip {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem;
+      background: var(--background-color);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      color: var(--text-color);
+    }
+
+    .feature-chip mat-icon {
+      font-size: 1rem;
+      width: 1rem;
+      height: 1rem;
+    }
+
+    .configuration-form h3 {
+      text-align: center;
+      margin-bottom: 2rem;
+      color: var(--text-color);
+    }
+
+    .full-width {
+      width: 100%;
+      margin-bottom: 1.5rem;
+    }
+
+    .template-option,
+    .version-option,
+    .env-option {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .env-option {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: bold;
+      font-size: 1.05rem;
+    }
+
+    .env-option.prod {
+      color: #21ba45 !important; /* vivid green */
+      font-weight: bold;
+    }
+
+    .env-option.dev {
+      color: #2185d0 !important; /* vivid blue */
+      font-weight: bold;
+    }
+
+    .env-option.cob {
+      color: #f2711c !important; /* vivid orange */
+      font-weight: bold;
+    }
+
+    /* Make sure selected and hovered options are also bold and visible */
+    .mat-option.mat-selected .env-option,
+    .mat-option:hover .env-option {
+      filter: brightness(0.85);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.08);
+      background: rgba(0,0,0,0.02);
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-top: 2rem;
+    }
+
+    .validate-btn,
+    .edit-btn {
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+
+    .dialog-actions {
+      padding: 1.5rem 2rem;
+      border-top: 1px solid var(--border-color);
+      background: var(--surface-color);
+      border-radius: 0 0 12px 12px;
+    }
+
+    .dialog-actions .action-buttons {
+      justify-content: space-between;
+      margin: 0;
+    }
+
+    .cancel-btn,
+    .back-btn,
+    .next-btn {
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+
+    .next-btn {
+      background: var(--primary-color);
+      color: white;
+    }
+
+    .next-btn:hover {
+      background: var(--accent-color);
+    }
+
+    @media (max-width: 768px) {
+      .action-cards {
+        grid-template-columns: 1fr;
+      }
+      
+      .progress-steps {
+        flex-direction: column;
+        gap: 1rem;
+      }
+      
+      .step-connector {
+        width: 2px;
+        height: 2rem;
+        margin: 0;
+      }
+    }
+  `]
 })
 export class UploadConfigDialogComponent {
   fileName: string = '';
+  fileSize: string = '';
   rawConfigContent: string = '';
   parsedData: any = null;
   errorMessage: string = '';
@@ -128,6 +775,10 @@ export class UploadConfigDialogComponent {
   // Add property to hold syntax errors
   syntaxErrors: string[] = [];
 
+  // Step management
+  currentStep: number = 1;
+  isDragOver: boolean = false;
+
   constructor(
     public dialogRef: MatDialogRef<UploadConfigDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { template: any },
@@ -147,20 +798,93 @@ export class UploadConfigDialogComponent {
     });
   }
 
+  onDragOver(event: DragEvent) {
+    event.preventDefault();
+    this.isDragOver = true;
+  }
+
+  onDragLeave(event: DragEvent) {
+    event.preventDefault();
+    this.isDragOver = false;
+  }
+
+  onDrop(event: DragEvent) {
+    event.preventDefault();
+    this.isDragOver = false;
+    
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.name.endsWith('.conf')) {
+        this.processFile(file);
+      }
+    }
+  }
+
   onFileSelected(event: any) {
     const file = event.target.files[0];
-    if (!file) return;
+    if (file) {
+      this.processFile(file);
+    }
+  }
+
+  processFile(file: File) {
     this.fileName = file.name;
+    this.fileSize = this.formatFileSize(file.size);
     this.loading = true;
+    this.errorMessage = '';
+    this.parsedData = null;
+    this.actionChosen = null;
+    
     const reader = new FileReader();
     reader.onload = () => {
       this.rawConfigContent = reader.result as string;
-      this.errorMessage = '';
-      this.parsedData = null;
-      this.actionChosen = null; // Reset action
       this.loading = false;
+      this.nextStep();
     };
     reader.readAsText(file);
+  }
+
+  removeFile() {
+    this.fileName = '';
+    this.fileSize = '';
+    this.rawConfigContent = '';
+    this.parsedData = null;
+    this.actionChosen = null;
+    this.currentStep = 1;
+  }
+
+  formatFileSize(bytes: number): string {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  nextStep() {
+    if (this.canProceedToNextStep()) {
+      this.currentStep++;
+    }
+  }
+
+  previousStep() {
+    if (this.currentStep > 1) {
+      this.currentStep--;
+    }
+  }
+
+  canProceedToNextStep(): boolean {
+    switch (this.currentStep) {
+      case 1:
+        return !!this.fileName;
+      case 2:
+        return !!this.actionChosen;
+      case 3:
+        return !!this.selectedTemplateName && !!this.selectedVersionTag && !!this.selectedEnvironment;
+      default:
+        return false;
+    }
   }
 
   chooseAction(action: 'validate' | 'edit') {
@@ -170,6 +894,7 @@ export class UploadConfigDialogComponent {
     this.schema = null;
     this.validationResult = null;
     this.availableVersions = [];
+    
     // Parse config only after action is chosen
     if (this.rawConfigContent) {
       try {
@@ -184,6 +909,8 @@ export class UploadConfigDialogComponent {
         this.parsedData = null;
       }
     }
+    
+    this.nextStep();
   }
 
   onTemplateInput() {

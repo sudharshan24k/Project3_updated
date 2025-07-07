@@ -24,7 +24,7 @@ import { mapConfToPrefill } from './dynamic-form/conf-parser';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, NgIf, NgFor, DynamicForm, SubmissionsViewerComponent, MatIconModule, MatTooltipModule, MatButtonModule, FormsModule, MatTabsModule, MatExpansionModule, TemplateHistoryComponent, AnimatedPopupComponent, MatListModule, MatFormFieldModule, MatInputModule, MatDialogModule, UploadConfigDialogComponent],
+  imports: [CommonModule, NgIf, NgFor, DynamicForm, SubmissionsViewerComponent, MatIconModule, MatTooltipModule, MatButtonModule, FormsModule, MatTabsModule, MatExpansionModule, TemplateHistoryComponent, AnimatedPopupComponent, MatListModule, MatFormFieldModule, MatInputModule, MatDialogModule],
   template: `
     <div class="container">
       
