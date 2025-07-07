@@ -1556,7 +1556,11 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnChanges, OnD
   openUploadConfigDialog(version: any) {
     this.schemaService.getTemplate(version.name).subscribe(templateResp => {
       const dialogRef = this.dialog.open(UploadConfigDialogComponent, {
-        width: '500px',
+        width: '60vw',
+        maxWidth: '95vw',
+        height: 'auto',
+        panelClass: 'centered-dialog',
+        disableClose: true,
         data: { template: templateResp }
       });
       dialogRef.afterClosed().subscribe(result => {
@@ -1577,7 +1581,11 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnChanges, OnD
   openUploadConfigDialogCommon() {
     // Open dialog in generic mode (no template/version preselected)
     const dialogRef = this.dialog.open(UploadConfigDialogComponent, {
-      width: '500px',
+      width: '60vw',
+      maxWidth: '95vw',
+      height: 'auto',
+      panelClass: 'centered-dialog',
+      disableClose: true,
       data: { template: null }
     });
     dialogRef.afterClosed().subscribe(result => {

@@ -18,6 +18,10 @@
         </div>
       </div>
     </button>
+    <button class="upload-config-btn" (click)="navigate.emit({ view: 'upload-config' })">
+      <mat-icon>cloud_upload</mat-icon>
+      <span>Upload Config File</span>
+    </button>
   </div>
 
   <app-application-dashboard-list (back)="back.emit()" (navigate)="navigate.emit($event)"></app-application-dashboard-list>
