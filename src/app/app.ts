@@ -1,4 +1,5 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, ViewChild } from '@angular/core';
+
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -288,6 +289,8 @@ export class AppComponent implements OnDestroy {
   formTemplateName: string | null = null;
   prefillSubmissionData: any = null;
 
+  @ViewChild(SearchByFillerComponent)
+  searchByFillerComp?: SearchByFillerComponent;
   constructor() {
     this.intervalId = setInterval(() => {
       this.currentDateTime = new Date();
@@ -314,8 +317,7 @@ export class AppComponent implements OnDestroy {
   onNavigate(event: any) {
     // Store the current view as previous before changing
     this.previousView = this.currentView;
-    
-    // event can be a string (view) or an object { view, mode, templateName, team }
+    // event can be a string (view) or an object { view, mode, templateName, team, prefillSubmissionData }
     if (typeof event === 'string') {
       this.currentView = event as any;
       if (event === 'launchpad') {
@@ -326,11 +328,22 @@ export class AppComponent implements OnDestroy {
       if (event.mode) this.formMode = event.mode;
       if (event.templateName) this.formTemplateName = event.templateName;
       if (event.team) this.dashboardTeam = event.team;
+      if (event.prefillSubmissionData) this.prefillSubmissionData = event.prefillSubmissionData;
     }
   }
 
   // Smart back navigation - return to the correct dashboard based on where user came from
   onBackNavigation() {
+        // Special handling for search-by-filler detail view
+    if (this.currentView === 'search-by-filler' && this.searchByFillerComp) {
+      if (this.searchByFillerComp.canGoBack()) {
+        this.searchByFillerComp.goBack();
+        return;
+      } else {
+        this.currentView = 'dashboard';
+        return;
+      }
+    }
     // If we're in a form, history, submissions, or helpdesk, go back to the dashboard we came from
     if (this.currentView === 'form' || this.currentView === 'history' || this.currentView === 'submissions' || this.currentView === 'helpdesk') {
       this.currentView = 'dashboard';

@@ -1373,18 +1373,18 @@
 }
 
 .config-validator-modal.fullscreen-modal {
-  width: 85vw; /* Reduced from 98vw */
-  height: 90vh; /* Reduced from 100% */
-  max-width: 1200px; /* Reduced from 1600px */
-  max-height: 100vh; /* Added max height constraint */
+  width: 85vw;
+  height: 90vh;
+  max-width: 1200px;
+  max-height: 90vh; // Ensure it doesn't exceed viewport
   background: #fff;
   border-radius: 18px;
   box-shadow: 0 8px 48px rgba(0,0,0,0.25);
   display: flex;
   flex-direction: column;
   position: relative;
-  overflow-x: hidden;
-  margin: auto; /* Center the modal */
+  overflow: hidden; // Prevent overflow
+  margin: auto;
 }
 
 .validator-close-x.always-on-top {
@@ -1720,8 +1720,9 @@
 }
 
 .field-results-scroll-wrapper {
-  max-height: 40vh; /* Reduced from 45vh */
+  flex: 1 1 auto;
   min-height: 200px;
+  max-height: none; // Remove max-height restriction
   overflow-y: auto;
   margin: 0.5rem 2.5rem 1.5rem 2.5rem;
   border-radius: 12px;
@@ -1815,7 +1816,11 @@
   font-weight: 800;
   color: inherit;
 }
+// Ensure validation errors section doesn't push content out
 .validation-errors-section {
+  flex-shrink: 0; // Don't shrink
+  max-height: 300px; // Limit height
+  overflow-y: auto; // Make it scrollable if too long
   background: #fff6f6;
   border-radius: 10px;
   margin: 0 2.5rem 1.2rem 2.5rem;
@@ -1840,8 +1845,7 @@
   font-weight: 700;
 }
 .validation-errors-list {
-  margin-left: 2.1rem;
-  max-height: 220px;
+  max-height: 200px; // Limit the list height
   overflow-y: auto;
   padding-right: 8px;
 }
@@ -1854,6 +1858,7 @@
   background: #dc3545;
   border-radius: 6px;
 }
+
 .validation-error-message {
   background: #ffeaea;
   color: #b71c1c;
@@ -2120,13 +2125,33 @@
 
 .modal-scrollable-content {
   flex: 1 1 auto;
-  min-height: 0;
+  min-height: 0; // Important for flex child
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  max-height: calc(80vh - 200px); /* Adjust based on header height */
+  max-height: calc(90vh - 200px); // Adjust based on header height
+}
+// Add collapsible header styling
+.collapsible-header {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background-color 0.2s ease;
 }
 
+.collapsible-header:hover {
+  background: rgba(0,0,0,0.05);
+  border-radius: 6px;
+}
+
+.collapsible-arrow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #666;
+}
 .collapse-expand-label {
   font-size: 0.92em;
   color: #888;

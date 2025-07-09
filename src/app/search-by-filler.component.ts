@@ -22,10 +22,10 @@ import { Router } from '@angular/router';
         <form (ngSubmit)="onSearchByFiller()" #searchForm="ngForm" style="display: flex; align-items: center; gap: 1.2rem; margin-top: 1.2rem; margin-bottom: 1.2rem;">
           <mat-form-field appearance="outline" style="flex: 1; min-width: 0; margin: 0;">
             <mat-label>Enter User Name</mat-label>
-            <input matInput [(ngModel)]="searchFillerName" name="searchFillerName" required placeholder="e.g. John" style="height: 44px;" />
+            <input matInput [(ngModel)]="searchFillerName" name="searchFillerName" required placeholder="e.g. John" style="height: 24px;" />
           </mat-form-field>
-          <button mat-stroked-button color="primary" type="submit" [disabled]="!searchFillerName || isSearching" style="height: 44px; min-width: 110px; font-weight: 500; border-radius: 24px;">Search</button>
-          <button mat-stroked-button color="primary" type="button" (click)="back.emit()" style="height: 44px; min-width: 90px; font-weight: 500; border-radius: 24px;">Back</button>
+          <button mat-stroked-button color="primary" type="submit" [disabled]="!searchFillerName || isSearching" style="height: 44px; min-width: 110px; font-weight: 500; border-radius: 24px;margin-bottom:20px">Search</button>
+          
         </form>
         <div *ngIf="isSearching" style="margin-top: 1.5rem; text-align: center;">
           <mat-icon class="spinning">refresh</mat-icon> Searching...
@@ -60,10 +60,6 @@ import { Router } from '@angular/router';
     <ng-template #detailView>
       <div class="container">
         <div class="page-header">
-          <button mat-stroked-button color="primary" (click)="selectedSubmission = null" style="margin-bottom: 1rem;">
-            <mat-icon>arrow_back</mat-icon>
-            <span>Back to Results</span>
-          </button>
         </div>
         <div class="card submission-data" style="max-width: 700px; margin: 2rem auto; padding: 2rem;">
           <div class="submission-data-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
@@ -298,5 +294,18 @@ export class SearchByFillerComponent {
       });
     });
   }
+
+  // Returns true if in detail view
+  canGoBack(): boolean {
+    return !!this.selectedSubmission;
+  }
+
+  // Handles going back from detail view to list
+  goBack(): void {
+    if (this.selectedSubmission) {
+      this.selectedSubmission = null;
+    } else {
+      this.back.emit();
+    }
+  }
 }
-  

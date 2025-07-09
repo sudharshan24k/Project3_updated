@@ -1621,10 +1621,13 @@ openUploadConfigDialogCommon() {
       // TODO: Validate result.parsedData against selected schema and show result
       alert('Validation logic coming soon!');
     } else if (result.action === 'updateAndEdit') {
-      // Use the full versioned template name for the form
-      this.selectedTemplate = result.selectedVersionTag;
-      this.prefillSubmissionData = result.prefillData;
-      this.mode = 'use';
+      // Instead of setting local state, emit to parent so app.ts can show form and header back button
+      this.navigate.emit({
+        view: 'form',
+        mode: 'use',
+        templateName: result.selectedVersionTag,
+        prefillSubmissionData: result.prefillData
+      });
     }
   });
 }
