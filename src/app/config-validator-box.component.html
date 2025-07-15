@@ -16,7 +16,12 @@
     </span>
   </div>
   <div class="file-name-row" *ngIf="formName">
-    <span class="file-name">{{ formName }} <span class="version-info">v{{ templateVersion || '1.0' }}</span></span>
+    <span class="file-name">
+      {{ formName }}
+      <span class="version-info">
+        <input [(ngModel)]="templateVersion" placeholder="FW Version" style="width: 60px; margin-left: 4px;" />
+      </span>
+    </span>
   </div>
 </div>
 

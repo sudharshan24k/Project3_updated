@@ -293,6 +293,7 @@ import { ConfigValidatorBoxComponent, ConfigValidationFieldResult } from './conf
           [data]="validatorBoxData"
           [parsedData]="parsedData"
           [schema]="schema"
+          [templateVersion]="schema?.version"
           [extraFields]="validatorBoxData?.extraFields ?? []"
           [syntaxErrors]="validatorBoxData?.syntaxErrors ?? []"
           [validationErrors]="validatorBoxData?.validationErrors ?? []"

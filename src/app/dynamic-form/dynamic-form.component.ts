@@ -719,6 +719,8 @@ loadTemplate() {
   }
 
   async onSubmit() {
+    // Always sync version_tag to version before sending to backend
+    this.schema.version_tag = this.schema.version;
     if (this.mode === 'create') {
       if (!this.isFormValid()) {
         this.showPopup('Please fill all required fields.', 'error');
@@ -731,6 +733,7 @@ loadTemplate() {
         author: this.schema.author,
         team_name: this.schema.team_name,
         version: this.schema.version,
+        version_tag: this.schema.version_tag,
         audit_pipeline: this.schema.audit_pipeline
       };
       this.schemaService.createTemplate(template).subscribe(() => {

@@ -201,6 +201,11 @@ async def edit_template(name: str, req: UpdateTemplateRequest = Body(...)):
         "schema": normalize_field_booleans(req.schema),
         "updated_at": datetime.datetime.utcnow()
     }
+    # --- Add version_tag update logic ---
+    if req.schema.get("version_tag"):
+        update_data["version_tag"] = req.schema["version_tag"]
+    elif req.schema.get("version"):
+        update_data["version_tag"] = req.schema["version"]
     await template_collection.update_one({"_id": existing_template["_id"]}, {"$set": update_data})
     updated_template = await template_collection.find_one({"_id": existing_template["_id"]})
     updated_template.pop("lock_password", None)
@@ -343,7 +348,13 @@ async def create_new_version(name: str, req: UpdateTemplateRequest = Body(...)):
     prev_template = await template_collection.find_one({"name": name})
     author = req.schema.get("author") if isinstance(req.schema, dict) and req.schema.get("author") else (prev_template.get("author") if prev_template else None)
     team_name = req.schema.get("team_name") if isinstance(req.schema, dict) and req.schema.get("team_name") else (prev_template.get("team_name") if prev_template else None)
-    version_tag = req.schema.get("version_tag") if isinstance(req.schema, dict) and req.schema.get("version_tag") else (prev_template.get("version_tag") if prev_template else None)
+    # --- Add version_tag update logic ---
+    if req.schema.get("version_tag"):
+        version_tag = req.schema["version_tag"]
+    elif req.schema.get("version"):
+        version_tag = req.schema["version"]
+    else:
+        version_tag = prev_template.get("version_tag") if prev_template else None
 
     new_template = {
         "name": versioned_name,

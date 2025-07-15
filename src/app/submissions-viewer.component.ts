@@ -15,6 +15,7 @@ import { InteractiveDialogComponent } from './interactive-dialog.component';
 import JSZip from 'jszip';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { mapConfToPrefill } from './dynamic-form/conf-parser';
 
 @Component({
   selector: 'app-submissions-viewer',
@@ -284,52 +285,7 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges, OnDestroy 
           .pipe(takeUntil(this.destroy$))
           .subscribe(sub => {
             const data = (sub.data && sub.data.data) ? sub.data.data : sub.data;
-            const prefillSubmissionData: any = {};
-            if (schema && Array.isArray(schema.fields)) {
-              schema.fields.forEach((field: any) => {
-                const fieldKey = field.key;
-                const fieldType = field.type;
-                const fieldValue = data ? data[fieldKey] : undefined;
-                if (field.environmentSpecific) {
-                  // Patch each environment (PROD, DEV, COB)
-                  prefillSubmissionData[fieldKey] = { PROD: null, DEV: null, COB: null };
-                  ['PROD', 'DEV', 'COB'].forEach(env => {
-                    if (fieldValue && fieldValue[env] !== undefined) {
-                      if (fieldType === 'keyvalue' && Array.isArray(fieldValue[env])) {
-                        prefillSubmissionData[fieldKey][env] = fieldValue[env].map((pair: any) => ({
-                          key: pair.key || '',
-                          value: pair.value || ''
-                        }));
-                      } else if (fieldType === 'mcq_multiple' && Array.isArray(fieldValue[env])) {
-                        prefillSubmissionData[fieldKey][env] = [...fieldValue[env]];
-                      } else {
-                        prefillSubmissionData[fieldKey][env] = fieldValue[env];
-                      }
-                    } else {
-                      // If not present, use empty array/object as appropriate
-                      if (fieldType === 'keyvalue') prefillSubmissionData[fieldKey][env] = [];
-                      else if (fieldType === 'mcq_multiple') prefillSubmissionData[fieldKey][env] = [];
-                      else prefillSubmissionData[fieldKey][env] = '';
-                    }
-                  });
-                } else if (fieldType === 'keyvalue' && Array.isArray(fieldValue)) {
-                  prefillSubmissionData[fieldKey] = fieldValue.map((pair: any) => ({
-                    key: pair.key || '',
-                    value: pair.value || ''
-                  }));
-                } else if (fieldType === 'mcq_multiple' && Array.isArray(fieldValue)) {
-                  prefillSubmissionData[fieldKey] = [...fieldValue];
-                } else if (fieldValue !== undefined) {
-                  prefillSubmissionData[fieldKey] = fieldValue;
-                } else {
-                  // If not present, use empty array/object as appropriate
-                  if (fieldType === 'keyvalue') prefillSubmissionData[fieldKey] = [];
-                  else if (fieldType === 'mcq_multiple') prefillSubmissionData[fieldKey] = [];
-                  else prefillSubmissionData[fieldKey] = '';
-                }
-              });
-            }
-            // Clear any fillerName or name field if present
+            const prefillSubmissionData = mapConfToPrefill(data, schema);
             if ('fillerName' in prefillSubmissionData) prefillSubmissionData.fillerName = '';
             if ('name' in prefillSubmissionData) prefillSubmissionData.name = '';
             this.duplicateEdit.emit({
