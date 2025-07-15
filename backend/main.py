@@ -206,6 +206,11 @@ async def edit_template(name: str, req: UpdateTemplateRequest = Body(...)):
         update_data["version_tag"] = req.schema["version_tag"]
     elif req.schema.get("version"):
         update_data["version_tag"] = req.schema["version"]
+    # --- Add author and team_name update logic ---
+    if req.schema.get("author"):
+        update_data["author"] = req.schema["author"]
+    if req.schema.get("team_name"):
+        update_data["team_name"] = req.schema["team_name"]
     await template_collection.update_one({"_id": existing_template["_id"]}, {"$set": update_data})
     updated_template = await template_collection.find_one({"_id": existing_template["_id"]})
     updated_template.pop("lock_password", None)

@@ -112,7 +112,13 @@ export class SchemaService {
   }
 
   updateTemplate(name: string, schema: any, change_log: string): Observable<any> {
-    const payload = { schema, change_log, version_tag: schema.version };
+    const payload = {
+      schema,
+      change_log,
+      version_tag: schema.version,
+      author: schema.author,
+      team_name: schema.team_name
+    };
     return this.http.put(`${this.apiUrl}/templates/${name}`, payload).pipe(
       tap(() => this.clearTemplatesCache())
     );
@@ -148,7 +154,13 @@ export class SchemaService {
    * Calls backend endpoint to create a new version (e.g. name_v2, name_v3, ...)
    */
   createNewVersion(name: string, schema: any, change_log: string): Observable<any> {
-    const payload = { schema, change_log, version_tag: schema.version };
+    const payload = {
+      schema,
+      change_log,
+      version_tag: schema.version,
+      author: schema.author,
+      team_name: schema.team_name
+    };
     // Backend should handle version increment and naming
     return this.http.post(`${this.apiUrl}/templates/${name}/newversion`, payload);
   }

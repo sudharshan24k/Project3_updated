@@ -49,6 +49,7 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges, OnDestroy 
   environments = ['PROD', 'DEV', 'COB'];
   selectedEnv = 'PROD';
   envFormattedSubmissionData: { [env: string]: string } = {};
+  templateMetadata: any = null;
 
   private destroy$ = new Subject<void>();
 
@@ -94,11 +95,15 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges, OnDestroy 
       });
   }
 
-  viewSubmission(submissionName: string) {
+  async viewSubmission(submissionName: string) {
     if (!this.templateName) return;
     this.selectedSubmissionName = submissionName;
     this.diffResult = null;
     this.selectedEnv = 'PROD'; // Default to PROD tab
+    // Fetch template metadata if not already loaded
+    if (!this.templateMetadata) {
+      this.templateMetadata = await this.schemaService.getTemplate(this.templateName).toPromise();
+    }
     this.schemaService.getSubmissionByName(this.templateName, submissionName)
       .pipe(takeUntil(this.destroy$))
       .subscribe(sub => {
@@ -109,7 +114,7 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges, OnDestroy 
         // Fix: always pass the correct data object
         const confData = sub.data?.data || sub.data;
         for (const env of this.environments) {
-          this.envFormattedSubmissionData[env] = this.formatAsConfEnv(confData, env);
+          this.envFormattedSubmissionData[env] = this.formatAsConfEnv(confData, env, this.templateMetadata, sub);
         }
         this.formattedSubmissionData = this.envFormattedSubmissionData[this.selectedEnv];
       });
@@ -121,9 +126,18 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges, OnDestroy 
   }
 
   // Helper: Generate config for a specific environment
-  private formatAsConfEnv(data: any, env: string): string {
-    if (!data) return '';
+  private formatAsConfEnv(data: any, env: string, metadata?: any, submission?: any): string {
     let confContent = '';
+    if (metadata) {
+      confContent += `# Template Name: ${metadata.name || ''}\n`;
+      confContent += `# Template Description: ${(metadata.schema?.description || '')}\n`;
+      confContent += `# Filler Name: ${submission?.fillerName || ''}\n`;
+      confContent += `# Team Name: ${metadata.team_name || ''}\n`;
+      confContent += `# Version Tag: ${metadata.version_tag || ''}\n`;
+      confContent += `# Time Filled: ${submission?.created_at || ''}\n`;
+      confContent += `# ---------------------------------------------\n`;
+    }
+    if (!data) return confContent;
     for (const key in data) {
       if (Object.prototype.hasOwnProperty.call(data, key)) {
         const value = data[key];
@@ -202,13 +216,16 @@ export class SubmissionsViewerComponent implements OnInit, OnChanges, OnDestroy 
   // Download all configs for all environments as a single zip file
   async downloadSubmission(submissionName: string) {
     if (!this.templateName) return;
+    // Always fetch template metadata before generating the zip
+    const metadata = await this.schemaService.getTemplate(this.templateName).toPromise();
+    this.templateMetadata = metadata;
     this.schemaService.downloadSubmissionByName(this.templateName, submissionName)
       .pipe(takeUntil(this.destroy$))
       .subscribe(async (submission: any) => {
         const confData = submission.data?.data || submission.data;
         const zip = new JSZip();
         for (const env of this.environments) {
-          const confContent = this.formatAsConfEnv(confData, env);
+          const confContent = this.formatAsConfEnv(confData, env, this.templateMetadata, submission);
           const fileName = `${submissionName}_${env}.conf`;
           zip.file(fileName, confContent);
         }
