@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { getConfigValidationFieldResults, debugFieldVisibility } from './dynamic-form/conf-parser';
+import { FormsModule } from '@angular/forms';
 
 export interface ConfigValidationFieldResult {
   key: string;
@@ -15,7 +16,7 @@ export interface ConfigValidationFieldResult {
 @Component({
   selector: 'app-config-validator-box',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule],
+  imports: [FormsModule, CommonModule, MatIconModule, MatButtonModule],
   templateUrl: './config-validator-box.component.html',
   styleUrls: ['./config-validator-box.component.scss']
 })
