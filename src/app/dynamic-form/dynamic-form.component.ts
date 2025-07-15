@@ -190,7 +190,7 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit, OnDestroy 
       regex: [''],
       options: this.fb.array([]),
       initialKeys: [''],
-      environmentSpecific: [false] // <-- Add this line
+      environmentSpecific: [false]
     });
     // Add top-level form for required fields
     this.topLevelForm = this.fb.group({
@@ -213,6 +213,15 @@ export class DynamicForm implements OnInit, OnChanges, AfterViewInit, OnDestroy 
       startWith(''),
       map(value => this._filterTemplates(value))
     );
+    // --- Add watcher for environmentSpecific and initialKeys ---
+    this.fieldForm.get('environmentSpecific')?.valueChanges.subscribe((envSpec) => {
+      this.handleEnvSpecificChange(envSpec);
+    });
+    this.fieldForm.get('initialKeys')?.valueChanges.subscribe((val) => {
+      if (this.fieldForm.get('type')?.value === 'keyvalue' && this.fieldForm.get('environmentSpecific')?.value) {
+        this.handleEnvSpecificChange(true);
+      }
+    });
   }
 
   ngOnInit() {
@@ -439,7 +448,7 @@ loadTemplate() {
   });
 }
 
- buildForm() {
+  buildForm() {
   const controls: { [key: string]: any } = {};
   
   // Add null/undefined checks for schema and fields
@@ -706,6 +715,23 @@ loadTemplate() {
     }
     // Add initialKeys property as requested
     newField.initialKeys = newField.type === 'keyvalue' && newField.initialKeys ? newField.initialKeys : undefined;
+    // --- Ensure defaultValue is structured for env-specific fields ---
+    if (newField.environmentSpecific && newField.defaultValue && typeof newField.defaultValue === 'object' && !Array.isArray(newField.defaultValue)) {
+      // For each env, flatten to primitive or array as needed
+      const envs = ['PROD', 'DEV', 'COB'];
+      envs.forEach(env => {
+        let val = newField.defaultValue[env];
+        if (newField.type === 'keyvalue' || newField.type === 'mcq_multiple') {
+          // keep as array
+          if (!Array.isArray(val)) newField.defaultValue[env] = [];
+        } else {
+          // flatten to string/number
+          if (val && typeof val === 'object') {
+            newField.defaultValue[env] = '';
+          }
+        }
+      });
+    }
     if (this.currentFieldIndex !== null) {
       this.schema.fields[this.currentFieldIndex] = newField;
     } else {
@@ -1074,6 +1100,62 @@ loadTemplate() {
     if (control instanceof FormArray) {
       control.removeAt(index);
     }
+  }
+
+  handleEnvSpecificChange(envSpec: boolean) {
+    const type = this.fieldForm.get('type')?.value;
+    let defVal = this.fieldForm.get('defaultValue')?.value;
+    if (envSpec) {
+      if (type === 'keyvalue') {
+        let keys = this.fieldForm.get('initialKeys')?.value;
+        if (typeof keys === 'string') {
+          keys = keys.split(',').map((k: string) => k.trim()).filter((k: string) => k);
+        }
+        let defaultPairs = Array.isArray(defVal) && defVal.length > 0 ? defVal : (Array.isArray(keys) ? keys.map((k: string) => ({ key: k, value: '' })) : []);
+        const envObj: any = { PROD: [], DEV: [], COB: [] };
+        ['PROD', 'DEV', 'COB'].forEach(env => {
+          envObj[env] = [...defaultPairs];
+        });
+        this.fieldForm.patchValue({ defaultValue: envObj }, { emitEvent: false });
+      } else if (type === 'mcq_multiple') {
+        const arrVal = Array.isArray(defVal) ? defVal : [];
+        const envObj: any = { PROD: [], DEV: [], COB: [] };
+        ['PROD', 'DEV', 'COB'].forEach(env => {
+          envObj[env] = [...arrVal];
+        });
+        this.fieldForm.patchValue({ defaultValue: envObj }, { emitEvent: false });
+      } else {
+        // For text, number, email, etc.
+        const envObj: any = { PROD: '', DEV: '', COB: '' };
+        ['PROD', 'DEV', 'COB'].forEach(env => {
+          envObj[env] = defVal || '';
+        });
+        this.fieldForm.patchValue({ defaultValue: envObj }, { emitEvent: false });
+      }
+    } else {
+      // If unticked, flatten defaultValue to single value
+      if (type === 'keyvalue') {
+        let keys = this.fieldForm.get('initialKeys')?.value;
+        if (typeof keys === 'string') {
+          keys = keys.split(',').map((k: string) => k.trim()).filter((k: string) => k);
+        }
+        this.fieldForm.patchValue({ defaultValue: Array.isArray(keys) ? keys.map((k: string) => ({ key: k, value: '' })) : [] }, { emitEvent: false });
+      } else if (type === 'mcq_multiple') {
+        this.fieldForm.patchValue({ defaultValue: [] }, { emitEvent: false });
+      } else {
+        this.fieldForm.patchValue({ defaultValue: '' }, { emitEvent: false });
+      }
+    }
+  }
+
+  setEnvDefaultValue(env: 'PROD' | 'DEV' | 'COB', value: any) {
+    const current = this.fieldForm.get('defaultValue')?.value || {};
+    const updated = { ...current, [env]: value };
+    this.fieldForm.get('defaultValue')?.setValue(updated);
+  }
+
+  setAllEnvDefaults(value: any) {
+    this.fieldForm.get('defaultValue')?.setValue({ PROD: value, DEV: value, COB: value });
   }
 
   ngOnDestroy() {

@@ -410,37 +410,13 @@
                     </div>
                     <div class="form-field">
                       <label>Default Value</label>
-                      <!-- For dropdown and mcq_single -->
-                      <ng-container *ngIf="fieldForm.get('type')?.value === 'dropdown' || fieldForm.get('type')?.value === 'mcq_single'">
-                        <select formControlName="defaultValue">
-                          <option *ngFor="let opt of options.controls" [value]="opt.value.value">{{ opt.value.label }}</option>
-                        </select>
+                      <!-- For environment specific fields: show per-env inputs -->
+                      <ng-container *ngIf="fieldForm.get('environmentSpecific')?.value; else singleDefaultValue">
+                        <input matInput [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" (ngModelChange)="setAllEnvDefaults($event)" placeholder="Default for all environments" style="width: 100%; margin-bottom: 8px;" />
                       </ng-container>
-                      <!-- For mcq_multiple -->
-                      <ng-container *ngIf="fieldForm.get('type')?.value === 'mcq_multiple'">
-                        <div *ngFor="let opt of options.controls">
-                          <input type="checkbox"
-                                [value]="opt.value.value"
-                                (change)="onDefaultMultiChange($event, opt.value.value)"
-                                [checked]="fieldForm.value.defaultValue?.includes(opt.value.value)">
-                          {{ opt.value.label }}
-                        </div>
-                      </ng-container>
-                      <!-- For boolean -->
-                      <ng-container *ngIf="fieldForm.get('type')?.value === 'boolean'">
-                        <select formControlName="defaultValue">
-                          <option [ngValue]="true">True</option>
-                          <option [ngValue]="false">False</option>
-                        </select>
-                      </ng-container>
-                      <!-- For keyvalue: hide defaultValue input -->
-                      <ng-container *ngIf="fieldForm.get('type')?.value === 'keyvalue'">
-                        <!-- No default value input for keyvalue -->
-                      </ng-container>
-                      <!-- For other types -->
-                      <ng-container *ngIf="fieldForm.get('type')?.value !== 'dropdown' && fieldForm.get('type')?.value !== 'mcq_single' && fieldForm.get('type')?.value !== 'mcq_multiple' && fieldForm.get('type')?.value !== 'boolean' && fieldForm.get('type')?.value !== 'keyvalue'">
-                        <input formControlName="defaultValue" placeholder="Optional default value">
-                      </ng-container>
+                      <ng-template #singleDefaultValue>
+                        <input matInput formControlName="defaultValue" placeholder="Default Value" />
+                      </ng-template>
                     </div>
                     <div class="form-field" *ngIf="fieldForm.get('type')?.value === 'text'">
                       
@@ -647,37 +623,13 @@
                 </div>
                 <div class="form-field">
                   <label>Default Value</label>
-                  <!-- For dropdown and mcq_single -->
-                  <ng-container *ngIf="fieldForm.get('type')?.value === 'dropdown' || fieldForm.get('type')?.value === 'mcq_single'">
-                    <select formControlName="defaultValue">
-                      <option *ngFor="let opt of options.controls" [value]="opt.value.value">{{ opt.value.label }}</option>
-                    </select>
+                  <!-- For environment specific fields: show per-env inputs -->
+                  <ng-container *ngIf="fieldForm.get('environmentSpecific')?.value; else singleDefaultValue">
+                    <input matInput [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" (ngModelChange)="setAllEnvDefaults($event)" placeholder="Default for all environments" style="width: 100%; margin-bottom: 8px;" />
                   </ng-container>
-                  <!-- For mcq_multiple -->
-                  <ng-container *ngIf="fieldForm.get('type')?.value === 'mcq_multiple'">
-                    <div *ngFor="let opt of options.controls">
-                      <input type="checkbox"
-                            [value]="opt.value.value"
-                            (change)="onDefaultMultiChange($event, opt.value.value)"
-                            [checked]="fieldForm.value.defaultValue?.includes(opt.value.value)">
-                      {{ opt.value.label }}
-                    </div>
-                  </ng-container>
-                  <!-- For boolean -->
-                  <ng-container *ngIf="fieldForm.get('type')?.value === 'boolean'">
-                    <select formControlName="defaultValue">
-                      <option [ngValue]="true">True</option>
-                      <option [ngValue]="false">False</option>
-                    </select>
-                  </ng-container>
-                  <!-- For keyvalue: hide defaultValue input -->
-                  <ng-container *ngIf="fieldForm.get('type')?.value === 'keyvalue'">
-                    <!-- No default value input for keyvalue -->
-                  </ng-container>
-                  <!-- For other types -->
-                  <ng-container *ngIf="fieldForm.get('type')?.value !== 'dropdown' && fieldForm.get('type')?.value !== 'mcq_single' && fieldForm.get('type')?.value !== 'mcq_multiple' && fieldForm.get('type')?.value !== 'boolean' && fieldForm.get('type')?.value !== 'keyvalue'">
-                    <input formControlName="defaultValue" placeholder="Optional default value">
-                  </ng-container>
+                  <ng-template #singleDefaultValue>
+                    <input matInput formControlName="defaultValue" placeholder="Default Value" />
+                  </ng-template>
                 </div>
                 <div class="form-field" *ngIf="fieldForm.get('type')?.value === 'text'">
                   <label>Validation Regex <mat-icon matTooltip="Pattern the input must match (e.g., ^[a-zA-Z]+$)">help_outline</mat-icon></label>
