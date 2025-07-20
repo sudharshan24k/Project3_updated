@@ -1097,6 +1097,29 @@ showAllErrors(event: MouseEvent) {
     }
   }
 }
+onEnvDefaultMultiChange(event: any, value: any, env: 'PROD' | 'DEV' | 'COB') {
+  const checked = event.target.checked;
+  let currentDefValue = this.fieldForm.value.defaultValue || { PROD: [], DEV: [], COB: [] };
+  
+  // Ensure the environment array exists
+  if (!currentDefValue[env]) {
+    currentDefValue[env] = [];
+  }
+  
+  let arr = [...currentDefValue[env]];
+  
+  if (checked) {
+    if (!arr.includes(value)) {
+      arr.push(value);
+    }
+  } else {
+    arr = arr.filter((v: any) => v !== value);
+  }
+  
+  currentDefValue[env] = arr;
+  this.fieldForm.patchValue({ defaultValue: currentDefValue });
+}
+
 
 
   // Helper to get options for a field key (for conditional logic)

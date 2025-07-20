@@ -461,14 +461,41 @@
                     <div class="form-field" style="margin-left: 1.25rem;">
                       <label>Field Type</label>
                       <div class="type-select-group" style="position: relative; display: flex; align-items: center;">
-                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'text'">text_fields</mat-icon>
-                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'number'">pin</mat-icon>
-                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'email'">email</mat-icon>
-                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'boolean'">toggle_on</mat-icon>
-                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'dropdown'">arrow_drop_down_circle</mat-icon>
-                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'mcq_single'">radio_button_checked</mat-icon>
-                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'mcq_multiple'">check_box</mat-icon>
-                        <select formControlName="type" [disabled]="fieldForm.get('environmentSpecific')?.value">
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'text'" 
+                                  style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                          text_fields
+                        </mat-icon>
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'number'" 
+                                  style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                          pin
+                        </mat-icon>
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'email'" 
+                                  style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                          email
+                        </mat-icon>
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'boolean'" 
+                                  style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                          toggle_on
+                        </mat-icon>
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'dropdown'" 
+                                  style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                          arrow_drop_down_circle
+                        </mat-icon>
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'mcq_single'" 
+                                  style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                          radio_button_checked
+                        </mat-icon>
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'mcq_multiple'" 
+                                  style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                          check_box
+                        </mat-icon>
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'keyvalue'" 
+                                  style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                          vpn_key
+                        </mat-icon>
+                        <select formControlName="type" 
+                                [disabled]="fieldForm.get('environmentSpecific')?.value"
+                                style="width: 100%; padding: 0.75rem 0.75rem 0.75rem 3rem; border: 1px solid #ced4da; border-radius: 4px; background-color: white; font-size: 0.875rem;">
                           <option value="text">Text</option>
                           <option value="number">Number</option>
                           <option value="email">Email</option>
@@ -494,68 +521,225 @@
                       <!-- For environment specific fields -->
                       <ng-container *ngIf="fieldForm.get('environmentSpecific')?.value; else singleDefaultValue">
                         <ng-container [ngSwitch]="fieldForm.get('type')?.value">
-                          <!-- Text, Number, Email - Environment specific text inputs -->
+                          
+                          <!-- Text - Individual environment inputs -->
                           <ng-container *ngSwitchCase="'text'">
-                            <input matInput [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
-                                   (ngModelChange)="setAllEnvDefaults($event)" 
-                                   placeholder="Default text for all environments" 
-                                   style="width: 100%; margin-bottom: 8px;" />
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                              <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="min-width: 60px; font-weight: 600;">PROD:</label>
+                                <input matInput [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
+                                       (ngModelChange)="setEnvDefaultValue('PROD', $event)" 
+                                       placeholder="Default text for PROD" 
+                                       style="flex: 1;" />
+                              </div>
+                              <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="min-width: 60px; font-weight: 600;">DEV:</label>
+                                <input matInput [ngModel]="fieldForm.value.defaultValue?.DEV" [ngModelOptions]="{standalone: true}" 
+                                       (ngModelChange)="setEnvDefaultValue('DEV', $event)" 
+                                       placeholder="Default text for DEV" 
+                                       style="flex: 1;" />
+                              </div>
+                              <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="min-width: 60px; font-weight: 600;">COB:</label>
+                                <input matInput [ngModel]="fieldForm.value.defaultValue?.COB" [ngModelOptions]="{standalone: true}" 
+                                       (ngModelChange)="setEnvDefaultValue('COB', $event)" 
+                                       placeholder="Default text for COB" 
+                                       style="flex: 1;" />
+                              </div>
+                            </div>
                           </ng-container>
+                          
+                          <!-- Number - Individual environment inputs -->
                           <ng-container *ngSwitchCase="'number'">
-                            <input matInput type="number" [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
-                                   (ngModelChange)="setAllEnvDefaults($event)" 
-                                   placeholder="Default number for all environments" 
-                                   style="width: 100%; margin-bottom: 8px;" />
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                              <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="min-width: 60px; font-weight: 600;">PROD:</label>
+                                <input matInput type="number" [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
+                                       (ngModelChange)="setEnvDefaultValue('PROD', $event)" 
+                                       placeholder="Default number for PROD" 
+                                       style="flex: 1;" />
+                              </div>
+                              <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="min-width: 60px; font-weight: 600;">DEV:</label>
+                                <input matInput type="number" [ngModel]="fieldForm.value.defaultValue?.DEV" [ngModelOptions]="{standalone: true}" 
+                                       (ngModelChange)="setEnvDefaultValue('DEV', $event)" 
+                                       placeholder="Default number for DEV" 
+                                       style="flex: 1;" />
+                              </div>
+                              <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="min-width: 60px; font-weight: 600;">COB:</label>
+                                <input matInput type="number" [ngModel]="fieldForm.value.defaultValue?.COB" [ngModelOptions]="{standalone: true}" 
+                                       (ngModelChange)="setEnvDefaultValue('COB', $event)" 
+                                       placeholder="Default number for COB" 
+                                       style="flex: 1;" />
+                              </div>
+                            </div>
                           </ng-container>
+
+                          <!-- Email - Individual environment inputs -->
                           <ng-container *ngSwitchCase="'email'">
-                            <input matInput type="email" [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
-                                   (ngModelChange)="setAllEnvDefaults($event)" 
-                                   placeholder="Default email for all environments" 
-                                   style="width: 100%; margin-bottom: 8px;" />
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                              <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="min-width: 60px; font-weight: 600;">PROD:</label>
+                                <input matInput type="email" [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
+                                       (ngModelChange)="setEnvDefaultValue('PROD', $event)" 
+                                       placeholder="Default email for PROD" 
+                                       style="flex: 1;" />
+                              </div>
+                              <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="min-width: 60px; font-weight: 600;">DEV:</label>
+                                <input matInput type="email" [ngModel]="fieldForm.value.defaultValue?.DEV" [ngModelOptions]="{standalone: true}" 
+                                       (ngModelChange)="setEnvDefaultValue('DEV', $event)" 
+                                       placeholder="Default email for DEV" 
+                                       style="flex: 1;" />
+                              </div>
+                              <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="min-width: 60px; font-weight: 600;">COB:</label>
+                                <input matInput type="email" [ngModel]="fieldForm.value.defaultValue?.COB" [ngModelOptions]="{standalone: true}" 
+                                       (ngModelChange)="setEnvDefaultValue('COB', $event)" 
+                                       placeholder="Default email for COB" 
+                                       style="flex: 1;" />
+                              </div>
+                            </div>
                           </ng-container>
                           
-                          <!-- Boolean - Environment specific boolean select -->
+                          <!-- Boolean - Individual environment selects -->
                           <ng-container *ngSwitchCase="'boolean'">
-                            <select [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
-                                    (ngModelChange)="setAllEnvDefaults($event)" 
-                                    style="width: 100%; margin-bottom: 8px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
-                              <option value="">-- Select Default --</option>
-                              <option [value]="true">True</option>
-                              <option [value]="false">False</option>
-                            </select>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                              <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="min-width: 60px; font-weight: 600;">PROD:</label>
+                                <select [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
+                                        (ngModelChange)="setEnvDefaultValue('PROD', $event)" 
+                                        style="flex: 1; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                                  <option value="">-- Select Default --</option>
+                                  <option [value]="true">True</option>
+                                  <option [value]="false">False</option>
+                                </select>
+                              </div>
+                              <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="min-width: 60px; font-weight: 600;">DEV:</label>
+                                <select [ngModel]="fieldForm.value.defaultValue?.DEV" [ngModelOptions]="{standalone: true}" 
+                                        (ngModelChange)="setEnvDefaultValue('DEV', $event)" 
+                                        style="flex: 1; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                                  <option value="">-- Select Default --</option>
+                                  <option [value]="true">True</option>
+                                  <option [value]="false">False</option>
+                                </select>
+                              </div>
+                              <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="min-width: 60px; font-weight: 600;">COB:</label>
+                                <select [ngModel]="fieldForm.value.defaultValue?.COB" [ngModelOptions]="{standalone: true}" 
+                                        (ngModelChange)="setEnvDefaultValue('COB', $event)" 
+                                        style="flex: 1; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                                  <option value="">-- Select Default --</option>
+                                  <option [value]="true">True</option>
+                                  <option [value]="false">False</option>
+                                </select>
+                              </div>
+                            </div>
                           </ng-container>
                           
-                          <!-- Dropdown - Environment specific option select -->
+                          <!-- Dropdown - Individual environment selects -->
                           <ng-container *ngSwitchCase="'dropdown'">
-                            <select [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
-                                    (ngModelChange)="setAllEnvDefaults($event)" 
-                                    style="width: 100%; margin-bottom: 8px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
-                              <option value="">-- Select Default Option --</option>
-                              <option *ngFor="let opt of options.controls" [value]="opt.value.value">{{ opt.value.label }}</option>
-                            </select>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                              <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="min-width: 60px; font-weight: 600;">PROD:</label>
+                                <select [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
+                                        (ngModelChange)="setEnvDefaultValue('PROD', $event)" 
+                                        style="flex: 1; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                                  <option value="">-- Select Default Option --</option>
+                                  <option *ngFor="let opt of options.controls" [value]="opt.value.value">{{ opt.value.label }}</option>
+                                </select>
+                              </div>
+                              <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="min-width: 60px; font-weight: 600;">DEV:</label>
+                                <select [ngModel]="fieldForm.value.defaultValue?.DEV" [ngModelOptions]="{standalone: true}" 
+                                        (ngModelChange)="setEnvDefaultValue('DEV', $event)" 
+                                        style="flex: 1; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                                  <option value="">-- Select Default Option --</option>
+                                  <option *ngFor="let opt of options.controls" [value]="opt.value.value">{{ opt.value.label }}</option>
+                                </select>
+                              </div>
+                              <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="min-width: 60px; font-weight: 600;">COB:</label>
+                                <select [ngModel]="fieldForm.value.defaultValue?.COB" [ngModelOptions]="{standalone: true}" 
+                                        (ngModelChange)="setEnvDefaultValue('COB', $event)" 
+                                        style="flex: 1; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                                  <option value="">-- Select Default Option --</option>
+                                  <option *ngFor="let opt of options.controls" [value]="opt.value.value">{{ opt.value.label }}</option>
+                                </select>
+                              </div>
+                            </div>
                           </ng-container>
-                          
-                          <!-- MCQ Single - Environment specific option select -->
+
+                          <!-- MCQ Single - Individual environment selects -->
                           <ng-container *ngSwitchCase="'mcq_single'">
-                            <select [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
-                                    (ngModelChange)="setAllEnvDefaults($event)" 
-                                    style="width: 100%; margin-bottom: 8px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
-                              <option value="">-- Select Default Option --</option>
-                              <option *ngFor="let opt of options.controls" [value]="opt.value.value">{{ opt.value.label }}</option>
-                            </select>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                              <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="min-width: 60px; font-weight: 600;">PROD:</label>
+                                <select [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
+                                        (ngModelChange)="setEnvDefaultValue('PROD', $event)" 
+                                        style="flex: 1; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                                  <option value="">-- Select Default Option --</option>
+                                  <option *ngFor="let opt of options.controls" [value]="opt.value.value">{{ opt.value.label }}</option>
+                                </select>
+                              </div>
+                              <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="min-width: 60px; font-weight: 600;">DEV:</label>
+                                <select [ngModel]="fieldForm.value.defaultValue?.DEV" [ngModelOptions]="{standalone: true}" 
+                                        (ngModelChange)="setEnvDefaultValue('DEV', $event)" 
+                                        style="flex: 1; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                                  <option value="">-- Select Default Option --</option>
+                                  <option *ngFor="let opt of options.controls" [value]="opt.value.value">{{ opt.value.label }}</option>
+                                </select>
+                              </div>
+                              <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="min-width: 60px; font-weight: 600;">COB:</label>
+                                <select [ngModel]="fieldForm.value.defaultValue?.COB" [ngModelOptions]="{standalone: true}" 
+                                        (ngModelChange)="setEnvDefaultValue('COB', $event)" 
+                                        style="flex: 1; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                                  <option value="">-- Select Default Option --</option>
+                                  <option *ngFor="let opt of options.controls" [value]="opt.value.value">{{ opt.value.label }}</option>
+                                </select>
+                              </div>
+                            </div>
                           </ng-container>
                           
-                          <!-- MCQ Multiple - Environment specific multi-select -->
+                          <!-- MCQ Multiple - Individual environment multi-selects -->
                           <ng-container *ngSwitchCase="'mcq_multiple'">
-                            <div style="width: 100%; margin-bottom: 8px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;">
-                              <div style="font-size: 0.9rem; margin-bottom: 8px; color: #6c757d;">Select default options for all environments:</div>
-                              <div *ngFor="let opt of options.controls" style="margin-bottom: 4px;">
-                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                                  <input type="checkbox" [value]="opt.value.value" 
-                                         (change)="onDefaultMultiChange($event, opt.value.value)" 
-                                         [checked]="fieldForm.value.defaultValue?.PROD?.includes(opt.value.value)">
-                                  <span>{{ opt.value.label }}</span>
-                                </label>
+                            <div style="display: flex; flex-direction: column; gap: 12px;">
+                              <div style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;">
+                                <div style="font-weight: 600; margin-bottom: 8px; color: #495057;">PROD Environment:</div>
+                                <div *ngFor="let opt of options.controls" style="margin-bottom: 4px;">
+                                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="checkbox" [value]="opt.value.value" 
+                                           (change)="onEnvDefaultMultiChange($event, opt.value.value, 'PROD')" 
+                                           [checked]="fieldForm.value.defaultValue?.PROD?.includes(opt.value.value)">
+                                    <span>{{ opt.value.label }}</span>
+                                  </label>
+                                </div>
+                              </div>
+                              <div style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;">
+                                <div style="font-weight: 600; margin-bottom: 8px; color: #495057;">DEV Environment:</div>
+                                <div *ngFor="let opt of options.controls" style="margin-bottom: 4px;">
+                                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="checkbox" [value]="opt.value.value" 
+                                           (change)="onEnvDefaultMultiChange($event, opt.value.value, 'DEV')" 
+                                           [checked]="fieldForm.value.defaultValue?.DEV?.includes(opt.value.value)">
+                                    <span>{{ opt.value.label }}</span>
+                                  </label>
+                                </div>
+                              </div>
+                              <div style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;">
+                                <div style="font-weight: 600; margin-bottom: 8px; color: #495057;">COB Environment:</div>
+                                <div *ngFor="let opt of options.controls" style="margin-bottom: 4px;">
+                                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="checkbox" [value]="opt.value.value" 
+                                           (change)="onEnvDefaultMultiChange($event, opt.value.value, 'COB')" 
+                                           [checked]="fieldForm.value.defaultValue?.COB?.includes(opt.value.value)">
+                                    <span>{{ opt.value.label }}</span>
+                                  </label>
+                                </div>
                               </div>
                             </div>
                           </ng-container>
@@ -810,17 +994,44 @@
                   <input formControlName="key" placeholder="unique_key" [disabled]="currentFieldIndex !== null && !isDuplicatedEdit">
                   <div *ngIf="fieldForm.get('key')?.invalid && fieldForm.get('key')?.touched" class="error-message">Key is required and must be alphanumeric/underscore.</div>
                 </div>
-                <div class="form-field">
+                <div class="form-field" style="margin-left: 1.25rem;">
                   <label>Field Type</label>
-                  <div class="type-select-group">
-                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'text'">text_fields</mat-icon>
-                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'number'">pin</mat-icon>
-                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'email'">email</mat-icon>
-                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'boolean'">toggle_on</mat-icon>
-                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'dropdown'">arrow_drop_down_circle</mat-icon>
-                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'mcq_single'">radio_button_checked</mat-icon>
-                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'mcq_multiple'">check_box</mat-icon>
-                    <select formControlName="type" [disabled]="fieldForm.get('environmentSpecific')?.value">
+                  <div class="type-select-group" style="position: relative; display: flex; align-items: center;">
+                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'text'" 
+                              style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                      text_fields
+                    </mat-icon>
+                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'number'" 
+                              style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                      pin
+                    </mat-icon>
+                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'email'" 
+                              style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                      email
+                    </mat-icon>
+                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'boolean'" 
+                              style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                      toggle_on
+                    </mat-icon>
+                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'dropdown'" 
+                              style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                      arrow_drop_down_circle
+                    </mat-icon>
+                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'mcq_single'" 
+                              style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                      radio_button_checked
+                    </mat-icon>
+                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'mcq_multiple'" 
+                              style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                      check_box
+                    </mat-icon>
+                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'keyvalue'" 
+                              style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                      vpn_key
+                    </mat-icon>
+                    <select formControlName="type" 
+                            [disabled]="fieldForm.get('environmentSpecific')?.value"
+                            style="width: 100%; padding: 0.75rem 0.75rem 0.75rem 3rem; border: 1px solid #ced4da; border-radius: 4px; background-color: white; font-size: 0.875rem;">
                       <option value="text">Text</option>
                       <option value="number">Number</option>
                       <option value="email">Email</option>
@@ -846,68 +1057,225 @@
                   <!-- For environment specific fields -->
                   <ng-container *ngIf="fieldForm.get('environmentSpecific')?.value; else singleDefaultValue">
                     <ng-container [ngSwitch]="fieldForm.get('type')?.value">
-                      <!-- Text, Number, Email - Environment specific text inputs -->
+                      
+                      <!-- Text - Individual environment inputs -->
                       <ng-container *ngSwitchCase="'text'">
-                        <input matInput [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
-                               (ngModelChange)="setAllEnvDefaults($event)" 
-                               placeholder="Default text for all environments" 
-                               style="width: 100%; margin-bottom: 8px;" />
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="min-width: 60px; font-weight: 600;">PROD:</label>
+                            <input matInput [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
+                                   (ngModelChange)="setEnvDefaultValue('PROD', $event)" 
+                                   placeholder="Default text for PROD" 
+                                   style="flex: 1;" />
+                          </div>
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="min-width: 60px; font-weight: 600;">DEV:</label>
+                            <input matInput [ngModel]="fieldForm.value.defaultValue?.DEV" [ngModelOptions]="{standalone: true}" 
+                                   (ngModelChange)="setEnvDefaultValue('DEV', $event)" 
+                                   placeholder="Default text for DEV" 
+                                   style="flex: 1;" />
+                          </div>
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="min-width: 60px; font-weight: 600;">COB:</label>
+                            <input matInput [ngModel]="fieldForm.value.defaultValue?.COB" [ngModelOptions]="{standalone: true}" 
+                                   (ngModelChange)="setEnvDefaultValue('COB', $event)" 
+                                   placeholder="Default text for COB" 
+                                   style="flex: 1;" />
+                          </div>
+                        </div>
                       </ng-container>
+                      
+                      <!-- Number - Individual environment inputs -->
                       <ng-container *ngSwitchCase="'number'">
-                        <input matInput type="number" [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
-                               (ngModelChange)="setAllEnvDefaults($event)" 
-                               placeholder="Default number for all environments" 
-                               style="width: 100%; margin-bottom: 8px;" />
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="min-width: 60px; font-weight: 600;">PROD:</label>
+                            <input matInput type="number" [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
+                                   (ngModelChange)="setEnvDefaultValue('PROD', $event)" 
+                                   placeholder="Default number for PROD" 
+                                   style="flex: 1;" />
+                          </div>
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="min-width: 60px; font-weight: 600;">DEV:</label>
+                            <input matInput type="number" [ngModel]="fieldForm.value.defaultValue?.DEV" [ngModelOptions]="{standalone: true}" 
+                                   (ngModelChange)="setEnvDefaultValue('DEV', $event)" 
+                                   placeholder="Default number for DEV" 
+                                   style="flex: 1;" />
+                          </div>
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="min-width: 60px; font-weight: 600;">COB:</label>
+                            <input matInput type="number" [ngModel]="fieldForm.value.defaultValue?.COB" [ngModelOptions]="{standalone: true}" 
+                                   (ngModelChange)="setEnvDefaultValue('COB', $event)" 
+                                   placeholder="Default number for COB" 
+                                   style="flex: 1;" />
+                          </div>
+                        </div>
                       </ng-container>
+
+                      <!-- Email - Individual environment inputs -->
                       <ng-container *ngSwitchCase="'email'">
-                        <input matInput type="email" [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
-                               (ngModelChange)="setAllEnvDefaults($event)" 
-                               placeholder="Default email for all environments" 
-                               style="width: 100%; margin-bottom: 8px;" />
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="min-width: 60px; font-weight: 600;">PROD:</label>
+                            <input matInput type="email" [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
+                                   (ngModelChange)="setEnvDefaultValue('PROD', $event)" 
+                                   placeholder="Default email for PROD" 
+                                   style="flex: 1;" />
+                          </div>
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="min-width: 60px; font-weight: 600;">DEV:</label>
+                            <input matInput type="email" [ngModel]="fieldForm.value.defaultValue?.DEV" [ngModelOptions]="{standalone: true}" 
+                                   (ngModelChange)="setEnvDefaultValue('DEV', $event)" 
+                                   placeholder="Default email for DEV" 
+                                   style="flex: 1;" />
+                          </div>
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="min-width: 60px; font-weight: 600;">COB:</label>
+                            <input matInput type="email" [ngModel]="fieldForm.value.defaultValue?.COB" [ngModelOptions]="{standalone: true}" 
+                                   (ngModelChange)="setEnvDefaultValue('COB', $event)" 
+                                   placeholder="Default email for COB" 
+                                   style="flex: 1;" />
+                          </div>
+                        </div>
                       </ng-container>
                       
-                      <!-- Boolean - Environment specific boolean select -->
+                      <!-- Boolean - Individual environment selects -->
                       <ng-container *ngSwitchCase="'boolean'">
-                        <select [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
-                                (ngModelChange)="setAllEnvDefaults($event)" 
-                                style="width: 100%; margin-bottom: 8px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
-                          <option value="">-- Select Default --</option>
-                          <option [value]="true">True</option>
-                          <option [value]="false">False</option>
-                        </select>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="min-width: 60px; font-weight: 600;">PROD:</label>
+                            <select [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
+                                    (ngModelChange)="setEnvDefaultValue('PROD', $event)" 
+                                    style="flex: 1; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                              <option value="">-- Select Default --</option>
+                              <option [value]="true">True</option>
+                              <option [value]="false">False</option>
+                            </select>
+                          </div>
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="min-width: 60px; font-weight: 600;">DEV:</label>
+                            <select [ngModel]="fieldForm.value.defaultValue?.DEV" [ngModelOptions]="{standalone: true}" 
+                                    (ngModelChange)="setEnvDefaultValue('DEV', $event)" 
+                                    style="flex: 1; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                              <option value="">-- Select Default --</option>
+                              <option [value]="true">True</option>
+                              <option [value]="false">False</option>
+                            </select>
+                          </div>
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="min-width: 60px; font-weight: 600;">COB:</label>
+                            <select [ngModel]="fieldForm.value.defaultValue?.COB" [ngModelOptions]="{standalone: true}" 
+                                    (ngModelChange)="setEnvDefaultValue('COB', $event)" 
+                                    style="flex: 1; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                              <option value="">-- Select Default --</option>
+                              <option [value]="true">True</option>
+                              <option [value]="false">False</option>
+                            </select>
+                          </div>
+                        </div>
                       </ng-container>
                       
-                      <!-- Dropdown - Environment specific option select -->
+                      <!-- Dropdown - Individual environment selects -->
                       <ng-container *ngSwitchCase="'dropdown'">
-                        <select [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
-                                (ngModelChange)="setAllEnvDefaults($event)" 
-                                style="width: 100%; margin-bottom: 8px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
-                          <option value="">-- Select Default Option --</option>
-                          <option *ngFor="let opt of options.controls" [value]="opt.value.value">{{ opt.value.label }}</option>
-                        </select>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="min-width: 60px; font-weight: 600;">PROD:</label>
+                            <select [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
+                                    (ngModelChange)="setEnvDefaultValue('PROD', $event)" 
+                                    style="flex: 1; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                              <option value="">-- Select Default Option --</option>
+                              <option *ngFor="let opt of options.controls" [value]="opt.value.value">{{ opt.value.label }}</option>
+                            </select>
+                          </div>
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="min-width: 60px; font-weight: 600;">DEV:</label>
+                            <select [ngModel]="fieldForm.value.defaultValue?.DEV" [ngModelOptions]="{standalone: true}" 
+                                    (ngModelChange)="setEnvDefaultValue('DEV', $event)" 
+                                    style="flex: 1; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                              <option value="">-- Select Default Option --</option>
+                              <option *ngFor="let opt of options.controls" [value]="opt.value.value">{{ opt.value.label }}</option>
+                            </select>
+                          </div>
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="min-width: 60px; font-weight: 600;">COB:</label>
+                            <select [ngModel]="fieldForm.value.defaultValue?.COB" [ngModelOptions]="{standalone: true}" 
+                                    (ngModelChange)="setEnvDefaultValue('COB', $event)" 
+                                    style="flex: 1; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                              <option value="">-- Select Default Option --</option>
+                              <option *ngFor="let opt of options.controls" [value]="opt.value.value">{{ opt.value.label }}</option>
+                            </select>
+                          </div>
+                        </div>
                       </ng-container>
-                      
-                      <!-- MCQ Single - Environment specific option select -->
+
+                      <!-- MCQ Single - Individual environment selects -->
                       <ng-container *ngSwitchCase="'mcq_single'">
-                        <select [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
-                                (ngModelChange)="setAllEnvDefaults($event)" 
-                                style="width: 100%; margin-bottom: 8px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
-                          <option value="">-- Select Default Option --</option>
-                          <option *ngFor="let opt of options.controls" [value]="opt.value.value">{{ opt.value.label }}</option>
-                        </select>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="min-width: 60px; font-weight: 600;">PROD:</label>
+                            <select [ngModel]="fieldForm.value.defaultValue?.PROD" [ngModelOptions]="{standalone: true}" 
+                                    (ngModelChange)="setEnvDefaultValue('PROD', $event)" 
+                                    style="flex: 1; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                              <option value="">-- Select Default Option --</option>
+                              <option *ngFor="let opt of options.controls" [value]="opt.value.value">{{ opt.value.label }}</option>
+                            </select>
+                          </div>
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="min-width: 60px; font-weight: 600;">DEV:</label>
+                            <select [ngModel]="fieldForm.value.defaultValue?.DEV" [ngModelOptions]="{standalone: true}" 
+                                    (ngModelChange)="setEnvDefaultValue('DEV', $event)" 
+                                    style="flex: 1; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                              <option value="">-- Select Default Option --</option>
+                              <option *ngFor="let opt of options.controls" [value]="opt.value.value">{{ opt.value.label }}</option>
+                            </select>
+                          </div>
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="min-width: 60px; font-weight: 600;">COB:</label>
+                            <select [ngModel]="fieldForm.value.defaultValue?.COB" [ngModelOptions]="{standalone: true}" 
+                                    (ngModelChange)="setEnvDefaultValue('COB', $event)" 
+                                    style="flex: 1; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                              <option value="">-- Select Default Option --</option>
+                              <option *ngFor="let opt of options.controls" [value]="opt.value.value">{{ opt.value.label }}</option>
+                            </select>
+                          </div>
+                        </div>
                       </ng-container>
                       
-                      <!-- MCQ Multiple - Environment specific multi-select -->
+                      <!-- MCQ Multiple - Individual environment multi-selects -->
                       <ng-container *ngSwitchCase="'mcq_multiple'">
-                        <div style="width: 100%; margin-bottom: 8px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;">
-                          <div style="font-size: 0.9rem; margin-bottom: 8px; color: #6c757d;">Select default options for all environments:</div>
-                          <div *ngFor="let opt of options.controls" style="margin-bottom: 4px;">
-                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                              <input type="checkbox" [value]="opt.value.value" 
-                                     (change)="onDefaultMultiChange($event, opt.value.value)" 
-                                     [checked]="fieldForm.value.defaultValue?.PROD?.includes(opt.value.value)">
-                              <span>{{ opt.value.label }}</span>
-                            </label>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                          <div style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;">
+                            <div style="font-weight: 600; margin-bottom: 8px; color: #495057;">PROD Environment:</div>
+                            <div *ngFor="let opt of options.controls" style="margin-bottom: 4px;">
+                              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" [value]="opt.value.value" 
+                                       (change)="onEnvDefaultMultiChange($event, opt.value.value, 'PROD')" 
+                                       [checked]="fieldForm.value.defaultValue?.PROD?.includes(opt.value.value)">
+                                <span>{{ opt.value.label }}</span>
+                              </label>
+                            </div>
+                          </div>
+                          <div style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;">
+                            <div style="font-weight: 600; margin-bottom: 8px; color: #495057;">DEV Environment:</div>
+                            <div *ngFor="let opt of options.controls" style="margin-bottom: 4px;">
+                              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" [value]="opt.value.value" 
+                                       (change)="onEnvDefaultMultiChange($event, opt.value.value, 'DEV')" 
+                                       [checked]="fieldForm.value.defaultValue?.DEV?.includes(opt.value.value)">
+                                <span>{{ opt.value.label }}</span>
+                              </label>
+                            </div>
+                          </div>
+                          <div style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;">
+                            <div style="font-weight: 600; margin-bottom: 8px; color: #495057;">COB Environment:</div>
+                            <div *ngFor="let opt of options.controls" style="margin-bottom: 4px;">
+                              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" [value]="opt.value.value" 
+                                       (change)="onEnvDefaultMultiChange($event, opt.value.value, 'COB')" 
+                                       [checked]="fieldForm.value.defaultValue?.COB?.includes(opt.value.value)">
+                                <span>{{ opt.value.label }}</span>
+                              </label>
+                            </div>
                           </div>
                         </div>
                       </ng-container>
@@ -1072,66 +1440,69 @@
                   <input formControlName="initialKeys" placeholder="e.g. key1, key2, key3">
                 </div>
 
-                <!-- Conditional Logic Section -->
-                <div class="section-heading span-2"><mat-icon>visibility</mat-icon> Conditional Logic</div>
-                <div class="form-field span-2">
-                  <label>Visible If (Show this field only if another field has a specific value)</label>
-                  <div class="conditional-logic-row" style="display: flex; gap: 0.5rem; align-items: center;">
-                    <select [(ngModel)]="visibleIfKey" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
-                      <option [ngValue]="null">-- Select Field --</option>
-                      <option *ngFor="let f of schema.fields" [ngValue]="f.key" [disabled]="f.key === fieldForm.value.key">{{ f.label }}</option>
-                    </select>
-                    <ng-container *ngIf="visibleIfKey">
-                      <ng-container [ngSwitch]="getFieldType(visibleIfKey)">
-                        <select *ngSwitchCase="'dropdown'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
-                          <option *ngFor="let opt of getFieldOptions(visibleIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
+
+
+                 <!-- Conditional Logic Section -->
+                    <div class="section-heading span-2"><mat-icon>visibility</mat-icon> Conditional Logic</div>
+                    <div class="form-field span-2">
+                      <label>Visible If (Show this field only if another field has a specific value)</label>
+                      <div class="conditional-logic-row" style="display: flex; gap: 0.5rem; align-items: center;">
+                        <select [(ngModel)]="visibleIfKey" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
+                          <option [ngValue]="null">-- Select Field --</option>
+                          <option *ngFor="let f of schema.fields" [ngValue]="f.key" [disabled]="f.key === fieldForm.value.key">{{ f.label }}</option>
                         </select>
-                        <select *ngSwitchCase="'mcq_single'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
-                          <option *ngFor="let opt of getFieldOptions(visibleIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
+                        <ng-container *ngIf="visibleIfKey">
+                          <ng-container [ngSwitch]="getFieldType(visibleIfKey)">
+                            <select *ngSwitchCase="'dropdown'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
+                              <option *ngFor="let opt of getFieldOptions(visibleIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
+                            </select>
+                            <select *ngSwitchCase="'mcq_single'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
+                              <option *ngFor="let opt of getFieldOptions(visibleIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
+                            </select>
+                            <div *ngSwitchCase="'mcq_multiple'" style="flex:1; display:flex; flex-wrap:wrap; gap:0.5rem; min-width: 250px;">
+                              <label *ngFor="let opt of getFieldOptions(visibleIfKey)">
+                                <input type="checkbox" [value]="opt.value" (change)="onMultiCondChange($event, 'visible')" [checked]="isArray(visibleIfValue) && visibleIfValue.includes(opt.value)"> {{ opt.label }}
+                              </label>
+                            </div>
+                            <select *ngSwitchCase="'boolean'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
+                              <option [ngValue]="true">True</option>
+                              <option [ngValue]="false">False</option>
+                            </select>
+                            <input *ngSwitchDefault [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value" style="flex:1; min-width: 250px;">
+                          </ng-container>
+                        </ng-container>
+                      </div>
+                    </div>
+                    <div class="form-field span-2">
+                      <label>Mandatory If (Make this field required only if another field has a specific value)</label>
+                      <div class="conditional-logic-row" style="display: flex; gap: 0.5rem; align-items: center;">
+                        <select [(ngModel)]="mandatoryIfKey" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
+                          <option [ngValue]="null">-- Select Field --</option>
+                          <option *ngFor="let f of schema.fields" [ngValue]="f.key" [disabled]="f.key === fieldForm.value.key">{{ f.label }}</option>
                         </select>
-                        <div *ngSwitchCase="'mcq_multiple'" style="flex:1; display:flex; flex-wrap:wrap; gap:0.5rem; min-width: 250px;">
-                          <label *ngFor="let opt of getFieldOptions(visibleIfKey)">
-                            <input type="checkbox" [value]="opt.value" (change)="onMultiCondChange($event, 'visible')" [checked]="isArray(visibleIfValue) && visibleIfValue.includes(opt.value)"> {{ opt.label }}
-                          </label>
-                        </div>
-                        <select *ngSwitchCase="'boolean'" [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
-                          <option [ngValue]="true">True</option>
-                          <option [ngValue]="false">False</option>
-                        </select>
-                        <input *ngSwitchDefault [(ngModel)]="visibleIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value" style="flex:1; min-width: 250px;">
-                      </ng-container>
-                    </ng-container>
-                  </div>
-                </div>
-                <div class="form-field span-2">
-                  <label>Mandatory If (Make this field required only if another field has a specific value)</label>
-                  <div class="conditional-logic-row" style="display: flex; gap: 0.5rem; align-items: center;">
-                    <select [(ngModel)]="mandatoryIfKey" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
-                      <option [ngValue]="null">-- Select Field --</option>
-                      <option *ngFor="let f of schema.fields" [ngValue]="f.key" [disabled]="f.key === fieldForm.value.key">{{ f.label }}</option>
-                    </select>
-                    <ng-container *ngIf="mandatoryIfKey">
-                      <ng-container [ngSwitch]="getFieldType(mandatoryIfKey)">
-                        <select *ngSwitchCase="'dropdown'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
-                          <option *ngFor="let opt of getFieldOptions(mandatoryIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
-                        </select>
-                        <select *ngSwitchCase="'mcq_single'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
-                          <option *ngFor="let opt of getFieldOptions(mandatoryIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
-                        </select>
-                        <div *ngSwitchCase="'mcq_multiple'" style="flex:1; display:flex; flex-wrap:wrap; gap:0.5rem; min-width: 250px;">
-                          <label *ngFor="let opt of getFieldOptions(mandatoryIfKey)">
-                            <input type="checkbox" [value]="opt.value" (change)="onMultiCondChange($event, 'mandatory')" [checked]="isArray(mandatoryIfValue) && mandatoryIfValue.includes(opt.value)"> {{ opt.label }}
-                          </label>
-                        </div>
-                        <select *ngSwitchCase="'boolean'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
-                          <option [ngValue]="true">True</option>
-                          <option [ngValue]="false">False</option>
-                        </select>
-                        <input *ngSwitchDefault [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value" style="flex:1; min-width: 250px;">
-                      </ng-container>
-                    </ng-container>
-                  </div>
-                </div>
+                        <ng-container *ngIf="mandatoryIfKey">
+                          <ng-container [ngSwitch]="getFieldType(mandatoryIfKey)">
+                            <select *ngSwitchCase="'dropdown'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
+                              <option *ngFor="let opt of getFieldOptions(mandatoryIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
+                            </select>
+                            <select *ngSwitchCase="'mcq_single'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
+                              <option *ngFor="let opt of getFieldOptions(mandatoryIfKey)" [ngValue]="opt.value">{{ opt.label }}</option>
+                            </select>
+                            <div *ngSwitchCase="'mcq_multiple'" style="flex:1; display:flex; flex-wrap:wrap; gap:0.5rem; min-width: 250px;">
+                              <label *ngFor="let opt of getFieldOptions(mandatoryIfKey)">
+                                <input type="checkbox" [value]="opt.value" (change)="onMultiCondChange($event, 'mandatory')" [checked]="isArray(mandatoryIfValue) && mandatoryIfValue.includes(opt.value)"> {{ opt.label }}
+                              </label>
+                            </div>
+                            <select *ngSwitchCase="'boolean'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
+                              <option [ngValue]="true">True</option>
+                              <option [ngValue]="false">False</option>
+                            </select>
+                            <input *ngSwitchDefault [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" placeholder="Value" style="flex:1; min-width: 250px;">
+                          </ng-container>
+                        </ng-container>
+                      </div>
+                    </div>
+
 
                 <!-- Save/Cancel Actions -->
                 <div class="field-editor-actions span-2">
