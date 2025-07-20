@@ -1765,6 +1765,13 @@
   font-weight: 600;
   letter-spacing: 0.2px;
 }
+.file-name-row.centered {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
 .version-info {
   color: #666;
   font-size: 1.1rem;

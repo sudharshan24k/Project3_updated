@@ -619,11 +619,146 @@ loadTemplate() {
     this.form.patchValue(sanitizedPrefill);
   }
 }
+// Add these methods to your DynamicForm class
+
+hasFieldError(fieldKey: string, errorType?: string): boolean {
+  const control = this.form.get(fieldKey);
+  if (!control) return false;
+  
+  if (errorType) {
+    return control.hasError(errorType) && (control.dirty || control.touched);
+  }
+  return control.invalid && (control.dirty || control.touched);
+}
+
+hasEnvFieldError(fieldKey: string, env: string, errorType?: string): boolean {
+  const envGroup = this.form.get(fieldKey) as FormGroup;
+  if (!envGroup) return false;
+  
+  const control = envGroup.get(env);
+  if (!control) return false;
+  
+  if (errorType) {
+    return control.hasError(errorType) && (control.dirty || control.touched);
+  }
+  return control.invalid && (control.dirty || control.touched);
+}
+
+getFieldErrorMessage(fieldKey: string): string {
+  const control = this.form.get(fieldKey);
+  if (!control || !control.errors || (!control.dirty && !control.touched)) return '';
+  
+  if (control.errors['required']) return 'This field is required';
+  if (control.errors['pattern']) return 'Invalid format';
+  if (control.errors['email']) return 'Invalid email format';
+  return 'Invalid input';
+}
+
+getEnvFieldErrorMessage(fieldKey: string, env: string): string {
+  const envGroup = this.form.get(fieldKey) as FormGroup;
+  if (!envGroup) return '';
+  
+  const control = envGroup.get(env);
+  if (!control || !control.errors || (!control.dirty && !control.touched)) return '';
+  
+  if (control.errors['required']) return 'This field is required';
+  if (control.errors['pattern']) return 'Invalid format';
+  if (control.errors['email']) return 'Invalid email format';
+  return 'Invalid input';
+}
+showAllErrors(event: MouseEvent) {
+  // Check if the click target is not an input, button, or interactive element
+  const target = event.target as HTMLElement;
+  if (
+    target.tagName === 'INPUT' ||
+    target.tagName === 'SELECT' ||
+    target.tagName === 'TEXTAREA' ||
+    target.tagName === 'BUTTON' ||
+    target.closest('button') ||
+    target.closest('mat-form-field') ||
+    target.closest('.mat-select') ||
+    target.closest('.mat-radio-group') ||
+    target.closest('.mat-checkbox') ||
+    target.closest('mat-slide-toggle') ||
+    target.closest('.env-field') ||
+    target.hasAttribute('formControlName') ||
+    target.closest('[formControlName]')
+  ) {
+    return; // Don't trigger if clicking on form controls
+  }
+  
+  // Mark all controls as touched to show validation errors
+  this.form.markAllAsTouched();
+  
+  // For environment-specific fields, also mark nested controls as touched
+  this.schema.fields.forEach((field: any) => {
+    if (field.environmentSpecific) {
+      const envGroup = this.form.get(field.key) as FormGroup;
+      if (envGroup) {
+        ['PROD', 'DEV', 'COB'].forEach(env => {
+          const control = envGroup.get(env);
+          if (control) {
+            control.markAsTouched();
+            // For FormArray controls (like keyvalue), mark nested controls as touched
+            if (control instanceof FormArray) {
+              control.controls.forEach(nestedControl => {
+                nestedControl.markAsTouched();
+                if (nestedControl instanceof FormGroup) {
+                  Object.keys(nestedControl.controls).forEach(key => {
+                    nestedControl.get(key)?.markAsTouched();
+                  });
+                }
+              });
+            }
+          }
+        });
+      }
+    } else {
+      // For regular FormArray controls
+      const control = this.form.get(field.key);
+      if (control instanceof FormArray) {
+        control.controls.forEach(nestedControl => {
+          nestedControl.markAsTouched();
+          if (nestedControl instanceof FormGroup) {
+            Object.keys(nestedControl.controls).forEach(key => {
+              nestedControl.get(key)?.markAsTouched();
+            });
+          }
+        });
+      }
+    }
+  });
+  
+  // Trigger change detection to update UI
+  this.cdr.detectChanges();
+}
 
   updateDynamicValidators() {
-    this.schema.fields.forEach((field: any) => {
+  this.schema.fields.forEach((field: any) => {
+    if (field.environmentSpecific) {
+      // Handle environment-specific fields
+      const envGroup = this.form.get(field.key) as FormGroup;
+      if (envGroup) {
+        ['PROD', 'DEV', 'COB'].forEach(env => {
+          const control = envGroup.get(env);
+          if (control) {
+            const validators: ValidatorFn[] = [];
+            if (this.isFieldRequired(field)) {
+              validators.push(Validators.required);
+            }
+            if (field.regex) {
+              validators.push(Validators.pattern(field.regex));
+            }
+            control.setValidators(validators);
+            control.updateValueAndValidity({ emitEvent: false });
+          }
+        });
+      }
+    } else {
+      // Handle non-environment specific fields
       const control = this.form.get(field.key);
       if (!control) return;
+      
       const validators: ValidatorFn[] = [];
       if (this.isFieldRequired(field)) {
         validators.push(Validators.required);
@@ -631,10 +766,13 @@ loadTemplate() {
       if (field.regex) {
         validators.push(Validators.pattern(field.regex));
       }
+      
       control.setValidators(validators);
       control.updateValueAndValidity({ emitEvent: false });
-    });
-  }
+    }
+  });
+}
+
 
   showAddFieldEditor() {
     this.currentFieldIndex = null;
@@ -928,15 +1066,38 @@ loadTemplate() {
     this.isImporting = false;
   }
 
-  onDefaultMultiChange(event: any, value: any) {
-    // this is to enable multi-select for default values in MCQ fields
-  const arr = this.fieldForm.value.defaultValue || [];
-  if (event.target.checked) {
-    this.fieldForm.patchValue({ defaultValue: [...arr, value] });
+ onDefaultMultiChange(event: any, value: any) {
+  const checked = event.target.checked;
+  const isEnvSpecific = this.fieldForm.get('environmentSpecific')?.value;
+  
+  if (isEnvSpecific) {
+    // Handle environment-specific multi-select defaults
+    let currentDefValue = this.fieldForm.value.defaultValue || { PROD: [], DEV: [], COB: [] };
+    
+    ['PROD', 'DEV', 'COB'].forEach(env => {
+      let arr = currentDefValue[env] || [];
+      if (checked) {
+        if (!arr.includes(value)) {
+          arr = [...arr, value];
+        }
+      } else {
+        arr = arr.filter((v: any) => v !== value);
+      }
+      currentDefValue[env] = arr;
+    });
+    
+    this.fieldForm.patchValue({ defaultValue: currentDefValue });
   } else {
-    this.fieldForm.patchValue({ defaultValue: arr.filter((v: any) => v !== value) });
+    // Handle single multi-select defaults
+    const arr = this.fieldForm.value.defaultValue || [];
+    if (checked) {
+      this.fieldForm.patchValue({ defaultValue: [...arr, value] });
+    } else {
+      this.fieldForm.patchValue({ defaultValue: arr.filter((v: any) => v !== value) });
+    }
   }
 }
+
 
   // Helper to get options for a field key (for conditional logic)
   getFieldOptions(key: string | null) {
@@ -1102,51 +1263,50 @@ loadTemplate() {
     }
   }
 
-  handleEnvSpecificChange(envSpec: boolean) {
-    const type = this.fieldForm.get('type')?.value;
-    let defVal = this.fieldForm.get('defaultValue')?.value;
-    if (envSpec) {
-      if (type === 'keyvalue') {
-        let keys = this.fieldForm.get('initialKeys')?.value;
-        if (typeof keys === 'string') {
-          keys = keys.split(',').map((k: string) => k.trim()).filter((k: string) => k);
-        }
-        let defaultPairs = Array.isArray(defVal) && defVal.length > 0 ? defVal : (Array.isArray(keys) ? keys.map((k: string) => ({ key: k, value: '' })) : []);
-        const envObj: any = { PROD: [], DEV: [], COB: [] };
-        ['PROD', 'DEV', 'COB'].forEach(env => {
-          envObj[env] = [...defaultPairs];
-        });
-        this.fieldForm.patchValue({ defaultValue: envObj }, { emitEvent: false });
-      } else if (type === 'mcq_multiple') {
-        const arrVal = Array.isArray(defVal) ? defVal : [];
-        const envObj: any = { PROD: [], DEV: [], COB: [] };
-        ['PROD', 'DEV', 'COB'].forEach(env => {
-          envObj[env] = [...arrVal];
-        });
-        this.fieldForm.patchValue({ defaultValue: envObj }, { emitEvent: false });
-      } else {
-        // For text, number, email, etc.
-        const envObj: any = { PROD: '', DEV: '', COB: '' };
-        ['PROD', 'DEV', 'COB'].forEach(env => {
-          envObj[env] = defVal || '';
-        });
-        this.fieldForm.patchValue({ defaultValue: envObj }, { emitEvent: false });
-      }
+handleEnvSpecificChange(envSpec: boolean) {
+  const type = this.fieldForm.get('type')?.value;
+  let defVal = this.fieldForm.get('defaultValue')?.value;
+  
+  if (envSpec) {
+    if (type === 'keyvalue') {
+      // Check if already has environment-specific structure, preserve it
+      const envObj: any = (defVal && typeof defVal === 'object' && 'PROD' in defVal) 
+        ? defVal 
+        : { PROD: [], DEV: [], COB: [] };
+      this.fieldForm.patchValue({ defaultValue: envObj }, { emitEvent: false });
+    } else if (type === 'mcq_multiple') {
+      const envObj: any = (defVal && typeof defVal === 'object' && 'PROD' in defVal) 
+        ? defVal 
+        : { PROD: [], DEV: [], COB: [] };
+      this.fieldForm.patchValue({ defaultValue: envObj }, { emitEvent: false });
     } else {
-      // If unticked, flatten defaultValue to single value
-      if (type === 'keyvalue') {
-        let keys = this.fieldForm.get('initialKeys')?.value;
-        if (typeof keys === 'string') {
-          keys = keys.split(',').map((k: string) => k.trim()).filter((k: string) => k);
-        }
-        this.fieldForm.patchValue({ defaultValue: Array.isArray(keys) ? keys.map((k: string) => ({ key: k, value: '' })) : [] }, { emitEvent: false });
-      } else if (type === 'mcq_multiple') {
-        this.fieldForm.patchValue({ defaultValue: [] }, { emitEvent: false });
-      } else {
-        this.fieldForm.patchValue({ defaultValue: '' }, { emitEvent: false });
-      }
+      // For text, number, email, etc. - preserve existing env values
+      const envObj: any = (defVal && typeof defVal === 'object' && 'PROD' in defVal) 
+        ? defVal 
+        : { PROD: '', DEV: '', COB: '' };
+      this.fieldForm.patchValue({ defaultValue: envObj }, { emitEvent: false });
+    }
+  } else {
+    // If unticked, preserve single values or extract from environment-specific
+    if (type === 'keyvalue') {
+      // Check if already a simple array, preserve it; otherwise extract from env or use empty
+      const singleValue = Array.isArray(defVal) ? defVal : 
+        (defVal && typeof defVal === 'object' && 'PROD' in defVal) ? (defVal.PROD || defVal.DEV || defVal.COB || []) : [];
+      this.fieldForm.patchValue({ defaultValue: singleValue }, { emitEvent: false });
+    } else if (type === 'mcq_multiple') {
+      const singleValue = Array.isArray(defVal) ? defVal : 
+        (defVal && typeof defVal === 'object' && 'PROD' in defVal) ? (defVal.PROD || defVal.DEV || defVal.COB || []) : [];
+      this.fieldForm.patchValue({ defaultValue: singleValue }, { emitEvent: false });
+    } else {
+      // For text, number, email, etc. - preserve single values or extract from env
+      const singleValue = (typeof defVal === 'string') ? defVal :
+        (defVal && typeof defVal === 'object' && 'PROD' in defVal) ? (defVal.PROD || defVal.DEV || defVal.COB || '') : '';
+      this.fieldForm.patchValue({ defaultValue: singleValue }, { emitEvent: false });
     }
   }
+}
+
+
 
   setEnvDefaultValue(env: 'PROD' | 'DEV' | 'COB', value: any) {
     const current = this.fieldForm.get('defaultValue')?.value || {};
