@@ -228,10 +228,9 @@ import { ConfigValidatorBoxComponent, ConfigValidationFieldResult } from './conf
               <mat-form-field appearance="outline" class="full-width" *ngIf="selectedTemplateName && availableVersions.length > 0">
                 <mat-label>Version</mat-label>
                 <mat-select [(ngModel)]="selectedVersionTag" (selectionChange)="onVersionSelected()">
-                  <mat-option *ngFor="let v of availableVersions" [value]="v">
+                  <mat-option *ngFor="let v of availableVersions" [value]="v.name">
                     <div class="version-option">
-                  
-                      <span>{{ v }}</span>
+                      <span>{{ v.name }}<ng-container *ngIf="v.version_tag"> (FW: {{ v.version_tag }})</ng-container></span>
                     </div>
                   </mat-option>
                 </mat-select>
@@ -991,7 +990,8 @@ export class UploadConfigDialogComponent {
   selectedTemplateName: string = '';
   selectedVersionTag: string = '';
   allTemplateVersions: string[] = [];
-  availableVersions: string[] = [];
+  // Change availableVersions to hold objects with name and version_tag
+  availableVersions: { name: string, version_tag?: string }[] = [];
   schema: any = null;
   validationResult: { valid: boolean, errors: string[], warnings: string[], extraFields?: string[], missingFields?: string[] } | null = null;
   loading = false;
@@ -1171,8 +1171,8 @@ export class UploadConfigDialogComponent {
     this.loading = true;
     // Find all template versions for this base name
     const matchingTemplates = this.templates.filter(t => t.name.startsWith(name + '_v'));
-    // Extract version names (e.g., framework_v1, framework_v2, ...)
-    this.availableVersions = matchingTemplates.map(t => t.name);
+    // Store both name and version_tag for each version
+    this.availableVersions = matchingTemplates.map(t => ({ name: t.name, version_tag: t.version_tag }));
     this.selectedVersionTag = '';
     this.schema = null;
     this.loading = false;
