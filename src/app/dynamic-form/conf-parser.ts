@@ -408,6 +408,164 @@ function evalVisibleIf(condition: any, data: any): boolean {
     return true;
   }
 }
+// Comprehensive field value comparison that handles all data types
+function compareFieldValues(configValue: any, defaultValue: any, fieldType: string): boolean {
+  // Handle null/undefined cases
+  if (configValue == null && defaultValue == null) return true;
+  if (configValue == null || defaultValue == null) return false;
+  
+  switch (fieldType) {
+    case 'text':
+    case 'email':
+      return compareStringValues(configValue, defaultValue);
+      
+    case 'number':
+      return compareNumberValues(configValue, defaultValue);
+      
+    case 'boolean':
+      return compareBooleanValues(configValue, defaultValue);
+      
+    case 'dropdown':
+    case 'mcq_single':
+      return compareStringValues(configValue, defaultValue);
+      
+    case 'mcq_multiple':
+      return compareArrayValues(configValue, defaultValue);
+      
+    case 'keyvalue':
+      return compareKeyValueObjects(configValue, defaultValue);
+      
+    default:
+      return compareStringValues(configValue, defaultValue);
+  }
+}
+
+// Compare string values (handles quoted and unquoted)
+function compareStringValues(configValue: any, defaultValue: any): boolean {
+  const configStr = normalizeQuotedValue(String(configValue));
+  const defaultStr = normalizeQuotedValue(String(defaultValue));
+  return configStr === defaultStr;
+}
+
+// Compare number values (handles quoted numbers)
+function compareNumberValues(configValue: any, defaultValue: any): boolean {
+  const configNum = parseFloat(normalizeQuotedValue(String(configValue)));
+  const defaultNum = parseFloat(String(defaultValue));
+  return !isNaN(configNum) && !isNaN(defaultNum) && configNum === defaultNum;
+}
+
+// Compare boolean values (handles string representations)
+function compareBooleanValues(configValue: any, defaultValue: any): boolean {
+  const configBool = parseBooleanValue(configValue);
+  const defaultBool = parseBooleanValue(defaultValue);
+  return configBool === defaultBool;
+}
+
+// Helper to parse boolean from various formats
+function parseBooleanValue(value: any): boolean {
+  if (typeof value === 'boolean') return value;
+  const strValue = normalizeQuotedValue(String(value)).toLowerCase();
+  return strValue === 'true';
+}
+
+// Compare array values (for MCQ multiple)
+function compareArrayValues(configValue: any, defaultValue: any): boolean {
+  // Parse config value if it's in MCQ format: {"a","b","c"}
+  let configArray: string[] = [];
+  if (typeof configValue === 'string') {
+    const mcqMatch = configValue.match(/^\{\s*("[^"]*"\s*(,\s*"[^"]*")*)\s*\}$/);
+    if (mcqMatch) {
+      configArray = configValue.slice(1, -1).split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+    } else {
+      // Handle comma-separated values
+      configArray = configValue.split(',').map(v => normalizeQuotedValue(v.trim()));
+    }
+  } else if (Array.isArray(configValue)) {
+    configArray = configValue.map(v => normalizeQuotedValue(String(v)));
+  }
+  
+  // Ensure defaultValue is array
+  const defaultArray = Array.isArray(defaultValue) ? 
+    defaultValue.map(v => String(v)) : 
+    [String(defaultValue)];
+  
+  // Compare arrays
+  if (configArray.length !== defaultArray.length) return false;
+  return configArray.sort().every((val, index) => val === defaultArray.sort()[index]);
+}
+
+// Compare keyvalue objects
+function compareKeyValueObjects(configValue: any, defaultValue: any): boolean {
+  // Parse config value if it's a JSON string
+  let configObj: any = {};
+  if (typeof configValue === 'string') {
+    try {
+      configObj = JSON.parse(configValue);
+    } catch {
+      return false;
+    }
+  } else if (typeof configValue === 'object' && configValue !== null) {
+    configObj = configValue;
+  }
+  
+  // Handle default value
+  let defaultObj: any = {};
+  if (Array.isArray(defaultValue)) {
+    // If default is empty array, accept any keyvalue object
+    if (defaultValue.length === 0) return true;
+    // Convert array of key-value pairs to object
+    defaultValue.forEach((item: any) => {
+      if (item && typeof item === 'object' && item.key !== undefined) {
+        defaultObj[item.key] = item.value || '';
+      }
+    });
+  } else if (typeof defaultValue === 'object' && defaultValue !== null) {
+    defaultObj = defaultValue;
+  }
+  
+  // Compare objects
+  const configKeys = Object.keys(configObj).sort();
+  const defaultKeys = Object.keys(defaultObj).sort();
+  
+  if (configKeys.length !== defaultKeys.length) return false;
+  if (!configKeys.every(key => defaultKeys.includes(key))) return false;
+  
+  return configKeys.every(key => String(configObj[key]) === String(defaultObj[key]));
+}
+
+// Format values for display in error messages
+function formatValueForDisplay(value: any, fieldType: string): string {
+  if (value == null) return 'null';
+  
+  switch (fieldType) {
+    case 'keyvalue':
+      if (Array.isArray(value)) {
+        if (value.length === 0) return '{}';
+        const obj: any = {};
+        value.forEach((item: any) => {
+          if (item && typeof item === 'object' && item.key !== undefined) {
+            obj[item.key] = item.value || '';
+          }
+        });
+        return JSON.stringify(obj);
+      }
+      return JSON.stringify(value);
+      
+    case 'mcq_multiple':
+      if (Array.isArray(value)) {
+        return `{"${value.join('","')}"}`;
+      }
+      return JSON.stringify(value);
+      
+    case 'boolean':
+      return String(parseBooleanValue(value));
+      
+    default:
+      return JSON.stringify(value);
+  }
+}
+
+
 
 // Updated validation function with single quote support and strict number validation
 export function validateConfAgainstSchema(parsedData: any, schema: any): { valid: boolean, errors: string[], warnings: string[] } {
@@ -466,28 +624,67 @@ export function validateConfAgainstSchema(parsedData: any, schema: any): { valid
     if (isEmpty && !isMandatory) {
       continue; // No error/warning for optional empty fields
     }
-
-    // User editable check - if field is not editable, it must have the default value
-    if (field.userEditable === false || field.editable === false) {
-      const defaultValue = getDefaultValue(field);
-      if (defaultValue !== null) {
-        // Compare the actual value with default value (handle quoted strings)
-        let actualValue = value;
-        if (typeof value === 'string' && isProperlyQuoted(value)) {
-          actualValue = normalizeQuotedValue(value);
+// User editable check - if field is not editable, it must have the default value
+if (field.userEditable === false || field.editable === false) {
+  const defaultValue = getDefaultValue(field);
+  if (defaultValue !== null) {
+    // For environment-specific fields, compare individual environment values
+    if (field.environmentSpecific && typeof defaultValue === 'object') {
+      // Config file contains flat values, but schema has environment structure
+      // Compare the config value against each environment's default value
+      let isValidForAnyEnv = false;
+      
+      if (typeof value === 'string') {
+        // Remove quotes from config value for comparison
+        const unquotedValue = normalizeQuotedValue(value);
+        
+        // Check if the config value matches any of the environment defaults
+        const envs = ['PROD', 'DEV', 'COB'];
+        for (const env of envs) {
+          if (defaultValue[env] === unquotedValue || defaultValue[env] === value) {
+            isValidForAnyEnv = true;
+            break;
+          }
         }
-
-        let expectedValue = defaultValue;
-        if (typeof defaultValue === 'string' && !isProperlyQuoted(defaultValue)) {
-          expectedValue = `"${defaultValue}"`;
-        }
-
-        if (value !== expectedValue && actualValue !== defaultValue) {
-          errors.push(`Field '${field.label || key}' is not user editable and must have default value: ${defaultValue}`);
-          continue;
+      } else if (Array.isArray(value) && field.type === 'mcq_multiple') {
+        // For MCQ multiple, check if array matches any environment's default
+        const envs = ['PROD', 'DEV', 'COB'];
+        for (const env of envs) {
+          if (Array.isArray(defaultValue[env]) && 
+              value.length === defaultValue[env].length &&
+              value.every((v, i) => v === defaultValue[env][i])) {
+            isValidForAnyEnv = true;
+            break;
+          }
         }
       }
+      
+      if (!isValidForAnyEnv) {
+        // Show which environment values are acceptable
+        const envValues = Object.entries(defaultValue).map(([env, val]) => `${env}: ${JSON.stringify(val)}`).join(', ');
+        errors.push(`Field '${field.label || key}' is not user editable and must match one of the default values: ${envValues}`);
+        continue;
+      }
+    } else {
+      // Original string/primitive comparison logic for non-environment fields
+      let actualValue = value;
+      if (typeof value === 'string' && isProperlyQuoted(value)) {
+        actualValue = normalizeQuotedValue(value);
+      }
+
+      let expectedValue = defaultValue;
+      if (typeof defaultValue === 'string' && !isProperlyQuoted(defaultValue)) {
+        expectedValue = `"${defaultValue}"`;
+      }
+
+      if (value !== expectedValue && actualValue !== defaultValue) {
+        errors.push(`Field '${field.label || key}' is not user editable and must have default value: ${typeof defaultValue === 'object' ? JSON.stringify(defaultValue) : defaultValue}`);
+        continue;
+      }
     }
+  }
+}
+
 
     // Only enforce quoting for types that require it and only for non-empty values
     if (!isEmpty && fieldTypeRequiresQuoting(type)) {
@@ -698,33 +895,55 @@ export function getConfigValidationFieldResults(parsedData: any, schema: any, ex
       continue;
     }
 
-    // User editable check - if field is not editable, it must have the default value
-    if (field.userEditable === false || field.editable === false) {
-      const defaultValue = getDefaultValue(field);
-      if (defaultValue !== null) {
-        // Compare the actual value with default value (handle quoted strings)
-        let actualValue = value;
-        if (typeof value === 'string' && isProperlyQuoted(value)) {
-          actualValue = normalizeQuotedValue(value);
-        }
-
-        let expectedValue = defaultValue;
-        if (typeof defaultValue === 'string' && !isProperlyQuoted(defaultValue)) {
-          expectedValue = `"${defaultValue}"`;
-        }
-
-        if (value !== expectedValue && actualValue !== defaultValue) {
-          results.push({
-            key,
-            label,
-            status: 'invalid',
-            message: `Field is not user editable and must have default value: ${defaultValue}`,
-            error: true
-          });
-          continue;
+// User editable check - if field is not editable, it must have the default value
+if (field.userEditable === false || field.editable === false) {
+  const defaultValue = getDefaultValue(field);
+  if (defaultValue !== null && defaultValue !== undefined) {
+    
+    if (field.environmentSpecific && typeof defaultValue === 'object') {
+      // Environment-specific field validation
+      let isValidForAnyEnv = false;
+      const envs = ['PROD', 'DEV', 'COB'];
+      
+      for (const env of envs) {
+        const envDefault = defaultValue[env];
+        if (compareFieldValues(value, envDefault, field.type)) {
+          isValidForAnyEnv = true;
+          break;
         }
       }
+      
+      if (!isValidForAnyEnv) {
+        const envValues = Object.entries(defaultValue)
+          .map(([env, val]) => `${env}: ${formatValueForDisplay(val, field.type)}`)
+          .join(', ');
+        results.push({  // Changed from errors.push
+          key,
+          label,
+          status: 'invalid',
+          message: `Field is not user editable and must match one of the default values: ${envValues}`,
+          error: true
+        });
+        continue;
+      }
+      
+    } else {
+      // Non-environment-specific field validation
+      if (!compareFieldValues(value, defaultValue, field.type)) {
+        results.push({  // Changed from errors.push
+          key,
+          label,
+          status: 'invalid',
+          message: `Field is not user editable and must have default value: ${formatValueForDisplay(defaultValue, field.type)}`,
+          error: true
+        });
+        continue;
+      }
     }
+  }
+}
+
+
 
     // Only enforce quoting for types that require it - and only for non-empty values
     if (!isEmpty && fieldTypeRequiresQuoting(type)) {

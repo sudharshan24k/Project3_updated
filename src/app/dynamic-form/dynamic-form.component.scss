@@ -409,7 +409,18 @@
   margin-top: 1.5rem;
   border: 1px solid transparent;
   box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  
+  // Regex field specific styles
+  .regex-field {
+    position: relative;
+  }
+
+  .input-with-button-container {
+    position: relative;
+    width: 100%;
+  }
 }
+
 .field-editor-title {
   font-size: 1.6rem;
   font-weight: 700;
@@ -418,6 +429,7 @@
   color: var(--text-color);
   position: relative;
 }
+
 .field-editor-title::after {
   content: '';
   display: block;
@@ -433,7 +445,10 @@
   grid-template-columns: repeat(2, 1fr);
   gap: 1.5rem 2rem;
 }
-.span-2 { grid-column: span 2; }
+
+.span-2 { 
+  grid-column: span 2; 
+}
 
 .field-editor-form .section-heading {
   grid-column: span 2;
@@ -450,6 +465,7 @@
   border: none;
   border-bottom: 2px solid var(--secondary-color);
 }
+
 .field-editor-form .section-heading:first-of-type {
   margin-top: 0;
 }
@@ -468,11 +484,13 @@
   align-items: center;
   gap: 0.25rem;
 }
+
 .field-editor-form .form-field label .mat-icon {
   font-size: 1rem;
   height: 1rem;
   width: 1rem;
 }
+
 .field-editor-form .form-field input,
 .field-editor-form .form-field select {
   width: 100%;
@@ -483,6 +501,7 @@
   font-size: 1rem;
   transition: all 0.2s ease-in-out;
 }
+
 .field-editor-form .form-field input:focus,
 .field-editor-form .form-field select:focus {
   outline: none;
@@ -494,19 +513,115 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  width: 100%;
 }
+
 .input-with-button input {
-  flex-grow: 1;
-}
-.regex-helper-dropdown {
-  margin-top: 0.5rem;
-  padding: 1rem;
-  box-shadow: 0 2px 8px var(--shadow-color-dark);
-  background: var(--surface-color);
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.2s ease-in-out;
+  background: var(--background-color);
+  
+  &:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--secondary-color);
+  }
 }
+
+.input-with-button button {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--secondary-color);
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease-in-out;
+  
+  &:hover {
+    background: var(--primary-color);
+    color: white;
+  }
+}
+
+.regex-helper-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1050;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  margin-top: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+  
+  .regex-helper-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--secondary-color);
+    border-radius: 8px 8px 0 0;
+    
+    .close-regex-btn {
+      width: 32px;
+      height: 32px;
+      
+      mat-icon {
+        font-size: 18px;
+      }
+    }
+  }
+  
+  .regex-options-container {
+    padding: 0.5rem 0;
+  }
+  
+  .regex-option-btn {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: none;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+    
+    &:hover {
+      background: var(--secondary-color);
+    }
+    
+    .regex-option-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      
+      .regex-label {
+        font-weight: 500;
+        color: var(--text-color);
+      }
+      
+      .regex-pattern {
+        font-family: 'Courier New', monospace;
+        font-size: 0.875rem;
+        color: var(--text-muted-color);
+        background: var(--background-color);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+      }
+    }
+  }
+}
+
 .regex-option button {
-  background: none; border: none;
+  background: none; 
+  border: none;
   color: var(--primary-color);
   cursor: pointer;
   text-align: left;
@@ -515,9 +630,11 @@
   border-radius: 4px;
   display: block;
 }
+
 .regex-option button:hover {
   background-color: var(--secondary-color);
 }
+
 .regex-option button span {
   color: var(--text-muted-color);
   font-size: 0.9em;
@@ -526,10 +643,12 @@
   display: block;
   margin-top: 0.25rem;
 }
+
 .close-regex-btn {
   margin-top: 0.5rem;
   width: 100%;
 }
+
 
 .type-select-group {
   display: flex;

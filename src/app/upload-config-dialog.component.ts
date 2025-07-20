@@ -237,39 +237,40 @@ import { ConfigValidatorBoxComponent, ConfigValidationFieldResult } from './conf
                 <mat-icon matSuffix>update</mat-icon>
               </mat-form-field>
 
-              <!-- Environment Selection -->
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Environment</mat-label>
-                <mat-select [(ngModel)]="selectedEnvironment">
-                  <mat-option value="PROD">
-                    <div class="env-option prod">
-                      <span>PROD</span>
-                    </div>
-                  </mat-option>
-                  <mat-option value="DEV">
-                    <div class="env-option dev">
-                      <span>DEV</span>
-                    </div>
-                  </mat-option>
-                  <mat-option value="COB">
-                    <div class="env-option cob">
-                      <span>COB</span>
-                    </div>
-                  </mat-option>
-                </mat-select>
-                <mat-icon matSuffix>settings</mat-icon>
-              </mat-form-field>
+                  <!-- Environment Selection (hide in validation mode) -->
+            <mat-form-field appearance="outline" class="full-width" *ngIf="actionChosen  !== 'validate'">
+              <mat-label>Environment</mat-label>
+              <mat-select [(ngModel)]="selectedEnvironment">
+                <mat-option value="PROD">
+                  <div class="env-option prod">
+                    <span>PROD</span>
+                  </div>
+                </mat-option>
+                <mat-option value="DEV">
+                  <div class="env-option dev">
+                    <span>DEV</span>
+                  </div>
+                </mat-option>
+                <mat-option value="COB">
+                  <div class="env-option cob">
+                    <span>COB</span>
+                  </div>
+                </mat-option>
+              </mat-select>
+              <mat-icon matSuffix>settings</mat-icon>
+            </mat-form-field>
 
               <!-- Action Buttons -->
               <div class="action-buttons">
-                <button mat-stroked-button 
-                        class="validate-btn" 
-                        (click)="onValidate()" 
-                        *ngIf="schema && actionChosen === 'validate'"
-                        [disabled]="!schema || !selectedVersionTag || !selectedEnvironment">
-                  <mat-icon>verified</mat-icon>
-                  Validate Configuration
-                </button>
+                          <button mat-stroked-button 
+                                  class="validate-btn" 
+                                  (click)="onValidate()" 
+                                  *ngIf="schema && actionChosen === 'validate'"
+                                  [disabled]="!schema || !selectedVersionTag">
+                            <mat-icon>verified</mat-icon>
+                            Validate Configuration
+                          </button>
+
                 
                 <button mat-raised-button 
                         color="primary" 

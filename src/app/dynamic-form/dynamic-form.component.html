@@ -64,12 +64,14 @@
                          [readonly]="isReadOnly || !isFieldEditable(field)" />
                   <mat-select *ngSwitchCase="'dropdown'" formControlName="PROD" 
                               [disabled]="isReadOnly || !isFieldEditable(field)">
-                    <mat-option *ngFor="let opt of field.options" [value]="opt.value">{{ opt.label }}</mat-option>
+                    <mat-option *ngFor="let opt of field.options" 
+              [value]="opt.value"
+              [disabled]="isReadOnly || !isFieldEditable(field)">{{ opt.label }}</mat-option>
                   </mat-select>
                   <mat-radio-group *ngSwitchCase="'mcq_single'" formControlName="PROD" 
                                    [disabled]="isReadOnly || !isFieldEditable(field)">
                     <div *ngFor="let opt of field.options">
-                      <mat-radio-button [value]="opt.value">{{ opt.label }}</mat-radio-button>
+                      <mat-radio-button [value]="opt.value" [disabled]="isReadOnly || !isFieldEditable(field)">{{ opt.label }}</mat-radio-button>
                     </div>
                   </mat-radio-group>
                   <div *ngSwitchCase="'mcq_multiple'">
@@ -82,7 +84,8 @@
                     </div>
                   </div>
                   <mat-slide-toggle *ngSwitchCase="'boolean'" formControlName="PROD" 
-                                    [disabled]="isReadOnly || !isFieldEditable(field)">
+                  [disabled]="isReadOnly || !isFieldEditable(field)"
+                  [style.pointer-events]="(isReadOnly || !isFieldEditable(field)) ? 'none' : 'auto'">
                     {{ field.placeholder || field.label }} (PROD)
                   </mat-slide-toggle>
                   <ng-container *ngSwitchCase="'keyvalue'">
@@ -91,19 +94,21 @@
                            [formGroupName]="i" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
                         <mat-form-field appearance="fill" style="flex:1;">
                           <mat-label>Key</mat-label>
-                          <input matInput formControlName="key">
+                          <input matInput formControlName="key" [readonly]="isReadOnly || !isFieldEditable(field)">
                         </mat-form-field>
                         <mat-form-field appearance="fill" style="flex:1;">
                           <mat-label>Value</mat-label>
-                          <input matInput formControlName="value">
+                          <input matInput formControlName="value" [readonly]="isReadOnly || !isFieldEditable(field)">
                         </mat-form-field>
                         <button mat-icon-button color="warn" type="button" 
-                                (click)="removeKeyValuePairEnv(asFormGroup(envGroup), 'PROD', i)">
+                                (click)="removeKeyValuePairEnv(asFormGroup(envGroup), 'PROD', i)"
+                                [disabled]="isReadOnly || !isFieldEditable(field)">
                           <span class="material-icons">delete</span>
                         </button>
                       </div>
                       <button mat-stroked-button color="primary" type="button" 
-                              (click)="addKeyValuePairEnv(asFormGroup(envGroup), 'PROD')">+ Add Pair</button>
+                              (click)="addKeyValuePairEnv(asFormGroup(envGroup), 'PROD')"
+                              [disabled]="isReadOnly || !isFieldEditable(field)">+ Add Pair</button>
                     </div>
                   </ng-container>
                   <input *ngSwitchDefault matInput formControlName="PROD" 
@@ -115,7 +120,7 @@
                   {{ getEnvFieldErrorMessage(field.key, 'PROD') }}
                 </div>
               </div>
-
+              
               <!-- DEV Environment -->
               <div class="env-field">
                 <label>{{ field.label }} (DEV)</label>
@@ -133,12 +138,14 @@
                          [readonly]="isReadOnly || !isFieldEditable(field)" />
                   <mat-select *ngSwitchCase="'dropdown'" formControlName="DEV" 
                               [disabled]="isReadOnly || !isFieldEditable(field)">
-                    <mat-option *ngFor="let opt of field.options" [value]="opt.value">{{ opt.label }}</mat-option>
+                    <mat-option *ngFor="let opt of field.options" 
+              [value]="opt.value"
+              [disabled]="isReadOnly || !isFieldEditable(field)">{{ opt.label }}</mat-option>
                   </mat-select>
                   <mat-radio-group *ngSwitchCase="'mcq_single'" formControlName="DEV" 
                                    [disabled]="isReadOnly || !isFieldEditable(field)">
                     <div *ngFor="let opt of field.options">
-                      <mat-radio-button [value]="opt.value">{{ opt.label }}</mat-radio-button>
+                      <mat-radio-button [value]="opt.value" [disabled]="isReadOnly || !isFieldEditable(field)">{{ opt.label }}</mat-radio-button>
                     </div>
                   </mat-radio-group>
                   <div *ngSwitchCase="'mcq_multiple'">
@@ -151,7 +158,8 @@
                     </div>
                   </div>
                   <mat-slide-toggle *ngSwitchCase="'boolean'" formControlName="DEV" 
-                                    [disabled]="isReadOnly || !isFieldEditable(field)">
+                                    [disabled]="isReadOnly || !isFieldEditable(field)"
+                  [style.pointer-events]="(isReadOnly || !isFieldEditable(field)) ? 'none' : 'auto'">
                     {{ field.placeholder || field.label }} (DEV)
                   </mat-slide-toggle>
                   <ng-container *ngSwitchCase="'keyvalue'">
@@ -160,19 +168,21 @@
                            [formGroupName]="i" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
                         <mat-form-field appearance="fill" style="flex:1;">
                           <mat-label>Key</mat-label>
-                          <input matInput formControlName="key">
+                          <input matInput formControlName="key" [readonly]="isReadOnly || !isFieldEditable(field)">
                         </mat-form-field>
                         <mat-form-field appearance="fill" style="flex:1;">
                           <mat-label>Value</mat-label>
-                          <input matInput formControlName="value">
+                          <input matInput formControlName="value" [readonly]="isReadOnly || !isFieldEditable(field)">
                         </mat-form-field>
                         <button mat-icon-button color="warn" type="button" 
-                                (click)="removeKeyValuePairEnv(asFormGroup(envGroup), 'DEV', i)">
+                                (click)="removeKeyValuePairEnv(asFormGroup(envGroup), 'DEV', i)"
+                                [disabled]="isReadOnly || !isFieldEditable(field)">
                           <span class="material-icons">delete</span>
                         </button>
                       </div>
                       <button mat-stroked-button color="primary" type="button" 
-                              (click)="addKeyValuePairEnv(asFormGroup(envGroup), 'DEV')">+ Add Pair</button>
+                              (click)="addKeyValuePairEnv(asFormGroup(envGroup), 'DEV')"
+                              [disabled]="isReadOnly || !isFieldEditable(field)">+ Add Pair</button>
                     </div>
                   </ng-container>
                   <input *ngSwitchDefault matInput formControlName="DEV" 
@@ -202,12 +212,14 @@
                          [readonly]="isReadOnly || !isFieldEditable(field)" />
                   <mat-select *ngSwitchCase="'dropdown'" formControlName="COB" 
                               [disabled]="isReadOnly || !isFieldEditable(field)">
-                    <mat-option *ngFor="let opt of field.options" [value]="opt.value">{{ opt.label }}</mat-option>
+                    <mat-option *ngFor="let opt of field.options" 
+              [value]="opt.value"
+              [disabled]="isReadOnly || !isFieldEditable(field)">{{ opt.label }}</mat-option>
                   </mat-select>
                   <mat-radio-group *ngSwitchCase="'mcq_single'" formControlName="COB" 
                                    [disabled]="isReadOnly || !isFieldEditable(field)">
                     <div *ngFor="let opt of field.options">
-                      <mat-radio-button [value]="opt.value">{{ opt.label }}</mat-radio-button>
+                      <mat-radio-button [value]="opt.value" [disabled]="isReadOnly || !isFieldEditable(field)">{{ opt.label }}</mat-radio-button>
                     </div>
                   </mat-radio-group>
                   <div *ngSwitchCase="'mcq_multiple'">
@@ -220,7 +232,8 @@
                     </div>
                   </div>
                   <mat-slide-toggle *ngSwitchCase="'boolean'" formControlName="COB" 
-                                    [disabled]="isReadOnly || !isFieldEditable(field)">
+                                    [disabled]="isReadOnly || !isFieldEditable(field)"
+                  [style.pointer-events]="(isReadOnly || !isFieldEditable(field)) ? 'none' : 'auto'">
                     {{ field.placeholder || field.label }} (COB)
                   </mat-slide-toggle>
                   <ng-container *ngSwitchCase="'keyvalue'">
@@ -229,19 +242,21 @@
                            [formGroupName]="i" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
                         <mat-form-field appearance="fill" style="flex:1;">
                           <mat-label>Key</mat-label>
-                          <input matInput formControlName="key">
+                          <input matInput formControlName="key" [readonly]="isReadOnly || !isFieldEditable(field)">
                         </mat-form-field>
                         <mat-form-field appearance="fill" style="flex:1;">
                           <mat-label>Value</mat-label>
-                          <input matInput formControlName="value">
+                          <input matInput formControlName="value" [readonly]="isReadOnly || !isFieldEditable(field)">
                         </mat-form-field>
                         <button mat-icon-button color="warn" type="button" 
-                                (click)="removeKeyValuePairEnv(asFormGroup(envGroup), 'COB', i)">
+                                (click)="removeKeyValuePairEnv(asFormGroup(envGroup), 'COB', i)"
+                                [disabled]="isReadOnly || !isFieldEditable(field)">
                           <span class="material-icons">delete</span>
                         </button>
                       </div>
                       <button mat-stroked-button color="primary" type="button" 
-                              (click)="addKeyValuePairEnv(asFormGroup(envGroup), 'COB')">+ Add Pair</button>
+                              (click)="addKeyValuePairEnv(asFormGroup(envGroup), 'COB')"
+                              [disabled]="isReadOnly || !isFieldEditable(field)">+ Add Pair</button>
                     </div>
                   </ng-container>
                   <input *ngSwitchDefault matInput formControlName="COB" 
@@ -257,7 +272,7 @@
           </div>
         </ng-container>
       </ng-container>
-
+      
       <!-- NORMAL FIELDS (NON-ENVIRONMENT SPECIFIC) -->
       <ng-template #normalField>
         <ng-container [ngSwitch]="field.type">
@@ -283,14 +298,16 @@
           <mat-select *ngSwitchCase="'dropdown'" [formControlName]="field.key" 
                       [disabled]="isReadOnly || !isFieldEditable(field)" 
                       [placeholder]="field.placeholder || ''" class="input-vertical">
-            <mat-option *ngFor="let opt of field.options" [value]="opt.value">{{ opt.label }}</mat-option>
+            <mat-option *ngFor="let opt of field.options" 
+              [value]="opt.value"
+              [disabled]="isReadOnly || !isFieldEditable(field)">{{ opt.label }}</mat-option>
           </mat-select>
           
           <mat-radio-group *ngSwitchCase="'mcq_single'" [formControlName]="field.key" 
                            [disabled]="isReadOnly || !isFieldEditable(field)" 
                            class="input-vertical mcq-options-vertical">
             <div *ngFor="let opt of field.options">
-              <mat-radio-button [value]="opt.value">{{ opt.label }}</mat-radio-button>
+              <mat-radio-button [value]="opt.value" [disabled]="isReadOnly || !isFieldEditable(field)">{{ opt.label }}</mat-radio-button>
             </div>
           </mat-radio-group>
           
@@ -307,7 +324,8 @@
           </div>
           
           <mat-slide-toggle *ngSwitchCase="'boolean'" [formControlName]="field.key" 
-                            [disabled]="isReadOnly || !isFieldEditable(field)" 
+                            [disabled]="isReadOnly || !isFieldEditable(field)"
+                  [style.pointer-events]="(isReadOnly || !isFieldEditable(field)) ? 'none' : 'auto'"
                             class="input-vertical">{{ field.placeholder || field.label }}</mat-slide-toggle>
           
           <ng-container *ngSwitchCase="'keyvalue'">
@@ -316,17 +334,21 @@
                    [formGroupName]="i" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
                 <mat-form-field appearance="fill" style="flex:1;">
                   <mat-label>Key</mat-label>
-                  <input matInput formControlName="key">
+                  <input matInput formControlName="key" [readonly]="isReadOnly || !isFieldEditable(field)">
                 </mat-form-field>
                 <mat-form-field appearance="fill" style="flex:1;">
                   <mat-label>Value</mat-label>
-                  <input matInput formControlName="value">
+                  <input matInput formControlName="value" [readonly]="isReadOnly || !isFieldEditable(field)">
                 </mat-form-field>
-                <button mat-icon-button color="warn" type="button" (click)="removeKeyValuePair(field.key, i)">
+                <button mat-icon-button color="warn" type="button" 
+                        (click)="removeKeyValuePair(field.key, i)"
+                        [disabled]="isReadOnly || !isFieldEditable(field)">
                   <span class="material-icons">delete</span>
                 </button>
               </div>
-              <button mat-stroked-button color="primary" type="button" (click)="addKeyValuePair(field.key)">
+              <button mat-stroked-button color="primary" type="button" 
+                      (click)="addKeyValuePair(field.key)"
+                      [disabled]="isReadOnly || !isFieldEditable(field)">
                 + Add Pair
               </button>
             </div>
@@ -351,7 +373,7 @@
   </div>
 </form>
         </div>
-
+        
         <!-- Right Panel: Template Schema Editor -->
         <div class="schema-editor-panel card" *ngIf="isEditMode">
            <header class="panel-header">
@@ -413,7 +435,7 @@
             </div>
 
             <hr class="section-divider">
-
+            
             <div class="field-list-header">
               <h4>Fields</h4>
               <button class="add-field-btn" (click)="showAddFieldEditor()" *ngIf="!isFieldEditorVisible">
@@ -458,44 +480,35 @@
                       <input formControlName="key" placeholder="unique_key" [disabled]="currentFieldIndex !== null && !isDuplicatedEdit">
                       <div *ngIf="fieldForm.get('key')?.invalid && fieldForm.get('key')?.touched" class="error-message">Key is required and must be alphanumeric/underscore.</div>
                     </div>
-                    <div class="form-field" style="margin-left: 1.25rem;">
+                   <div class="form-field" style="margin-left: 1.25rem;">
                       <label>Field Type</label>
-                      <div class="type-select-group" style="position: relative; display: flex; align-items: center;">
-                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'text'" 
-                                  style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                      <div class="type-select-group">
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'text'">
                           text_fields
                         </mat-icon>
-                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'number'" 
-                                  style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'number'">
                           pin
                         </mat-icon>
-                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'email'" 
-                                  style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'email'">
                           email
                         </mat-icon>
-                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'boolean'" 
-                                  style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'boolean'">
                           toggle_on
                         </mat-icon>
-                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'dropdown'" 
-                                  style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'dropdown'">
                           arrow_drop_down_circle
                         </mat-icon>
-                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'mcq_single'" 
-                                  style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'mcq_single'">
                           radio_button_checked
                         </mat-icon>
-                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'mcq_multiple'" 
-                                  style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'mcq_multiple'">
                           check_box
                         </mat-icon>
-                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'keyvalue'" 
-                                  style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'keyvalue'">
                           vpn_key
                         </mat-icon>
                         <select formControlName="type" 
-                                [disabled]="fieldForm.get('environmentSpecific')?.value"
-                                style="width: 100%; padding: 0.75rem 0.75rem 0.75rem 3rem; border: 1px solid #ced4da; border-radius: 4px; background-color: white; font-size: 0.875rem;">
+                                [disabled]="fieldForm.get('environmentSpecific')?.value">
                           <option value="text">Text</option>
                           <option value="number">Number</option>
                           <option value="email">Email</option>
@@ -508,6 +521,7 @@
                       </div>
                     </div>
 
+                                        
                     <!-- Field Settings Section -->
                     <div class="section-heading span-2"><mat-icon>tune</mat-icon> Field Settings</div>
                     <div class="form-field span-2">
@@ -575,7 +589,7 @@
                               </div>
                             </div>
                           </ng-container>
-
+                          
                           <!-- Email - Individual environment inputs -->
                           <ng-container *ngSwitchCase="'email'">
                             <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -671,7 +685,7 @@
                               </div>
                             </div>
                           </ng-container>
-
+                          
                           <!-- MCQ Single - Individual environment selects -->
                           <ng-container *ngSwitchCase="'mcq_single'">
                             <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -820,32 +834,44 @@
                       </ng-template>
                     </div>
                     
-                    <div class="form-field" *ngIf="fieldForm.get('type')?.value === 'text'">
-                      
-                    <label>Validation Regex <mat-icon matTooltip="Pattern the input must match (e.g., ^[a-zA-Z]+$)">help_outline</mat-icon></label>
-                      <div class="input-with-button">
-                        <input formControlName="regex" placeholder="e.g., ^[a-zA-Z]+$">
-                        <button type="button" mat-icon-button (click)="regexHelperVisible = !regexHelperVisible" matTooltip="Show Regex Helper">
-                          <mat-icon>auto_fix_high</mat-icon>
-                        </button>
-                      </div>
-                      <div *ngIf="regexHelperVisible" class="regex-helper-dropdown card">
-                        <div style="font-weight: 600; margin-bottom: 0.5rem;">Regex Helper</div>
-                        <div *ngFor="let opt of regexOptions" class="regex-option">
-                          <button type="button" (click)="fieldForm.get('regex')?.setValue(opt.value); regexHelperVisible = false;">
-                            {{ opt.label }}
-                            <span>{{ opt.value }}</span>
-                          </button>
+                    <div class="form-field regex-field" *ngIf="fieldForm.get('type')?.value === 'text'" style="margin-left: 1.25rem;">
+                        <label>Validation Regex <mat-icon matTooltip="Pattern the input must match (e.g., ^[a-zA-Z]+$)">help_outline</mat-icon></label>
+                        <div class="input-with-button-container">
+                          <div class="input-with-button">
+                            <input formControlName="regex" placeholder="e.g., ^[a-zA-Z]+$">
+                            <button type="button" mat-icon-button (click)="regexHelperVisible = !regexHelperVisible" matTooltip="Show Regex Helper">
+                              <mat-icon>auto_fix_high</mat-icon>
+                            </button>
+                          </div>
+                          <div *ngIf="regexHelperVisible" class="regex-helper-dropdown card">
+                            <div class="regex-helper-header">
+                              <span style="font-weight: 600;">Regex Helper</span>
+                              <button type="button" mat-icon-button (click)="regexHelperVisible = false" class="close-regex-btn">
+                                <mat-icon>close</mat-icon>
+                              </button>
+                            </div>
+                            <div class="regex-options-container">
+                              <div *ngFor="let opt of regexOptions" class="regex-option">
+                                <button type="button" 
+                                        class="regex-option-btn"
+                                        (click)="fieldForm.get('regex')?.setValue(opt.value); regexHelperVisible = false;">
+                                  <div class="regex-option-content">
+                                    <span class="regex-label">{{ opt.label }}</span>
+                                    <span class="regex-pattern">{{ opt.value }}</span>
+                                  </div>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <button type="button" (click)="regexHelperVisible = false" class="close-regex-btn">Close</button>
                       </div>
-                    </div>
+
                     
                     <div class="small-checkbox-group span-2" style="display: flex; gap: 1.2rem; align-items: center; margin-bottom: 1.2rem;">
                       <mat-checkbox formControlName="required" color="primary" style="margin:0; font-size:0.97rem;">
                         Required Field <mat-icon matTooltip="User must fill this field">help_outline</mat-icon>
                       </mat-checkbox>
-                      <mat-checkbox formControlName="editable" color="primary" style="margin:0; font-size:0.97rem;">
+                       <mat-checkbox formControlName="editable" color="primary" style="margin:0; font-size:0.97rem;"*ngIf="fieldForm.get('type')?.value !== 'mcq_multiple' && fieldForm.get('type')?.value !== 'keyvalue'">
                         User Editable <mat-icon matTooltip="If unchecked, field is visible but not editable">help_outline</mat-icon>
                       </mat-checkbox>
                       <mat-checkbox formControlName="environmentSpecific" color="primary" style="margin:0; font-size:0.97rem;">
@@ -904,7 +930,7 @@
                       <label>Default Keys (comma separated)</label>
                       <input formControlName="initialKeys" placeholder="e.g. key1, key2, key3">
                     </div>
-
+                    
                     <!-- Conditional Logic Section -->
                     <div class="section-heading span-2"><mat-icon>visibility</mat-icon> Conditional Logic</div>
                     <div class="form-field span-2">
@@ -978,7 +1004,7 @@
               </ng-container>
               <p *ngIf="schema.fields.length === 0" class="no-fields-message">No fields added yet.</p>
             </div>
-
+            
             <!-- Only show add field editor at the end if adding a new field -->
             <div *ngIf="isFieldEditorVisible && currentFieldIndex === null" class="field-editor-form card">
               <h5 class="field-editor-title">Add New Field</h5>
@@ -994,56 +1020,47 @@
                   <input formControlName="key" placeholder="unique_key" [disabled]="currentFieldIndex !== null && !isDuplicatedEdit">
                   <div *ngIf="fieldForm.get('key')?.invalid && fieldForm.get('key')?.touched" class="error-message">Key is required and must be alphanumeric/underscore.</div>
                 </div>
-                <div class="form-field" style="margin-left: 1.25rem;">
-                  <label>Field Type</label>
-                  <div class="type-select-group" style="position: relative; display: flex; align-items: center;">
-                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'text'" 
-                              style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
-                      text_fields
-                    </mat-icon>
-                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'number'" 
-                              style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
-                      pin
-                    </mat-icon>
-                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'email'" 
-                              style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
-                      email
-                    </mat-icon>
-                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'boolean'" 
-                              style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
-                      toggle_on
-                    </mat-icon>
-                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'dropdown'" 
-                              style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
-                      arrow_drop_down_circle
-                    </mat-icon>
-                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'mcq_single'" 
-                              style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
-                      radio_button_checked
-                    </mat-icon>
-                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'mcq_multiple'" 
-                              style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
-                      check_box
-                    </mat-icon>
-                    <mat-icon *ngIf="fieldForm.get('type')?.value === 'keyvalue'" 
-                              style="position: absolute; left: 0.75rem; z-index: 1; pointer-events: none; color: #6c757d;">
-                      vpn_key
-                    </mat-icon>
-                    <select formControlName="type" 
-                            [disabled]="fieldForm.get('environmentSpecific')?.value"
-                            style="width: 100%; padding: 0.75rem 0.75rem 0.75rem 3rem; border: 1px solid #ced4da; border-radius: 4px; background-color: white; font-size: 0.875rem;">
-                      <option value="text">Text</option>
-                      <option value="number">Number</option>
-                      <option value="email">Email</option>
-                      <option value="boolean">Boolean</option>
-                      <option value="dropdown">Dropdown</option>
-                      <option value="mcq_single">MCQ (Single Select)</option>
-                      <option value="mcq_multiple">MCQ (Multiple Select)</option>
-                      <option value="keyvalue">Key-Value</option>
-                    </select>
-                  </div>
-                </div>
-
+                 <div class="form-field" style="margin-left: 1.25rem;">
+                      <label>Field Type</label>
+                      <div class="type-select-group">
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'text'">
+                          text_fields
+                        </mat-icon>
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'number'">
+                          pin
+                        </mat-icon>
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'email'">
+                          email
+                        </mat-icon>
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'boolean'">
+                          toggle_on
+                        </mat-icon>
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'dropdown'">
+                          arrow_drop_down_circle
+                        </mat-icon>
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'mcq_single'">
+                          radio_button_checked
+                        </mat-icon>
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'mcq_multiple'">
+                          check_box
+                        </mat-icon>
+                        <mat-icon *ngIf="fieldForm.get('type')?.value === 'keyvalue'">
+                          vpn_key
+                        </mat-icon>
+                        <select formControlName="type" 
+                                [disabled]="fieldForm.get('environmentSpecific')?.value">
+                          <option value="text">Text</option>
+                          <option value="number">Number</option>
+                          <option value="email">Email</option>
+                          <option value="boolean">Boolean</option>
+                          <option value="dropdown">Dropdown</option>
+                          <option value="mcq_single">MCQ (Single Select)</option>
+                          <option value="mcq_multiple">MCQ (Multiple Select)</option>
+                          <option value="keyvalue">Key-Value</option>
+                        </select>
+                      </div>
+                    </div>
+                
                 <!-- Field Settings Section -->
                 <div class="section-heading span-2"><mat-icon>tune</mat-icon> Field Settings</div>
                 <div class="form-field span-2">
@@ -1111,7 +1128,7 @@
                           </div>
                         </div>
                       </ng-container>
-
+                      
                       <!-- Email - Individual environment inputs -->
                       <ng-container *ngSwitchCase="'email'">
                         <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -1207,7 +1224,7 @@
                           </div>
                         </div>
                       </ng-container>
-
+                      
                       <!-- MCQ Single - Individual environment selects -->
                       <ng-container *ngSwitchCase="'mcq_single'">
                         <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -1356,31 +1373,44 @@
                   </ng-template>
                 </div>
                 
-                <div class="form-field" *ngIf="fieldForm.get('type')?.value === 'text'">
-                  <label>Validation Regex <mat-icon matTooltip="Pattern the input must match (e.g., ^[a-zA-Z]+$)">help_outline</mat-icon></label>
-                  <div class="input-with-button">
-                    <input formControlName="regex" placeholder="e.g., ^[a-zA-Z]+$">
-                    <button type="button" mat-icon-button (click)="regexHelperVisible = !regexHelperVisible" matTooltip="Show Regex Helper">
-                      <mat-icon>auto_fix_high</mat-icon>
-                    </button>
-                  </div>
-                  <div *ngIf="regexHelperVisible" class="regex-helper-dropdown card">
-                    <div style="font-weight: 600; margin-bottom: 0.5rem;">Regex Helper</div>
-                    <div *ngFor="let opt of regexOptions" class="regex-option">
-                      <button type="button" (click)="fieldForm.get('regex')?.setValue(opt.value); regexHelperVisible = false;">
-                        {{ opt.label }}
-                        <span>{{ opt.value }}</span>
-                      </button>
-                    </div>
-                    <button type="button" (click)="regexHelperVisible = false" class="close-regex-btn">Close</button>
-                  </div>
-                </div>
+                   <div class="form-field regex-field" *ngIf="fieldForm.get('type')?.value === 'text'" style="margin-left: 1.25rem;">
+                        <label>Validation Regex <mat-icon matTooltip="Pattern the input must match (e.g., ^[a-zA-Z]+$)">help_outline</mat-icon></label>
+                        <div class="input-with-button-container">
+                          <div class="input-with-button">
+                            <input formControlName="regex" placeholder="e.g., ^[a-zA-Z]+$">
+                            <button type="button" mat-icon-button (click)="regexHelperVisible = !regexHelperVisible" matTooltip="Show Regex Helper">
+                              <mat-icon>auto_fix_high</mat-icon>
+                            </button>
+                          </div>
+                          <div *ngIf="regexHelperVisible" class="regex-helper-dropdown card">
+                            <div class="regex-helper-header">
+                              <span style="font-weight: 600;">Regex Helper</span>
+                              <button type="button" mat-icon-button (click)="regexHelperVisible = false" class="close-regex-btn">
+                                <mat-icon>close</mat-icon>
+                              </button>
+                            </div>
+                            <div class="regex-options-container">
+                              <div *ngFor="let opt of regexOptions" class="regex-option">
+                                <button type="button" 
+                                        class="regex-option-btn"
+                                        (click)="fieldForm.get('regex')?.setValue(opt.value); regexHelperVisible = false;">
+                                  <div class="regex-option-content">
+                                    <span class="regex-label">{{ opt.label }}</span>
+                                    <span class="regex-pattern">{{ opt.value }}</span>
+                                  </div>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
                 
                 <div class="small-checkbox-group span-2" style="display: flex; gap: 1.2rem; align-items: center; margin-bottom: 1.2rem;">
                   <mat-checkbox formControlName="required" color="primary" style="margin:0; font-size:0.97rem;">
                     Required Field <mat-icon matTooltip="User must fill this field">help_outline</mat-icon>
                   </mat-checkbox>
-                  <mat-checkbox formControlName="editable" color="primary" style="margin:0; font-size:0.97rem;">
+                   <mat-checkbox formControlName="editable" color="primary" style="margin:0; font-size:0.97rem;"*ngIf="fieldForm.get('type')?.value !== 'mcq_multiple' && fieldForm.get('type')?.value !== 'keyvalue'">
                     User Editable <mat-icon matTooltip="If unchecked, field is visible but not editable">help_outline</mat-icon>
                   </mat-checkbox>
                   <mat-checkbox formControlName="environmentSpecific" color="primary" style="margin:0; font-size:0.97rem;">
@@ -1439,10 +1469,8 @@
                   <label>Default Keys (comma separated)</label>
                   <input formControlName="initialKeys" placeholder="e.g. key1, key2, key3">
                 </div>
-
-
-
-                 <!-- Conditional Logic Section -->
+                
+                <!-- Conditional Logic Section -->
                     <div class="section-heading span-2"><mat-icon>visibility</mat-icon> Conditional Logic</div>
                     <div class="form-field span-2">
                       <label>Visible If (Show this field only if another field has a specific value)</label>
@@ -1479,7 +1507,7 @@
                         <select [(ngModel)]="mandatoryIfKey" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
                           <option [ngValue]="null">-- Select Field --</option>
                           <option *ngFor="let f of schema.fields" [ngValue]="f.key" [disabled]="f.key === fieldForm.value.key">{{ f.label }}</option>
-                        </select>
+                          </select>
                         <ng-container *ngIf="mandatoryIfKey">
                           <ng-container [ngSwitch]="getFieldType(mandatoryIfKey)">
                             <select *ngSwitchCase="'dropdown'" [(ngModel)]="mandatoryIfValue" [ngModelOptions]="{standalone: true}" style="flex:1; min-width: 250px;">
